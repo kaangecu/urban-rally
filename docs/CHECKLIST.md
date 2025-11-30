@@ -93,10 +93,10 @@
 - [x] Task filtering and sorting functions
 - [x] Task statistics calculation
 
-### Phase 3: State Management (Zustand) ✅ PARTIALLY COMPLETED
+### Phase 3: State Management (Zustand) ✅ COMPLETED
 - [x] `src/store/authStore.ts` - Auth state (Phase 1)
 - [x] `src/store/taskStore.ts` - Tasks state (Phase 2)
-- [ ] `src/store/mapStore.ts` - Map state
+- [x] `src/store/mapStore.ts` - Map state (Phase 3)
 - [ ] `src/store/leaderboardStore.ts` - Rankings
 - [ ] Offline sync middleware
 
@@ -109,12 +109,13 @@
 - [x] Task statistics display
 - [x] Loading and error states
 
-### Phase 5: Map Integration
-- [ ] `src/features/map/GameMap.tsx` - Leaflet map
-- [ ] Task markers with custom icons
-- [ ] User location marker
+### Phase 5: Map Integration ✅ COMPLETED
+- [x] `src/features/map/GameMap.tsx` - Leaflet map
+- [x] Task markers with custom icons
+- [x] User location marker
+- [x] Map/List view toggle
+- [x] GPS accuracy indicator
 - [ ] Offline tile caching strategy
-- [ ] GPS accuracy indicator
 
 ### Phase 5: Task System
 - [ ] `src/features/tasks/TaskList.tsx` - Task cards

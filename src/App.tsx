@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
+import { TaskList } from './features/tasks/TaskList';
+import { TaskDetail } from './features/tasks/TaskDetail';
 
 function App() {
   const { isAuthenticated, team, tenant } = useAuthStore();
@@ -49,26 +51,11 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="text-center py-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            🎉 Welcome to the game!
-          </h2>
-          <p className="text-gray-600 mb-8">
-            You're successfully logged in as <strong>{team.teamName || team.accessCode}</strong>
-          </p>
-          
-          {/* Placeholder for upcoming features */}
-          <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
-            <h3 className="text-xl font-semibold mb-4">Coming Soon:</h3>
-            <ul className="text-left space-y-2 text-gray-700">
-              <li>📍 Interactive Map with Task Markers</li>
-              <li>📸 Task List & Photo Submissions</li>
-              <li>🏆 Live Leaderboard</li>
-              <li>💡 Purchasable Hints</li>
-            </ul>
-          </div>
-        </div>
+        <TaskList />
       </main>
+
+      {/* Task Detail Modal */}
+      <TaskDetail />
     </div>
   );
 }

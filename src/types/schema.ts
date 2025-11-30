@@ -125,6 +125,8 @@ export interface Task extends MultiTenantEntity {
   title: string;
   description: string;
   type: TaskType;
+  imageUrl?: string; // Task image/photo
+  difficulty?: 'easy' | 'medium' | 'hard';
   
   // Points
   points: number;
@@ -147,9 +149,14 @@ export interface Task extends MultiTenantEntity {
   
   // Sponsorship
   sponsorId?: string;
+  sponsorName?: string;
   sponsorLogoUrl?: string;
   requiresVideoAd?: boolean; // Must watch ad to unlock
   videoAdUrl?: string;
+  
+  // Timing
+  unlockAt?: Date; // When task becomes available
+  expiresAt?: Date; // When task is no longer available
   
   // Ordering
   order?: number; // For sequential tasks
@@ -164,9 +171,11 @@ export interface Task extends MultiTenantEntity {
  */
 export type TaskType = 
   | 'GPS'          // Find a location
+  | 'GPS_LOCATION' // Alias for GPS
   | 'PHOTO'        // Take a photo at location
   | 'VIDEO'        // Record a video
   | 'QUIZ'         // Answer questions
+  | 'QR_CODE'      // Scan a QR code
   | 'SPONSORED'    // Branded challenge
   | 'CHECKPOINT'   // Must visit in order
   | 'WILDCARD';    // Creative/custom

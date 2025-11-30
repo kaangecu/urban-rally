@@ -6,7 +6,7 @@ import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
 
 function App() {
-  const { isAuthenticated, team, tenant } = useAuthStore();
+  const { isAuthenticated, team, tenant, logout } = useAuthStore();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   useEffect(() => {
@@ -41,13 +41,22 @@ function App() {
                 Team: {team.teamName || team.accessCode}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold" style={{ color: 'var(--color-primary, #1a56db)' }}>
-                {team.score} pts
-              </p>
-              <p className="text-xs text-gray-500">
-                {team.completedTaskIds.length} tasks completed
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-2xl font-bold" style={{ color: 'var(--color-primary, #1a56db)' }}>
+                  {team.score} pts
+                </p>
+                <p className="text-xs text-gray-500">
+                  {team.completedTaskIds.length} tasks completed
+                </p>
+              </div>
+              <button
+                onClick={logout}
+                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                title="Logout"
+              >
+                🚪 Logout
+              </button>
             </div>
           </div>
           

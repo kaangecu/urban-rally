@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for Multi-Tenant Theming */
+:root {
+  --color-primary: #1a56db;
+  --color-secondary: #7e3af2;
+  --color-accent: #f59e0b;
+}
+
+/* Base Styles for Mobile-First PWA */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+}
+
+/* Leaflet CSS Override */
+@import 'leaflet/dist/leaflet.css';
+
+/* Touch-friendly minimum sizes */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}

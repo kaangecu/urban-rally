@@ -1,0 +1,47 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB max
+    }
+    
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Team Photo Uploads (scoped by tenant and team)
+    match /uploads/{tenantId}/{eventId}/{teamId}/{fileName} {
+      // Teams can upload their own photos
+      allow write: if isAuthenticated()
+                   && request.auth.uid == teamId
+                   && isImage()
+                   && isValidImageSize();
+      
+      // Anyone can read (for leaderboard/gallery)
+      allow read: if true;
+    }
+    
+    // Tenant Logos (Admin only, public read)
+    match /tenants/{tenantId}/logo/{fileName} {
+      allow read: if true;
+      allow write: if false; // Admin SDK only
+    }
+    
+    // Sponsor Logos (Admin only, public read)
+    match /sponsors/{sponsorId}/{fileName} {
+      allow read: if true;
+      allow write: if false; // Admin SDK only
+    }
+    
+    // Default: Deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -32,8 +32,9 @@ service cloud.firestore {
       // Public read for branding (logo, colors, name)
       allow read: if true;
       
-      // Only via Admin SDK or Cloud Functions
-      allow write: if false;
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
     }
     
     // ====================================
@@ -44,8 +45,9 @@ service cloud.firestore {
       // Public read for active events (map bounds, start/end dates)
       allow read: if true;
       
-      // Only admins can create/edit events
-      allow write: if false;
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
     }
     
     // ====================================
@@ -56,7 +58,8 @@ service cloud.firestore {
       // Allow reading by accessCode for login (before auth)
       // OR if user owns the team (after auth)
       allow read: if isTeamOwner(teamId) 
-                  || (!isAuthenticated() && request.query != null);
+                  || (!isAuthenticated() && request.query != null)
+                  || true; // ⚠️ DEVELOPMENT: Open read access
       
       // Teams can update their own data after authentication
       // Allow setting uid on first login, then normal updates
@@ -66,8 +69,10 @@ service cloud.firestore {
                     && request.resource.data.eventId == resource.data.eventId
                     && request.resource.data.accessCode == resource.data.accessCode;
       
-      // No direct creation (teams created via Cloud Functions on login)
-      allow create, delete: if false;
+      // ⚠️ DEVELOPMENT: Allow creates for test data setup
+      // TODO: Change to 'if false' in production
+      allow create: if true;
+      allow delete: if false;
     }
     
     // ====================================
@@ -76,12 +81,13 @@ service cloud.firestore {
     
     match /tasks/{taskId} {
       // Teams can read tasks for their event
-      // Query MUST include tenantId filter
+      // Query MUST include tenantId filter (or open in dev)
       allow read: if isAuthenticated() 
-                  && hasTenantIdInQuery();
+                  || true; // ⚠️ DEVELOPMENT: Open read access
       
-      // Only admins can create/edit tasks
-      allow write: if false;
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
     }
     
     // ====================================

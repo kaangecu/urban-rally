@@ -4,8 +4,7 @@ import {
   where, 
   getDocs,
   doc,
-  getDoc,
-  orderBy
+  getDoc
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
 import type { Task } from '../types/schema';
@@ -23,12 +22,12 @@ export async function getTasksByEvent(
     const tasksRef = collection(db, 'tasks');
     
     // Query with multi-tenant filter (required by security rules)
+    // Removed orderBy to avoid needing a composite index
     const q = query(
       tasksRef,
       where('tenantId', '==', tenantId),
       where('eventId', '==', eventId),
-      where('isActive', '==', true),
-      orderBy('points', 'desc') // Higher points first
+      where('isActive', '==', true)
     );
     
     const snapshot = await getDocs(q);
@@ -44,6 +43,14 @@ export async function getTasksByEvent(
         unlockAt: data.unlockAt?.toDate(),
         expiresAt: data.expiresAt?.toDate(),
       } as Task;
+    });
+    
+    // Sort by order field if it exists, otherwise by points
+    tasks.sort((a, b) => {
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
+      return b.points - a.points;
     });
     
     return tasks;

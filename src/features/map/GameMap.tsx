@@ -71,13 +71,15 @@ function UserLocationMarker() {
 
   if (!userLocation) return null;
 
+  const userSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="8" fill="#3B82F6" stroke="white" stroke-width="3"/>
+      <circle cx="16" cy="16" r="3" fill="white"/>
+    </svg>
+  `;
+
   const userIcon = new Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-        <circle cx="16" cy="16" r="8" fill="#3B82F6" stroke="white" stroke-width="3"/>
-        <circle cx="16" cy="16" r="3" fill="white"/>
-      </svg>
-    `),
+    iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(userSvg),
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -126,21 +128,33 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
 
   const getTaskIcon = (task: Task, isCompleted: boolean) => {
     const color = isCompleted ? '#10B981' : '#3B82F6';
-    const icon = task.type === 'GPS' || task.type === 'GPS_LOCATION' ? '📍' : 
-                 task.type === 'PHOTO' ? '📸' :
-                 task.type === 'VIDEO' ? '🎥' :
-                 task.type === 'QUIZ' ? '❓' :
-                 task.type === 'SPONSORED' ? '⭐' : '✨';
+    
+    // Use letter abbreviations instead of emojis
+    let iconText = 'T';
+    if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
+      iconText = 'G';
+    } else if (task.type === 'PHOTO') {
+      iconText = 'P';
+    } else if (task.type === 'VIDEO') {
+      iconText = 'V';
+    } else if (task.type === 'QUIZ') {
+      iconText = 'Q';
+    } else if (task.type === 'SPONSORED') {
+      iconText = 'S';
+    }
+
+    // Use URL encoding instead of btoa to avoid emoji issues
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">
+        <path d="M20,0 C8.95,0 0,8.95 0,20 C0,32 20,52 20,52 C20,52 40,32 40,20 C40,8.95 31.05,0 20,0 Z" 
+              fill="${color}" stroke="white" stroke-width="2"/>
+        <text x="20" y="26" font-size="18" font-weight="bold" text-anchor="middle" fill="white">${iconText}</text>
+        ${isCompleted ? '<circle cx="32" cy="8" r="6" fill="#10B981" stroke="white" stroke-width="2"/><text x="32" y="12" font-size="10" font-weight="bold" text-anchor="middle" fill="white">✓</text>' : ''}
+      </svg>
+    `;
 
     return new Icon({
-      iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">
-          <path d="M20,0 C8.95,0 0,8.95 0,20 C0,32 20,52 20,52 C20,52 40,32 40,20 C40,8.95 31.05,0 20,0 Z" 
-                fill="${color}" stroke="white" stroke-width="2"/>
-          <text x="20" y="26" font-size="20" text-anchor="middle" fill="white">${icon}</text>
-          ${isCompleted ? '<circle cx="32" cy="8" r="6" fill="#10B981" stroke="white" stroke-width="2"/><text x="32" y="12" font-size="10" text-anchor="middle" fill="white">✓</text>' : ''}
-        </svg>
-      `),
+      iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
       iconSize: [40, 52],
       iconAnchor: [20, 52],
       popupAnchor: [0, -52],

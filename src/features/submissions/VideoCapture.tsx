@@ -23,19 +23,24 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   const [recordedVideo, setRecordedVideo] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [permissionRequested, setPermissionRequested] = useState(false);
 
   useEffect(() => {
-    startCamera();
+    // Only start camera automatically if user already requested permission
+    if (permissionRequested) {
+      startCamera();
+    }
     return () => {
       cleanup();
     };
-  }, []);
+  }, [permissionRequested]);
 
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setPermissionRequested(true);
 
       // Request camera and microphone permission with proper constraints
       const constraints: MediaStreamConstraints = {
@@ -239,7 +244,22 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
 
       {/* Video/Preview */}
       <div className="flex-1 relative flex items-center justify-center">
-        {error ? (
+        {!permissionRequested ? (
+          // Permission request screen
+          <div className="text-center text-white p-6">
+            <Video className="w-16 h-16 mx-auto mb-4 text-white/70" />
+            <h3 className="text-xl font-semibold mb-3">Camera & Microphone Access Needed</h3>
+            <p className="text-white/70 mb-6">
+              We need access to your camera and microphone to record a video for this task.
+            </p>
+            <button
+              onClick={startCamera}
+              className="px-8 py-4 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors font-semibold text-lg"
+            >
+              Enable Camera & Mic
+            </button>
+          </div>
+        ) : error ? (
           <div className="text-center text-white p-6">
             <p className="text-lg mb-4">{error}</p>
             {error.includes('reload the page') ? (
@@ -288,7 +308,14 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
 
       {/* Controls */}
       <div className="p-6 bg-black/50">
-        {recordedVideo ? (
+        {!permissionRequested ? (
+          <button
+            onClick={handleCancel}
+            className="w-full py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors font-semibold"
+          >
+            Cancel
+          </button>
+        ) : recordedVideo ? (
           <div className="flex gap-4">
             <button
               onClick={retakeVideo}
@@ -313,20 +340,22 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             Stop Recording
           </button>
         ) : (
-          <button
-            onClick={startRecording}
-            disabled={isLoading || !!error}
-            className="w-full py-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
-          >
-            <Video className="w-6 h-6" />
-            Start Recording
-          </button>
-        )}
-        
-        {!recordedVideo && !isRecording && (
-          <p className="text-center text-white/70 text-sm mt-3">
-            Maximum duration: {maxDuration} seconds
-          </p>
+          <>
+            <button
+              onClick={startRecording}
+              disabled={isLoading || !!error}
+              className="w-full py-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
+            >
+              <Video className="w-6 h-6" />
+              Start Recording
+            </button>
+            
+            {!isRecording && permissionRequested && (
+              <p className="text-center text-white/70 text-sm mt-3">
+                Maximum duration: {maxDuration} seconds
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

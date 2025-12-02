@@ -14,19 +14,24 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [permissionRequested, setPermissionRequested] = useState(false);
 
   useEffect(() => {
-    startCamera();
+    // Only start camera automatically if user already requested permission
+    if (permissionRequested) {
+      startCamera();
+    }
     return () => {
       stopCamera();
     };
-  }, [facingMode]);
+  }, [facingMode, permissionRequested]);
 
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setPermissionRequested(true);
 
       // Stop any existing stream
       stopCamera();
@@ -184,7 +189,22 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
 
       {/* Camera/Preview */}
       <div className="flex-1 relative flex items-center justify-center">
-        {error ? (
+        {!permissionRequested ? (
+          // Permission request screen
+          <div className="text-center text-white p-6">
+            <Camera className="w-16 h-16 mx-auto mb-4 text-white/70" />
+            <h3 className="text-xl font-semibold mb-3">Camera Access Needed</h3>
+            <p className="text-white/70 mb-6">
+              We need access to your camera to take a photo for this task.
+            </p>
+            <button
+              onClick={startCamera}
+              className="px-8 py-4 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors font-semibold text-lg"
+            >
+              Enable Camera
+            </button>
+          </div>
+        ) : error ? (
           <div className="text-center text-white p-6">
             <p className="text-lg mb-4">{error}</p>
             {error.includes('reload the page') ? (
@@ -229,7 +249,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
 
       {/* Controls */}
       <div className="p-6 bg-black/50">
-        {capturedImage ? (
+        {!permissionRequested ? (
+          <button
+            onClick={handleCancel}
+            className="w-full py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors font-semibold"
+          >
+            Cancel
+          </button>
+        ) : capturedImage ? (
           <div className="flex gap-4">
             <button
               onClick={retakePhoto}

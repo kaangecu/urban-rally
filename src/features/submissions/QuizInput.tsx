@@ -26,7 +26,10 @@ export const QuizInput: React.FC<QuizInputProps> = ({
   const remainingChars = maxLength - answer.length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center p-4">
+    <div 
+      className="fixed bg-black/50 z-[120] flex items-center justify-center p-4"
+      style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+    >
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">

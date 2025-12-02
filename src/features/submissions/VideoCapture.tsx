@@ -165,7 +165,10 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-[120] flex flex-col">
+    <div 
+      className="fixed bg-black z-[120] flex flex-col"
+      style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/50">
         <button
@@ -214,7 +217,10 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
               className="max-w-full max-h-full object-contain"
             />
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <div 
+                className="absolute flex items-center justify-center bg-black/50"
+                style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+              >
                 <div className="text-white text-lg">Loading camera...</div>
               </div>
             )}

@@ -1,8 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* CSS Variables for Multi-Tenant Theming */
+/* Tailwind v4 Theme Configuration */
+@theme {
+  --color-primary: #1a56db;
+  --color-secondary: #7e3af2;
+  --color-accent: #f59e0b;
+  
+  /* Touch-friendly minimum sizes */
+  --min-height-touch: 44px;
+  --min-width-touch: 44px;
+}
+
+/* CSS Variables for Multi-Tenant Theming (for JS access) */
 :root {
   --color-primary: #1a56db;
   --color-secondary: #7e3af2;

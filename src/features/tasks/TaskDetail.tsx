@@ -18,57 +18,23 @@ export function TaskDetail() {
 
   const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
 
-  // Render TaskSubmission in a separate portal at the top level
-  if (isSubmitting && !isCompleted) {
-    console.log('🎯 Rendering TaskSubmission modal');
-    return (
-      <>
-        {/* Keep TaskDetail visible in background */}
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto opacity-50 pointer-events-none">
-            <div className="p-6">
-              <p className="text-center text-gray-500">Loading submission interface...</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* TaskSubmission at higher z-index */}
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
-            <TaskSubmission
-              task={selectedTask}
-              onSuccess={() => {
-                setIsSubmitting(false);
-                setSelectedTask(null);
-                // Refresh team data to show updated score
-                window.location.reload();
-              }}
-              onCancel={() => {
-                console.log('❌ TaskSubmission cancelled');
-                setIsSubmitting(false);
-              }}
-            />
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
-          <button
-            onClick={() => setSelectedTask(null)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <>
+      {/* Main TaskDetail Modal */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
+            <button
+              onClick={() => setSelectedTask(null)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
         {/* Content */}
         <div className="p-6 space-y-6">
@@ -213,6 +179,29 @@ export function TaskDetail() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* TaskSubmission Overlay - renders on top when active */}
+      {isSubmitting && !isCompleted && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
+            <TaskSubmission
+              task={selectedTask}
+              onSuccess={() => {
+                console.log('✅ TaskSubmission success');
+                setIsSubmitting(false);
+                setSelectedTask(null);
+                // Refresh team data to show updated score
+                window.location.reload();
+              }}
+              onCancel={() => {
+                console.log('❌ TaskSubmission cancelled');
+                setIsSubmitting(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { TaskSubmission } from '../submissions/TaskSubmission';
@@ -19,8 +18,7 @@ export function TaskDetail() {
 
   const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
 
-  // Render modal content
-  const modalContent = (
+  return (
     <>
       {/* Main TaskDetail Modal */}
       <div 
@@ -212,7 +210,4 @@ export function TaskDetail() {
       )}
     </>
   );
-
-  // Render in a portal to ensure it's at the document root level
-  return createPortal(modalContent, document.body);
 }

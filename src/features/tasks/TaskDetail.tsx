@@ -1,34 +1,16 @@
+import { useState } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
-import type { Task } from '../../types/schema';
+import { TaskSubmission } from '../submissions/TaskSubmission';
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask } = useTaskStore();
   const { team } = useAuthStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!selectedTask) return null;
 
   const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
-
-  const getTypeIcon = (type: Task['type']) => {
-    switch (type) {
-      case 'GPS_LOCATION':
-      case 'GPS':
-        return '📍';
-      case 'PHOTO':
-        return '📸';
-      case 'VIDEO':
-        return '🎥';
-      case 'QUIZ':
-        return '❓';
-      case 'QR_CODE':
-        return '📱';
-      case 'SPONSORED':
-        return '⭐';
-      default:
-        return '✨';
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -162,7 +144,10 @@ export function TaskDetail() {
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             {!isCompleted ? (
               <>
-                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+                <button 
+                  onClick={() => setIsSubmitting(true)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
                   Start Task
                 </button>
                 <button
@@ -182,6 +167,24 @@ export function TaskDetail() {
             )}
           </div>
         </div>
+
+        {/* Task Submission Modal */}
+        {isSubmitting && !isCompleted && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
+              <TaskSubmission
+                task={selectedTask}
+                onSuccess={() => {
+                  setIsSubmitting(false);
+                  setSelectedTask(null);
+                  // Refresh team data to show updated score
+                  window.location.reload();
+                }}
+                onCancel={() => setIsSubmitting(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

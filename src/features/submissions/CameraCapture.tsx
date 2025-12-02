@@ -112,7 +112,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black z-[120] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black/50">
         <button

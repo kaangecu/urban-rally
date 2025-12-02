@@ -21,14 +21,14 @@ export function TaskDetail() {
   return (
     <>
       {/* Main TaskDetail Modal */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100]">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
             <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
             <button
               onClick={() => setSelectedTask(null)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -183,8 +183,8 @@ export function TaskDetail() {
 
       {/* TaskSubmission Overlay - renders on top when active */}
       {isSubmitting && !isCompleted && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[110]">
+          <div className="bg-white rounded-2xl max-w-lg w-full mx-4 shadow-2xl">
             <TaskSubmission
               task={selectedTask}
               onSuccess={() => {

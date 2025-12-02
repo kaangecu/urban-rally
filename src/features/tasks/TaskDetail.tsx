@@ -18,6 +18,42 @@ export function TaskDetail() {
 
   const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
 
+  // Render TaskSubmission in a separate portal at the top level
+  if (isSubmitting && !isCompleted) {
+    console.log('🎯 Rendering TaskSubmission modal');
+    return (
+      <>
+        {/* Keep TaskDetail visible in background */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto opacity-50 pointer-events-none">
+            <div className="p-6">
+              <p className="text-center text-gray-500">Loading submission interface...</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* TaskSubmission at higher z-index */}
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
+            <TaskSubmission
+              task={selectedTask}
+              onSuccess={() => {
+                setIsSubmitting(false);
+                setSelectedTask(null);
+                // Refresh team data to show updated score
+                window.location.reload();
+              }}
+              onCancel={() => {
+                console.log('❌ TaskSubmission cancelled');
+                setIsSubmitting(false);
+              }}
+            />
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -176,24 +212,6 @@ export function TaskDetail() {
             )}
           </div>
         </div>
-
-        {/* Task Submission Modal */}
-        {isSubmitting && !isCompleted && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl max-w-lg w-full mx-4">
-              <TaskSubmission
-                task={selectedTask}
-                onSuccess={() => {
-                  setIsSubmitting(false);
-                  setSelectedTask(null);
-                  // Refresh team data to show updated score
-                  window.location.reload();
-                }}
-                onCancel={() => setIsSubmitting(false)}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

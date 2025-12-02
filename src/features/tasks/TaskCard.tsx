@@ -72,8 +72,8 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
       onClick={() => setSelectedTask(task)}
       className={`rounded-lg overflow-hidden cursor-pointer transition-all ${
         useCyberpunk
-          ? `glass-card hover:shadow-[0_0_30px_-10px_rgba(236,72,153,0.5)] hover:scale-105 ${
-              isCompleted ? 'opacity-75 border-2 border-cyan-500 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]' : ''
+          ? `glass-card-strong neon-border hover:neon-glow hover:scale-105 ${
+              isCompleted ? 'opacity-75 neon-border-cyan shadow-[0_0_20px_-5px_rgba(6,182,212,0.7)]' : ''
             }`
           : `bg-white shadow-md hover:shadow-lg hover:scale-105 ${
               isCompleted ? 'opacity-75 border-2 border-green-500' : ''
@@ -103,14 +103,14 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
       ) : (
         <div className={`h-48 flex items-center justify-center relative ${
           useCyberpunk
-            ? 'bg-gradient-to-br from-pink-900/20 to-cyan-900/20 border-b border-white/10'
+            ? 'glass-frosted-dark border-b border-white/10'
             : 'bg-gradient-to-br from-blue-100 to-indigo-100'
         }`}>
           <span className="text-6xl">{getTypeIcon(task.type)}</span>
           {isCompleted && (
             <div className={`absolute top-2 right-2 px-3 py-1 rounded-full font-semibold text-sm flex items-center gap-1 ${
               useCyberpunk
-                ? 'bg-cyan-500/80 text-white shadow-[0_0_15px_-3px_rgba(6,182,212,0.7)] backdrop-blur-sm'
+                ? 'glass-card-strong neon-border-cyan text-cyan-300'
                 : 'bg-green-500 text-white'
             }`}>
               <span>✓</span>
@@ -143,7 +143,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
           {/* Type Badge */}
           <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded ${
             useCyberpunk
-              ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300'
+              ? 'glass-frosted neon-border-pink text-pink-300'
               : 'bg-blue-100 text-blue-800'
           }`}>
             {getTypeIcon(task.type)}
@@ -161,7 +161,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
           {task.sponsorName && (
             <span className={`px-2 py-1 text-xs font-semibold rounded ${
               useCyberpunk
-                ? 'bg-yellow-500/20 border border-yellow-500/50 text-yellow-300'
+                ? 'glass-frosted border border-yellow-500/50 text-yellow-300'
                 : 'bg-purple-100 text-purple-800'
             }`}>
               Sponsored

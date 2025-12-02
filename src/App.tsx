@@ -35,7 +35,7 @@ function App() {
         : 'bg-gray-100'
     }`}>
       {/* Header */}
-      <header className={`${useCyberpunk ? 'bg-black/40 backdrop-blur-xl border-b border-white/10' : 'bg-white'} shadow-sm sticky top-0 z-10`}>
+      <header className={`${useCyberpunk ? 'glass-header' : 'bg-white'} shadow-sm sticky top-0 z-10`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -60,7 +60,7 @@ function App() {
                 onClick={logout}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   useCyberpunk
-                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm'
+                    ? 'glass-card-subtle neon-border text-white'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
                 title="Logout"
@@ -77,10 +77,10 @@ function App() {
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 viewMode === 'list'
                   ? useCyberpunk
-                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white shadow-lg shadow-pink-500/20'
+                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white neon-glow'
                     : 'bg-blue-600 text-white'
                   : useCyberpunk
-                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 backdrop-blur-sm'
+                    ? 'glass-card-subtle neon-border text-gray-300'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -91,10 +91,10 @@ function App() {
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 viewMode === 'map'
                   ? useCyberpunk
-                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white shadow-lg shadow-pink-500/20'
+                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white neon-glow'
                     : 'bg-blue-600 text-white'
                   : useCyberpunk
-                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 backdrop-blur-sm'
+                    ? 'glass-card-subtle neon-border text-gray-300'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >

@@ -87,11 +87,17 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className={viewMode === 'map' ? 'h-[calc(100vh-180px)]' : 'max-w-7xl mx-auto px-4 py-6'}>
-        {viewMode === 'list' ? <TaskList /> : <GameMap />}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {viewMode === 'list' ? (
+          <TaskList />
+        ) : (
+          <div className="h-[calc(100vh-200px)] -mx-4 -my-6">
+            <GameMap />
+          </div>
+        )}
       </main>
 
-      {/* Task Detail Modal */}
+      {/* Task Detail Modal - Renders at document level with high z-index */}
       <TaskDetail />
     </div>
   );

@@ -24,6 +24,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
   const [distanceFromTask, setDistanceFromTask] = useState<number | null>(null);
 
+  console.log('🎯 TaskSubmission rendered', { 
+    taskType: task.type, 
+    taskId: task.id, 
+    state,
+    team: team?.id,
+    tenant: tenant?.id
+  });
+
   // Get user location on mount
   useEffect(() => {
     if (task.type === 'GPS' && navigator.geolocation) {
@@ -170,32 +178,44 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   };
 
   const startCapture = () => {
+    console.log('🚀 startCapture called, task type:', task.type);
+    
     // Check GPS proximity if required
     if (task.type === 'GPS' && distanceFromTask !== null) {
+      console.log('❌ GPS check failed, distance:', distanceFromTask);
       setError(`You are ${Math.round(distanceFromTask)}m away from the task location. Get closer to submit.`);
       return;
     }
 
+    console.log('✅ Setting state to capture');
     setState('capture');
   };
 
   // Render capture interfaces
   if (state === 'capture') {
+    console.log('📸 Rendering capture interface for type:', task.type);
+    
     if (task.type === 'PHOTO') {
+      console.log('📸 Rendering CameraCapture');
       return <CameraCapture onCapture={handlePhotoCapture} onCancel={() => setState('idle')} />;
     }
     
     if (task.type === 'VIDEO') {
+      console.log('🎥 Rendering VideoCapture');
       return <VideoCapture onCapture={handleVideoCapture} onCancel={() => setState('idle')} />;
     }
     
     if (task.type === 'QUIZ' && task.description) {
+      console.log('❓ Rendering QuizInput');
       return <QuizInput question={task.description} onSubmit={handleQuizSubmit} onCancel={() => setState('idle')} />;
     }
 
     if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
+      console.log('📍 Rendering CameraCapture for GPS');
       return <CameraCapture onCapture={handlePhotoCapture} onCancel={() => setState('idle')} />;
     }
+    
+    console.log('⚠️ No matching task type, returning null');
   }
 
   return (

@@ -8,6 +8,12 @@ export function TaskDetail() {
   const { team } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log('📋 TaskDetail rendered', { 
+    taskId: selectedTask?.id, 
+    isSubmitting,
+    isCompleted: team?.completedTaskIds.includes(selectedTask?.id || '') || false
+  });
+
   if (!selectedTask) return null;
 
   const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
@@ -145,7 +151,10 @@ export function TaskDetail() {
             {!isCompleted ? (
               <>
                 <button 
-                  onClick={() => setIsSubmitting(true)}
+                  onClick={() => {
+                    console.log('🎬 Start Task button clicked!');
+                    setIsSubmitting(true);
+                  }}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                 >
                   Start Task

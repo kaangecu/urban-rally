@@ -4,19 +4,20 @@ import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
+import { applyTheme, isCyberpunkTheme } from './utils/theme';
 
 function App() {
   const { isAuthenticated, team, tenant, logout } = useAuthStore();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  
+  // Check if current tenant uses cyberpunk theme
+  const useCyberpunk = tenant ? isCyberpunkTheme(tenant) : false;
 
   useEffect(() => {
     // Apply tenant theme if already logged in
     if (tenant) {
-      const root = document.documentElement;
-      root.style.setProperty('--color-primary', tenant.primaryColor);
-      if (tenant.secondaryColor) {
-        root.style.setProperty('--color-secondary', tenant.secondaryColor);
-      }
+      // Apply theme using the new utility
+      applyTheme(tenant);
       document.title = `${tenant.name} - UrbanRally`;
     }
   }, [tenant]);
@@ -28,31 +29,40 @@ function App() {
 
   // Authenticated - show main app
   return (
-    <div className="min-h-screen bg-gray-100 relative">
+    <div className={`min-h-screen relative ${
+      useCyberpunk 
+        ? 'bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#050505] to-[#000000]' 
+        : 'bg-gray-100'
+    }`}>
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className={`${useCyberpunk ? 'bg-black/40 backdrop-blur-xl border-b border-white/10' : 'bg-white'} shadow-sm sticky top-0 z-10`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className={`text-xl font-bold ${useCyberpunk ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'text-gray-900'}`}>
                 {tenant?.name || 'UrbanRally'}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className={`text-sm ${useCyberpunk ? 'text-gray-400' : 'text-gray-600'}`}>
                 Team: {team.teamName || team.accessCode}
               </p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-2xl font-bold" style={{ color: 'var(--color-primary, #1a56db)' }}>
+                <p className={`text-2xl font-bold ${useCyberpunk ? 'bg-gradient-to-r from-pink-500 to-cyan-500 bg-clip-text text-transparent' : ''}`} 
+                   style={!useCyberpunk ? { color: 'var(--color-primary, #1a56db)' } : undefined}>
                   {team.score} pts
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className={`text-xs ${useCyberpunk ? 'text-gray-500' : 'text-gray-500'}`}>
                   {team.completedTaskIds.length} tasks completed
                 </p>
               </div>
               <button
                 onClick={logout}
-                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  useCyberpunk
+                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
                 title="Logout"
               >
                 🚪 Logout
@@ -66,8 +76,12 @@ function App() {
               onClick={() => setViewMode('list')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? useCyberpunk
+                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white shadow-lg shadow-pink-500/20'
+                    : 'bg-blue-600 text-white'
+                  : useCyberpunk
+                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 backdrop-blur-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               📋 List View
@@ -76,8 +90,12 @@ function App() {
               onClick={() => setViewMode('map')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 viewMode === 'map'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? useCyberpunk
+                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white shadow-lg shadow-pink-500/20'
+                    : 'bg-blue-600 text-white'
+                  : useCyberpunk
+                    ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 backdrop-blur-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               🗺️ Map View

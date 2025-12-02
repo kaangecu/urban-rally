@@ -2,13 +2,26 @@
 
 /* Tailwind v4 Theme Configuration */
 @theme {
-  --color-primary: #1a56db;
-  --color-secondary: #7e3af2;
-  --color-accent: #f59e0b;
+  /* Theme colors (controlled by JavaScript theme utility) */
+  /* Default values - will be overridden by applyTheme() */
+  --color-background: 243 244 246;      /* Light: Gray-100, Dark: Almost black */
+  --color-surface: 255 255 255;         /* Light: White, Dark: Dark gray */
+  --color-text-main: 17 24 39;          /* Light: Gray-900, Dark: White */
+  --color-text-muted: 107 114 128;      /* Light: Gray-500, Dark: Gray-400 */
+  --color-border: 209 213 219;          /* Light: Gray-300, Dark: White/10 */
+  
+  /* Tenant-specific colors (injected by App.tsx) */
+  --color-primary: 26 86 219;           /* Default blue, overridden by tenant */
+  --color-secondary: 126 58 242;        /* Default purple, overridden by tenant */
   
   /* Touch-friendly minimum sizes */
   --min-height-touch: 44px;
   --min-width-touch: 44px;
+  
+  /* Border radius */
+  --radius: 0.75rem;                    /* 12px */
+  --radius-sm: 0.25rem;                 /* 4px */
+  --radius-lg: 1.5rem;                  /* 24px */
 }
 
 /* CSS Variables for Multi-Tenant Theming (for JS access) */
@@ -40,4 +53,42 @@ body {
 button, a, [role="button"] {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* Cyberpunk Theme Enhancements */
+.theme-cyberpunk {
+  /* Glassmorphism support */
+  --blur-strength: 12px;
+}
+
+.theme-cyberpunk .glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(var(--blur-strength, 12px));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.theme-cyberpunk .neon-glow {
+  box-shadow: 0 0 20px -5px currentColor;
+}
+
+.theme-cyberpunk .neon-border {
+  border: 1px solid;
+  box-shadow: 0 0 10px -3px currentColor, inset 0 0 10px -5px currentColor;
+}
+
+/* Reduce blur on mobile for performance */
+@media (max-width: 768px) {
+  .theme-cyberpunk {
+    --blur-strength: 6px;
+  }
+  
+  .theme-cyberpunk .glass-card {
+    backdrop-filter: blur(var(--blur-strength, 6px));
+  }
+}
+
+/* Light Theme - No special effects needed */
+.theme-light {
+  --blur-strength: 0px;
 }

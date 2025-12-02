@@ -2,10 +2,10 @@
  * Test Data Setup Script
  * 
  * Populates Firebase Firestore with test data for development:
- * - 1 Tenant (ESN Berlin)
- * - 1 Event (Welcome Week 2025)
- * - 1 Test Team (Access Code: BERLIN2025)
- * - 15 Tasks across Berlin
+ * - 2 Tenants (ESN Berlin + Urban Chase Cyberpunk)
+ * - 2 Events (Welcome Week 2025 + Night Chase 2025)
+ * - 2 Test Teams (BERLIN2025 + CHASE2025)
+ * - 15 Tasks for each event
  * 
  * Usage: npm run setup-test-data
  */
@@ -31,8 +31,10 @@ async function setupTestData() {
   console.log('🚀 Starting test data setup...\n');
 
   try {
-    // 1. Create Tenant
-    console.log('📦 Creating tenant...');
+    // ========================================
+    // TENANT 1: ESN Berlin (Existing Light Theme)
+    // ========================================
+    console.log('📦 Creating Tenant 1: ESN Berlin...');
     await setDoc(doc(db, 'tenants', 'esn-berlin'), {
       id: 'esn-berlin',
       name: 'ESN Berlin',
@@ -46,10 +48,32 @@ async function setupTestData() {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    console.log('✅ Tenant created: ESN Berlin\n');
+    console.log('✅ Tenant created: ESN Berlin (Light Theme)\n');
 
-    // 2. Create Event
-    console.log('📅 Creating event...');
+    // ========================================
+    // TENANT 2: Urban Chase (Cyberpunk Theme)
+    // ========================================
+    console.log('📦 Creating Tenant 2: Urban Chase...');
+    await setDoc(doc(db, 'tenants', 'urban-chase'), {
+      id: 'urban-chase',
+      name: 'Urban Chase',
+      primaryColor: '#ec4899',      // Neon Pink
+      secondaryColor: '#06b6d4',    // Cyan
+      logoUrl: '',
+      website: 'https://urban-chase.app',
+      contactEmail: 'info@urban-chase.app',
+      subscriptionTier: 'premium',
+      isActive: true,
+      themeStyle: 'cyberpunk',      // Custom field to trigger cyberpunk UI
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    console.log('✅ Tenant created: Urban Chase (Cyberpunk Theme)\n');
+
+    // ========================================
+    // EVENT 1: ESN Berlin - Welcome Week 2025
+    // ========================================
+    console.log('📅 Creating Event 1: Welcome Week 2025...');
     await setDoc(doc(db, 'events', 'welcome-week-2025'), {
       id: 'welcome-week-2025',
       tenantId: 'esn-berlin',
@@ -64,8 +88,28 @@ async function setupTestData() {
     });
     console.log('✅ Event created: Welcome Week 2025\n');
 
-    // 3. Create Test Team
-    console.log('👥 Creating test team...');
+    // ========================================
+    // EVENT 2: Urban Chase - Night Chase 2025
+    // ========================================
+    console.log('📅 Creating Event 2: Night Chase 2025...');
+    await setDoc(doc(db, 'events', 'night-chase-2025'), {
+      id: 'night-chase-2025',
+      tenantId: 'urban-chase',
+      name: 'Night Chase 2025',
+      description: 'Navigate the neon-lit streets and complete cyberpunk missions!',
+      startDate: new Date('2025-12-01'),
+      endDate: new Date('2025-12-31'),
+      isActive: true,
+      maxTeams: 100,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    console.log('✅ Event created: Night Chase 2025\n');
+
+    // ========================================
+    // TEAM 1: ESN Berlin Test Team
+    // ========================================
+    console.log('👥 Creating Team 1: The Explorers...');
     await setDoc(doc(db, 'teams', 'team-test-01'), {
       id: 'team-test-01',
       tenantId: 'esn-berlin',
@@ -82,6 +126,27 @@ async function setupTestData() {
       updatedAt: new Date(),
     });
     console.log('✅ Team created with access code: BERLIN2025\n');
+
+    // ========================================
+    // TEAM 2: Urban Chase Test Team
+    // ========================================
+    console.log('👥 Creating Team 2: Neon Runners...');
+    await setDoc(doc(db, 'teams', 'team-test-02'), {
+      id: 'team-test-02',
+      tenantId: 'urban-chase',
+      eventId: 'night-chase-2025',
+      accessCode: 'CHASE2025',
+      teamName: 'Neon Runners',
+      memberCount: 3,
+      score: 0,
+      completedTaskIds: [],
+      purchasedHintIds: [],
+      inventory: [],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    console.log('✅ Team created with access code: CHASE2025\n');
 
     // 4. Create Tasks
     console.log('📍 Creating tasks...');
@@ -384,31 +449,209 @@ async function setupTestData() {
       },
     ];
 
-    // Create all tasks
+    // Cyberpunk tasks for Urban Chase
+    const cyberpunkTasks = [
+      // GPS Location Tasks with Cyberpunk flavor
+      {
+        id: 'task-alex-tower',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '🌃 Alexanderplatz Nexus',
+        description: 'Scan the neon-lit hub where East meets West in the digital age.',
+        type: 'GPS',
+        points: 75,
+        difficulty: 'easy',
+        coordinates: { lat: 52.5219, lng: 13.4132 },
+        radius: 40,
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'task-hacker-bridge',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '⚡ Oberbaum Data Bridge',
+        description: 'Cross the iconic bridge where data streams flow between districts.',
+        type: 'GPS',
+        points: 60,
+        difficulty: 'easy',
+        coordinates: { lat: 52.5016, lng: 13.4453 },
+        radius: 35,
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1599946347371-68eb71b16afc',
+        isActive: true,
+        order: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'task-checkpoint-charlie',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '🔒 Checkpoint Charlie Terminal',
+        description: 'Access the historic security checkpoint in the heart of the city.',
+        type: 'GPS',
+        points: 55,
+        difficulty: 'easy',
+        coordinates: { lat: 52.5075, lng: 13.3903 },
+        radius: 25,
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1599946347371-68eb71b16afc',
+        isActive: true,
+        order: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'task-east-side-gallery',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '🎨 Digital Wall Gallery',
+        description: 'Document the largest open-air cyber-graffiti installation.',
+        type: 'GPS_LOCATION',
+        points: 80,
+        difficulty: 'medium',
+        coordinates: { lat: 52.5053, lng: 13.4397 },
+        radius: 50,
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 4,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+
+      // Photo Tasks
+      {
+        id: 'task-neon-street',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '💫 Neon Street Art',
+        description: 'Capture urban street art glowing in the night. Extra points for creative angles!',
+        type: 'PHOTO',
+        points: 65,
+        difficulty: 'easy',
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 5,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'task-cyber-food',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '🍜 Cyber Cuisine',
+        description: 'Find and photograph futuristic street food in the neon district.',
+        type: 'PHOTO',
+        points: 50,
+        difficulty: 'easy',
+        requiresPhoto: true,
+        requiresVideo: false,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 6,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+
+      // Quiz Task
+      {
+        id: 'task-berlin-tech',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '💻 Tech Capital Trivia',
+        description: 'Prove your knowledge of Berlin\'s tech scene and digital culture!',
+        type: 'QUIZ',
+        points: 45,
+        difficulty: 'medium',
+        requiresPhoto: false,
+        requiresVideo: false,
+        requiresText: true,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 7,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+
+      // Video Task
+      {
+        id: 'task-team-glitch',
+        tenantId: 'urban-chase',
+        eventId: 'night-chase-2025',
+        title: '📹 Glitch Team Intro',
+        description: 'Record a 30-second team intro with maximum cyberpunk energy!',
+        type: 'VIDEO',
+        points: 120,
+        difficulty: 'hard',
+        requiresPhoto: false,
+        requiresVideo: true,
+        requiresText: false,
+        imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047',
+        isActive: true,
+        order: 8,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    // Create all tasks for both events
+    console.log('  ESN Berlin Tasks:');
     for (const task of tasks) {
       await setDoc(doc(db, 'tasks', task.id), task);
       console.log(`  ✅ ${task.title}`);
     }
 
-    console.log(`\n✅ Created ${tasks.length} tasks\n`);
+    console.log('\n  Urban Chase Tasks:');
+    for (const task of cyberpunkTasks) {
+      await setDoc(doc(db, 'tasks', task.id), task);
+      console.log(`  ✅ ${task.title}`);
+    }
+
+    console.log(`\n✅ Created ${tasks.length + cyberpunkTasks.length} tasks total\n`);
 
     // Summary
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🎉 Test Environment Setup Complete!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     console.log('📊 Summary:');
-    console.log('  • Tenant: ESN Berlin');
-    console.log('  • Event: Welcome Week 2025');
-    console.log('  • Team Access Code: BERLIN2025');
-    console.log('  • Tasks Created: 15');
-    console.log('  • Total Points: 895\n');
+    console.log('\n  TENANT 1: ESN Berlin (Light Theme)');
+    console.log('    • Event: Welcome Week 2025');
+    console.log('    • Team Access Code: BERLIN2025');
+    console.log('    • Tasks: 15');
+    console.log('    • Total Points: 895');
+    console.log('    • Style: Classic light UI\n');
+    console.log('  TENANT 2: Urban Chase (Cyberpunk Theme)');
+    console.log('    • Event: Night Chase 2025');
+    console.log('    • Team Access Code: CHASE2025');
+    console.log('    • Tasks: 8');
+    console.log('    • Total Points: 550');
+    console.log('    • Style: Neon cyberpunk dark UI\n');
     console.log('🚀 Next Steps:');
     console.log('  1. Run: npm run dev');
-    console.log('  2. Login with code: BERLIN2025');
-    console.log('  3. Start testing!\n');
+    console.log('  2. Test ESN Berlin: Login with BERLIN2025');
+    console.log('  3. Test Urban Chase: Login with CHASE2025');
+    console.log('  4. Compare UI themes!\n');
     console.log('📚 Documentation:');
     console.log('  • docs/TEST_ENV_SETUP.md');
-    console.log('  • docs/TEST_ENV_COMPLETE.md\n');
+    console.log('  • docs/THEME_IMPLEMENTATION_ANALYSIS.md\n');
 
   } catch (error) {
     console.error('❌ Error setting up test data:', error);

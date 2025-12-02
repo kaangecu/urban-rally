@@ -31,12 +31,59 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       // Stop any existing stream
       stopCamera();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Request camera permission with proper constraints
+      // Using 'exact' can fail if the device doesn't support that facing mode
+      // Using 'ideal' falls back gracefully
+      const constraints: MediaStreamConstraints = {
         video: {
-          facingMode: facingMode,
+          facingMode: { ideal: facingMode },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error('Error accessing camera:', err);
+      
+      let errorMessage = 'Unable to access camera.';
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera permission denied. Please enable camera access in your browser settings and reload the page.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage = 'Camera is already in use by another application.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage = 'Camera does not support the requested settings. Trying with basic settings...';
+        // Retry with basic constraints
+        setTimeout(() => retryWithBasicConstraints(), 1000);
+        return;
+      }
+      
+      setError(errorMessage);
+      setIsLoading(false);
+    }
+  };
+
+  const retryWithBasicConstraints = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      stopCamera();
+      
+      // Simplest possible constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
       });
 
       streamRef.current = stream;
@@ -46,9 +93,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       }
 
       setIsLoading(false);
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      setError('Unable to access camera. Please check permissions.');
+    } catch (err: any) {
+      console.error('Error with basic constraints:', err);
+      setError('Unable to access camera. Please check your browser permissions.');
       setIsLoading(false);
     }
   };
@@ -140,12 +187,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
         {error ? (
           <div className="text-center text-white p-6">
             <p className="text-lg mb-4">{error}</p>
-            <button
-              onClick={startCamera}
-              className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Try Again
-            </button>
+            {error.includes('reload the page') ? (
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Reload Page
+              </button>
+            ) : (
+              <button
+                onClick={retryWithBasicConstraints}
+                className="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Try Again
+              </button>
+            )}
           </div>
         ) : capturedImage ? (
           <img src={capturedImage} alt="Captured" className="max-w-full max-h-full object-contain" />

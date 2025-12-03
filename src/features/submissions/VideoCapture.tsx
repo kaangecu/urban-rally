@@ -162,27 +162,34 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         
         setIsLoading(true); // Show loading while creating blob
         
-        try {
-          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-          console.log('🎥 Blob created, size:', blob.size);
-          
-          const url = URL.createObjectURL(blob);
-          console.log('🎥 Object URL created:', url);
-          
-          setRecordedVideo(url);
-          setIsLoading(false); // Clear loading state
-          
-          // Stop camera stream
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
-            streamRef.current = null;
-            console.log('🎥 Camera stream stopped');
+        // Use setTimeout to ensure state updates properly
+        setTimeout(() => {
+          try {
+            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+            console.log('🎥 Blob created, size:', blob.size);
+            
+            const url = URL.createObjectURL(blob);
+            console.log('🎥 Object URL created:', url);
+            console.log('🎥 Setting recordedVideo state to:', url);
+            
+            setRecordedVideo(url);
+            console.log('🎥 recordedVideo state set');
+            
+            // Stop camera stream
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach((track) => track.stop());
+              streamRef.current = null;
+              console.log('🎥 Camera stream stopped');
+            }
+            
+            setIsLoading(false); // Clear loading state
+            console.log('🎥 Loading state cleared');
+          } catch (err) {
+            console.error('❌ Error creating video blob:', err);
+            setError('Failed to process video. Please try again.');
+            setIsLoading(false);
           }
-        } catch (err) {
-          console.error('❌ Error creating video blob:', err);
-          setError('Failed to process video. Please try again.');
-          setIsLoading(false);
-        }
+        }, 100); // Small delay to ensure state updates properly
       };
 
       mediaRecorder.start();
@@ -282,9 +289,23 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     permissionRequested,
     isRecording,
     hasRecordedVideo: !!recordedVideo,
+    recordedVideoURL: recordedVideo,
     error,
     isLoading
   });
+
+  // Debug: Check why preview might not show
+  if (recordedVideo) {
+    console.log('✅ recordedVideo is truthy, should show preview');
+  } else if (isLoading) {
+    console.log('⏳ isLoading is true, showing loading screen');
+  } else if (!permissionRequested) {
+    console.log('🚫 Permission not requested, showing permission screen');
+  } else if (error) {
+    console.log('❌ Error state:', error);
+  } else {
+    console.log('📹 Should show live camera');
+  }
 
   return (
     <div 

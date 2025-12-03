@@ -11,10 +11,6 @@ service firebase.storage {
       return request.resource.size < 5 * 1024 * 1024; // 5MB max
     }
     
-    function isValidVideoSize() {
-      return request.resource.size < 50 * 1024 * 1024; // 50MB max for videos
-    }
-    
     function isImage() {
       return request.resource.contentType.matches('image/.*');
     }
@@ -23,14 +19,20 @@ service firebase.storage {
       return request.resource.contentType.matches('video/.*');
     }
     
-    // Task Submissions (photos and videos)
-    match /submissions/{tenantId}/{eventId}/{teamId}/{taskId}/{fileName} {
-      // Teams can upload their own submissions
-      allow write: if isAuthenticated()
-                   && request.auth.uid == teamId
+    function isValidVideoSize() {
+      return request.resource.size < 50 * 1024 * 1024; // 50MB max for videos
+    }
+    
+    // Check if user's UID matches the team's UID in Firestore
+    function isTeamMember(teamId) {
+      return isAuthenticated() 
+             && firestore.get(/databases/(default)/documents/teams/$(teamId)).data.uid == request.auth.uid;
+    }
+    
+    // Task Submissions - path without fileName segment
+    match /submissions/{tenantId}/{eventId}/{teamId}/{taskId} {
+      allow write: if isTeamMember(teamId)
                    && ((isImage() && isValidImageSize()) || (isVideo() && isValidVideoSize()));
-      
-      // Anyone authenticated can read submissions
       allow read: if isAuthenticated();
     }
     

@@ -27,17 +27,22 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   const [permissionRequested, setPermissionRequested] = useState(false);
 
   useEffect(() => {
+    console.log('🎥 VideoCapture mounted, permissionRequested:', permissionRequested);
+    
     // Only start camera automatically if user already requested permission
     if (permissionRequested) {
+      console.log('🎥 Auto-starting camera');
       startCamera();
     }
     return () => {
+      console.log('🎥 VideoCapture unmounting, cleaning up');
       cleanup();
     };
   }, [permissionRequested]);
 
   const startCamera = async () => {
     try {
+      console.log('🎥 startCamera called');
       setIsLoading(true);
       setError(null);
       setPermissionRequested(true);
@@ -52,17 +57,23 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         audio: true,
       };
 
+      console.log('🎥 Requesting camera/mic with constraints:', constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('🎥 Got stream:', stream);
 
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        console.log('🎥 Set stream to video element');
+      } else {
+        console.warn('⚠️ videoRef.current is null');
       }
 
       setIsLoading(false);
+      console.log('🎥 Camera started successfully');
     } catch (err: any) {
-      console.error('Error accessing camera/microphone:', err);
+      console.error('❌ Error accessing camera/microphone:', err);
       
       let errorMessage = 'Unable to access camera or microphone.';
       

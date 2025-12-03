@@ -228,21 +228,46 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   };
 
   const retakeVideo = () => {
+    console.log('🎥 Retaking video');
+    
+    // Clean up old video URL to free memory
+    if (recordedVideo) {
+      URL.revokeObjectURL(recordedVideo);
+    }
+    
     setRecordedVideo(null);
     setRecordingTime(0);
+    setError(null);
     chunksRef.current = [];
     startCamera();
   };
 
   const confirmVideo = () => {
-    if (chunksRef.current.length === 0) return;
+    console.log('🎥 Confirming video, chunks:', chunksRef.current.length);
+    
+    if (chunksRef.current.length === 0) {
+      console.error('❌ No video chunks to upload');
+      setError('No video recorded. Please try again.');
+      return;
+    }
 
     const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    console.log('🎥 Creating file from blob, size:', blob.size);
+    
     const file = new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
+    console.log('🎥 File created:', file.name, file.size, 'bytes');
+    
     onCapture(file);
   };
 
   const handleCancel = () => {
+    console.log('🎥 Cancelling video capture');
+    
+    // Clean up video URL if it exists
+    if (recordedVideo) {
+      URL.revokeObjectURL(recordedVideo);
+    }
+    
     cleanup();
     onCancel();
   };
@@ -331,7 +356,21 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             ref={previewRef}
             src={recordedVideo}
             controls
+            playsInline
+            preload="auto"
             className="w-full h-full object-contain"
+            onLoadedMetadata={() => {
+              console.log('🎥 Video metadata loaded');
+              setIsLoading(false);
+            }}
+            onLoadedData={() => {
+              console.log('🎥 Video data loaded, ready to play');
+            }}
+            onError={(e) => {
+              console.error('❌ Video playback error:', e);
+              setError('Unable to play video preview. You can still upload it.');
+              setIsLoading(false);
+            }}
           />
         ) : (
           <>

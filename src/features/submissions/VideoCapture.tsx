@@ -152,18 +152,36 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
+          console.log('🎥 Data chunk received, size:', event.data.size);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        setRecordedVideo(url);
+        console.log('🎥 MediaRecorder stopped, processing video...');
+        console.log('🎥 Chunks collected:', chunksRef.current.length);
         
-        // Stop camera stream
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
+        setIsLoading(true); // Show loading while creating blob
+        
+        try {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          console.log('🎥 Blob created, size:', blob.size);
+          
+          const url = URL.createObjectURL(blob);
+          console.log('🎥 Object URL created:', url);
+          
+          setRecordedVideo(url);
+          setIsLoading(false); // Clear loading state
+          
+          // Stop camera stream
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+            console.log('🎥 Camera stream stopped');
+          }
+        } catch (err) {
+          console.error('❌ Error creating video blob:', err);
+          setError('Failed to process video. Please try again.');
+          setIsLoading(false);
         }
       };
 
@@ -191,8 +209,13 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   };
 
   const stopRecording = () => {
+    console.log('🎥 stopRecording called');
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('🎥 Stopping MediaRecorder, state:', mediaRecorderRef.current.state);
       mediaRecorderRef.current.stop();
+    } else {
+      console.log('⚠️ MediaRecorder already inactive or null');
     }
     
     setIsRecording(false);
@@ -200,6 +223,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+      console.log('🎥 Timer cleared');
     }
   };
 
@@ -228,6 +252,14 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  console.log('🎥 VideoCapture render, state:', {
+    permissionRequested,
+    isRecording,
+    hasRecordedVideo: !!recordedVideo,
+    error,
+    isLoading
+  });
 
   return (
     <div 

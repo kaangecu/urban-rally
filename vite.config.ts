@@ -6,10 +6,9 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 export default defineConfig({
   plugins: [
     react(),
-    basicSsl() // Enable HTTPS for local development
+    basicSsl() // Enable HTTPS for local development - creates self-signed certificate
   ],
   server: {
-    https: true, // Enable HTTPS
-    host: true,  // Allow network access
+    host: true,  // Allow network access (0.0.0.0)
   }
 })

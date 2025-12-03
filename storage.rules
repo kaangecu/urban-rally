@@ -11,8 +11,27 @@ service firebase.storage {
       return request.resource.size < 5 * 1024 * 1024; // 5MB max
     }
     
+    function isValidVideoSize() {
+      return request.resource.size < 50 * 1024 * 1024; // 50MB max for videos
+    }
+    
     function isImage() {
       return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+    
+    // Task Submissions (photos and videos)
+    match /submissions/{tenantId}/{eventId}/{teamId}/{taskId}/{fileName} {
+      // Teams can upload their own submissions
+      allow write: if isAuthenticated()
+                   && request.auth.uid == teamId
+                   && ((isImage() && isValidImageSize()) || (isVideo() && isValidVideoSize()));
+      
+      // Anyone authenticated can read submissions
+      allow read: if isAuthenticated();
     }
     
     // Team Photo Uploads (scoped by tenant and team)

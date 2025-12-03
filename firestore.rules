@@ -15,6 +15,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == resource.data.uid;
     }
     
+    function isTeamMember(teamId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/teams/$(teamId)).data.uid == request.auth.uid;
+    }
+    
     function belongsToTenant(tenantId) {
       return request.resource.data.tenantId == tenantId;
     }
@@ -97,11 +101,11 @@ service cloud.firestore {
     match /submissions/{submissionId} {
       // Teams can read their own submissions
       allow read: if isAuthenticated() 
-                  && request.auth.uid == resource.data.teamId;
+                  && isTeamMember(resource.data.teamId);
       
       // Teams can submit photos/videos for tasks
       allow create: if isAuthenticated()
-                    && request.resource.data.teamId == request.auth.uid
+                    && isTeamMember(request.resource.data.teamId)
                     && belongsToTenant(request.resource.data.tenantId);
       
       // Only Cloud Functions can approve/reject (update status, award points)

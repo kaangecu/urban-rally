@@ -220,11 +220,16 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
 
   return (
     <div 
-      className="fixed bg-black z-[120] flex flex-col"
-      style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+      className="fixed bg-black z-[120] flex flex-col h-screen"
+      style={{ 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0,
+      }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-black/50">
+      <div className="flex items-center justify-between p-4 bg-black/50 flex-shrink-0">
         <button
           onClick={handleCancel}
           className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -235,15 +240,15 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         {isRecording && (
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-white font-mono text-lg">
+            <span className="text-white font-mono text-sm sm:text-lg">
               {formatTime(recordingTime)} / {formatTime(maxDuration)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Video/Preview */}
-      <div className="flex-1 relative flex items-center justify-center">
+      {/* Video/Preview - Allow scrolling on very small screens */}
+      <div className="flex-1 relative flex items-center justify-center overflow-auto min-h-0">
         {!permissionRequested ? (
           // Permission request screen
           <div className="text-center text-white p-6">
@@ -283,7 +288,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             ref={previewRef}
             src={recordedVideo}
             controls
-            className="max-w-full max-h-full object-contain"
+            className="w-full h-full object-contain"
           />
         ) : (
           <>
@@ -292,7 +297,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
               autoPlay
               playsInline
               muted
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain"
             />
             {isLoading && (
               <div 
@@ -306,8 +311,8 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         )}
       </div>
 
-      {/* Controls */}
-      <div className="p-6 bg-black/50">
+      {/* Controls - Fixed at bottom, always visible */}
+      <div className="p-4 sm:p-6 bg-black/50 flex-shrink-0 safe-area-bottom">
         {!permissionRequested ? (
           <button
             onClick={handleCancel}
@@ -334,9 +339,9 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         ) : isRecording ? (
           <button
             onClick={stopRecording}
-            className="w-full py-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold flex items-center justify-center gap-2"
+            className="w-full py-3 sm:py-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold flex items-center justify-center gap-2 text-base sm:text-lg"
           >
-            <Square className="w-6 h-6" />
+            <Square className="w-5 h-5 sm:w-6 sm:h-6" />
             Stop Recording
           </button>
         ) : (
@@ -344,14 +349,14 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             <button
               onClick={startRecording}
               disabled={isLoading || !!error}
-              className="w-full py-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
+              className="w-full py-3 sm:py-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2 text-base sm:text-lg"
             >
-              <Video className="w-6 h-6" />
+              <Video className="w-5 h-5 sm:w-6 sm:h-6" />
               Start Recording
             </button>
             
             {!isRecording && permissionRequested && (
-              <p className="text-center text-white/70 text-sm mt-3">
+              <p className="text-center text-white/70 text-xs sm:text-sm mt-2">
                 Maximum duration: {maxDuration} seconds
               </p>
             )}

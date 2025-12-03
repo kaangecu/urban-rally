@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import 'leaflet/dist/leaflet.css';
 
 /* Tailwind v4 Theme Configuration */
 @theme {
@@ -45,9 +46,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
 }
-
-/* Leaflet CSS Override */
-@import 'leaflet/dist/leaflet.css';
 
 /* Touch-friendly minimum sizes */
 button, a, [role="button"] {

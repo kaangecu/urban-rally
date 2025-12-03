@@ -373,26 +373,48 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             )}
           </div>
         ) : recordedVideo ? (
-          <video
-            ref={previewRef}
-            src={recordedVideo}
-            controls
-            playsInline
-            preload="auto"
-            className="w-full h-full object-contain"
-            onLoadedMetadata={() => {
-              console.log('🎥 Video metadata loaded');
-              setIsLoading(false);
-            }}
-            onLoadedData={() => {
-              console.log('🎥 Video data loaded, ready to play');
-            }}
-            onError={(e) => {
-              console.error('❌ Video playback error:', e);
-              setError('Unable to play video preview. You can still upload it.');
-              setIsLoading(false);
-            }}
-          />
+          <>
+            {isLoading && (
+              <div 
+                className="absolute flex items-center justify-center bg-black/50 z-10"
+                style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+              >
+                <div className="text-white text-lg">Processing video...</div>
+              </div>
+            )}
+            <video
+              ref={previewRef}
+              src={recordedVideo}
+              controls
+              playsInline
+              preload="auto"
+              className="w-full h-full object-contain"
+              onLoadStart={() => {
+                console.log('🎥 Video load started');
+              }}
+              onLoadedMetadata={() => {
+                console.log('🎥 Video metadata loaded');
+                setIsLoading(false);
+              }}
+              onLoadedData={() => {
+                console.log('🎥 Video data loaded, ready to play');
+              }}
+              onCanPlay={() => {
+                console.log('🎥 Video can play');
+              }}
+              onError={(e) => {
+                console.error('❌ Video playback error:', e);
+                const videoElement = e.currentTarget;
+                console.error('❌ Video error details:', {
+                  error: videoElement.error,
+                  networkState: videoElement.networkState,
+                  readyState: videoElement.readyState
+                });
+                setError('Unable to play video preview. You can still upload it.');
+                setIsLoading(false);
+              }}
+            />
+          </>
         ) : (
           <>
             <video

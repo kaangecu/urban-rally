@@ -161,6 +161,12 @@ export interface Task extends MultiTenantEntity {
   requiresVideo: boolean;
   requiresText: boolean;
   
+  // Quiz Questions (for QUIZ type tasks)
+  quizType?: 'text' | 'multiple-choice' | 'number';
+  quizOptions?: string[]; // For multiple choice questions
+  quizCorrectAnswer?: string | number; // The correct answer
+  quizHint?: string; // Optional hint for the quiz
+  
   // Hints (purchasable)
   hints?: TaskHint[];
   

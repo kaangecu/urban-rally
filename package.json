@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "setup-test-data": "tsx src/scripts/setup-test-data.ts"
+    "setup-test-data": "tsx src/scripts/setup-test-data.ts",
+    "add-tasks": "tsx scripts/add-quiz-photo-tasks.ts"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",

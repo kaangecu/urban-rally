@@ -164,7 +164,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     }
   };
 
-  const handleQuizSubmit = async (answer: string) => {
+  const handleQuizSubmit = async (answer: string | number) => {
     if (!team || !tenant) {
       setError('Missing authentication data');
       return;
@@ -174,11 +174,19 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setError(null);
 
     try {
+      // Check if answer is correct (if we have the correct answer stored)
+      const isCorrect = task.quizCorrectAnswer !== undefined 
+        ? String(answer).toLowerCase().trim() === String(task.quizCorrectAnswer).toLowerCase().trim()
+        : true; // If no correct answer is set, accept any answer
+      
+      // Award points based on correctness
+      const pointsAwarded = isCorrect ? task.points : Math.floor(task.points * 0.5); // Half points for wrong answer
+      
       // Create submission with text answer
       await createSubmission(task.id, team.id, tenant.id, team.eventId, {
         type: 'text',
-        textResponse: answer,
-        points: task.points,
+        textResponse: String(answer),
+        points: pointsAwarded,
         submittedLocation: userLocation
           ? {
               lat: userLocation.coords.latitude,
@@ -240,7 +248,16 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     
     if (task.type === 'QUIZ' && task.description) {
       console.log('❓ Rendering QuizInput');
-      return <QuizInput question={task.description} onSubmit={handleQuizSubmit} onCancel={() => setState('idle')} />;
+      return (
+        <QuizInput 
+          question={task.description}
+          type={task.quizType || 'text'}
+          options={task.quizOptions}
+          hint={task.quizHint}
+          onSubmit={handleQuizSubmit}
+          onCancel={() => setState('idle')}
+        />
+      );
     }
 
     if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {

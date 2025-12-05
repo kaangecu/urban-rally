@@ -3,26 +3,47 @@ import { Check, X } from 'lucide-react';
 
 interface QuizInputProps {
   question: string;
-  onSubmit: (answer: string) => void;
+  type?: 'text' | 'multiple-choice' | 'number';
+  options?: string[]; // For multiple choice
+  hint?: string;
+  onSubmit: (answer: string | number) => void;
   onCancel: () => void;
   maxLength?: number;
 }
 
 export const QuizInput: React.FC<QuizInputProps> = ({ 
-  question, 
+  question,
+  type = 'text',
+  options = [],
+  hint,
   onSubmit, 
   onCancel,
   maxLength = 500 
 }) => {
   const [answer, setAnswer] = useState('');
+  const [selectedOption, setSelectedOption] = useState<string>('');
 
   const handleSubmit = () => {
-    if (answer.trim()) {
-      onSubmit(answer.trim());
+    if (type === 'multiple-choice') {
+      if (selectedOption) {
+        onSubmit(selectedOption);
+      }
+    } else if (type === 'number') {
+      const numAnswer = parseFloat(answer.trim());
+      if (!isNaN(numAnswer)) {
+        onSubmit(numAnswer);
+      }
+    } else {
+      if (answer.trim()) {
+        onSubmit(answer.trim());
+      }
     }
   };
 
-  const isValid = answer.trim().length > 0;
+  const isValid = type === 'multiple-choice' 
+    ? selectedOption !== '' 
+    : answer.trim().length > 0;
+  
   const remainingChars = maxLength - answer.length;
 
   return (
@@ -68,39 +89,124 @@ export const QuizInput: React.FC<QuizInputProps> = ({
               </div>
             </div>
 
-            {/* Answer Input */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                Your Answer:
-              </label>
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                maxLength={maxLength}
-                placeholder="Type your answer here..."
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                         text-white placeholder-gray-500 
-                         focus:bg-white/10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 
-                         resize-none backdrop-blur-sm transition-all
-                         text-base sm:text-sm"
-                rows={6}
-                autoFocus
-              />
-              
-              {/* Character Counter */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-3">
-                <p className="text-sm text-gray-400">
-                  {answer.trim().length === 0 ? (
-                    'Answer is required'
-                  ) : (
-                    <span className="text-cyan-300">✓ Answer ready to submit</span>
-                  )}
-                </p>
-                <p className={`text-sm ${remainingChars < 50 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                  {remainingChars} characters remaining
-                </p>
+            {/* Hint (if provided) */}
+            {hint && (
+              <div className="relative overflow-hidden rounded-lg border border-yellow-500/30 bg-yellow-950/20 p-3 backdrop-blur-sm">
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-400 text-sm font-bold">💡</span>
+                  <p className="text-yellow-200/90 text-sm leading-relaxed">
+                    <span className="font-semibold">Hint:</span> {hint}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Multiple Choice Options */}
+            {type === 'multiple-choice' && options.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
+                  Select Your Answer:
+                </label>
+                <div className="space-y-3">
+                  {options.map((option, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedOption(option)}
+                      className={`group w-full text-left p-4 rounded-xl border transition-all ${
+                        selectedOption === option
+                          ? 'border-cyan-500 bg-cyan-500/20 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]'
+                          : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedOption === option
+                            ? 'border-cyan-400 bg-cyan-500'
+                            : 'border-gray-400 bg-transparent group-hover:border-gray-300'
+                        }`}>
+                          {selectedOption === option && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className={`font-medium transition-colors ${
+                          selectedOption === option ? 'text-cyan-300' : 'text-gray-300 group-hover:text-white'
+                        }`}>
+                          {option}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Text Answer Input */}
+            {(type === 'text' || type === 'number') && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
+                  Your Answer:
+                </label>
+                {type === 'number' ? (
+                  <input
+                    type="number"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Enter a number..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
+                             text-white placeholder-gray-500 
+                             focus:bg-white/10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 
+                             backdrop-blur-sm transition-all
+                             text-base sm:text-sm"
+                    autoFocus
+                  />
+                ) : (
+                  <textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    maxLength={maxLength}
+                    placeholder="Type your answer here..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
+                             text-white placeholder-gray-500 
+                             focus:bg-white/10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 
+                             resize-none backdrop-blur-sm transition-all
+                             text-base sm:text-sm"
+                    rows={6}
+                    autoFocus
+                  />
+                )}
+                
+                {/* Character Counter (for text input only) */}
+                {type === 'text' && (
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-3">
+                    <p className="text-sm text-gray-400">
+                      {answer.trim().length === 0 ? (
+                        'Answer is required'
+                      ) : (
+                        <span className="text-cyan-300">✓ Answer ready to submit</span>
+                      )}
+                    </p>
+                    <p className={`text-sm ${remainingChars < 50 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                      {remainingChars} characters remaining
+                    </p>
+                  </div>
+                )}
+
+                {/* Number validation (for number input) */}
+                {type === 'number' && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-400">
+                      {answer.trim().length === 0 ? (
+                        'Number is required'
+                      ) : isNaN(parseFloat(answer)) ? (
+                        <span className="text-red-400">⚠ Please enter a valid number</span>
+                      ) : (
+                        <span className="text-cyan-300">✓ Number ready to submit</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

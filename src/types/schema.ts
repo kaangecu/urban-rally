@@ -81,8 +81,25 @@ export interface Team extends MultiTenantEntity {
   accessCode: string; // Unique code, e.g., "BER-42"
   uid?: string; // Firebase Auth UID (linked after first login)
   
+  // User Profile (GDPR-compliant)
+  displayName?: string; // User's personal name/nickname
+  email?: string; // Optional email for notifications
+  profilePhotoUrl?: string; // Optional avatar
+  
+  // GDPR Consent Tracking (Required for German compliance)
+  consentGiven?: {
+    terms: boolean; // Accepted Terms of Service
+    privacy: boolean; // Accepted Privacy Policy
+    termsVersion: string; // Version accepted (e.g., "1.0")
+    privacyVersion: string; // Version accepted
+    termsAcceptedAt?: Date; // Timestamp for legal compliance
+    privacyAcceptedAt?: Date; // Timestamp for legal compliance
+    ipAddress?: string; // IP address when consent given (GDPR requirement)
+  };
+  
   // Team Info
   teamName?: string; // Optional custom name
+  teamDisplayName?: string; // Friendly team name for leaderboard
   memberCount?: number;
   
   // Game State

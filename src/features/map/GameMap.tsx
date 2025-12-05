@@ -169,7 +169,7 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
         eventHandlers={{
           click: () => {
             setSelectedMarkerId(task.id);
-            setSelectedTask(task);
+            // setSelectedTask(task);
           },
         }}
       >
@@ -248,7 +248,7 @@ export function GameMap() {
       <MapContainer
         center={center as LatLngExpression}
         zoom={zoom}
-        className="h-full w-full"
+        className="h-full w-full z-0"
         zoomControl={true}
       >
         <TileLayer
@@ -269,7 +269,7 @@ export function GameMap() {
       </MapContainer>
 
       {/* Map controls overlay */}
-      <div className="absolute top-4 right-4 z-[1000] space-y-2">
+      <div className="absolute top-4 right-4 z-10 space-y-2">
         <button
           onClick={() => useMapStore.getState().focusOnUser()}
           className="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-lg shadow-lg transition-colors"
@@ -283,7 +283,7 @@ export function GameMap() {
       </div>
 
       {/* Task count badge */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-4 py-2">
+      <div className="absolute bottom-4 left-4 z-10 bg-white rounded-lg shadow-lg px-4 py-2">
         <p className="text-sm text-gray-600">
           <span className="font-bold text-blue-600">{tasksWithLocation.length}</span>
           {' '}tasks on map

@@ -141,3 +141,61 @@ export async function updateTeamScore(
     throw new Error('Failed to update score');
   }
 }
+
+/**
+ * Update team profile with user information and GDPR consent
+ * @param teamId - Team document ID
+ * @param data - Profile data including displayName, email, and consent
+ */
+export async function updateTeamProfile(
+  teamId: string,
+  data: {
+    displayName?: string;
+    email?: string;
+    profilePhotoUrl?: string;
+    teamDisplayName?: string;
+    consentGiven?: {
+      terms: boolean;
+      privacy: boolean;
+      termsVersion: string;
+      privacyVersion: string;
+      termsAcceptedAt?: Date;
+      privacyAcceptedAt?: Date;
+      ipAddress?: string;
+    };
+  }
+): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    const teamRef = doc(db, 'teams', teamId);
+    
+    // Filter out undefined values - Firestore doesn't accept them
+    const updateData: Record<string, any> = {
+      updatedAt: serverTimestamp(),
+    };
+    
+    // Only add fields that are defined
+    if (data.displayName !== undefined) {
+      updateData.displayName = data.displayName;
+    }
+    if (data.email !== undefined && data.email !== '') {
+      updateData.email = data.email;
+    }
+    if (data.profilePhotoUrl !== undefined) {
+      updateData.profilePhotoUrl = data.profilePhotoUrl;
+    }
+    if (data.teamDisplayName !== undefined) {
+      updateData.teamDisplayName = data.teamDisplayName;
+    }
+    if (data.consentGiven !== undefined) {
+      updateData.consentGiven = data.consentGiven;
+    }
+    
+    await updateDoc(teamRef, updateData);
+    
+    console.log('✅ Team profile updated:', data.displayName);
+  } catch (error) {
+    console.error('Error updating team profile:', error);
+    throw new Error('Failed to update profile');
+  }
+}

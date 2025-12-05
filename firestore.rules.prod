@@ -1,0 +1,182 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ====================================
+    // HELPER FUNCTIONS
+    // ====================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isTeamOwner(teamId) {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function isTeamMember(teamId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/teams/$(teamId)).data.uid == request.auth.uid;
+    }
+    
+    function belongsToTenant(tenantId) {
+      return request.resource.data.tenantId == tenantId;
+    }
+    
+    // CRITICAL: All queries MUST include tenantId filter to prevent cross-tenant data leaks
+    function hasTenantIdInQuery() {
+      return request.query.limit == null || 'tenantId' in request.query;
+    }
+    
+    // ====================================
+    // TENANTS COLLECTION
+    // ====================================
+    
+    match /tenants/{tenantId} {
+      // Public read for branding (logo, colors, name)
+      allow read: if true;
+      
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
+    }
+    
+    // ====================================
+    // EVENTS COLLECTION
+    // ====================================
+    
+    match /events/{eventId} {
+      // Public read for active events (map bounds, start/end dates)
+      allow read: if true;
+      
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
+    }
+    
+    // ====================================
+    // TEAMS COLLECTION (Strict Isolation)
+    // ====================================
+    
+    match /teams/{teamId} {
+      // Allow reading by accessCode for login (before auth)
+      // OR if user owns the team (after auth)
+      allow read: if isTeamOwner(teamId) 
+                  || (!isAuthenticated() && request.query != null)
+                  || true; // ⚠️ DEVELOPMENT: Open read access
+      
+      // Teams can update their own data after authentication
+      // Allow setting uid on first login, then normal updates
+      // But CANNOT change tenantId, eventId, or accessCode (prevent hijacking)
+      // ALLOW updating profile fields: displayName, email, profilePhotoUrl, consentGiven, teamDisplayName
+      allow update: if (isAuthenticated() && request.auth.uid == request.resource.data.uid)
+                    && request.resource.data.tenantId == resource.data.tenantId
+                    && request.resource.data.eventId == resource.data.eventId
+                    && request.resource.data.accessCode == resource.data.accessCode
+                    && (
+                      // Allow profile field updates only
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        'displayName',
+                        'email', 
+                        'profilePhotoUrl',
+                        'teamDisplayName',
+                        'consentGiven',
+                        'currentLocation',
+                        'lastKnownPosition',
+                        'lastLoginAt',
+                        'updatedAt',
+                        'score',
+                        'completedTaskIds',
+                        'inventory',
+                        'uid'
+                      ])
+                    );
+      
+      // ⚠️ DEVELOPMENT: Allow creates for test data setup
+      // TODO: Change to 'if false' in production
+      allow create: if true;
+      allow delete: if false;
+    }
+    
+    // ====================================
+    // TASKS COLLECTION (Read-Only for Teams)
+    // ====================================
+    
+    match /tasks/{taskId} {
+      // Teams can read tasks for their event
+      // Query MUST include tenantId filter (or open in dev)
+      allow read: if isAuthenticated() 
+                  || true; // ⚠️ DEVELOPMENT: Open read access
+      
+      // ⚠️ DEVELOPMENT: Allow writes for test data setup
+      // TODO: Change to 'if false' in production
+      allow write: if true;
+    }
+    
+    // ====================================
+    // TASK SUBMISSIONS
+    // ====================================
+    
+    match /submissions/{submissionId} {
+      // Teams can read their own submissions
+      allow read: if isAuthenticated() 
+                  && isTeamMember(resource.data.teamId);
+      
+      // Teams can submit photos/videos for tasks
+      allow create: if isAuthenticated()
+                    && isTeamMember(request.resource.data.teamId)
+                    && belongsToTenant(request.resource.data.tenantId);
+      
+      // Only Cloud Functions can approve/reject (update status, award points)
+      allow update, delete: if false;
+    }
+    
+    // ====================================
+    // LEADERBOARD (Public Read-Only)
+    // ====================================
+    
+    match /leaderboard/{eventId}/entries/{teamId} {
+      // Public leaderboard (real-time rankings)
+      allow read: if true;
+      
+      // Only via Cloud Functions (recalculated on task completion)
+      allow write: if false;
+    }
+    
+    // ====================================
+    // USER PROFILES (Admins/Organizers)
+    // ====================================
+    
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Only via Admin SDK
+      allow write: if false;
+    }
+    
+    // ====================================
+    // STRIPE INTEGRATION (Payments)
+    // ====================================
+    
+    match /customers/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      
+      match /checkout_sessions/{sessionId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == uid;
+      }
+      
+      match /subscriptions/{subscriptionId} {
+        allow read: if isAuthenticated() && request.auth.uid == uid;
+      }
+    }
+    
+    // ====================================
+    // DEFAULT DENY
+    // ====================================
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

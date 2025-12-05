@@ -17,10 +17,15 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "setup-test-data": "tsx src/scripts/setup-test-data.ts",
-    "add-tasks": "tsx scripts/add-quiz-photo-tasks.ts"
+    "add-tasks": "tsx scripts/add-quiz-photo-tasks.ts",
+    "dev-setup": "./scripts/dev-setup.sh",
+    "deploy:rules:dev": "firebase deploy --only firestore:rules",
+    "deploy:rules:prod": "cp firestore.rules.prod firestore.rules && firebase deploy --only firestore:rules",
+    "firebase:backup-rules": "firebase firestore:rules get > firestore.backup.rules"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
+    "dotenv": "^17.2.3",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.25",
     "leaflet": "^1.9.4",

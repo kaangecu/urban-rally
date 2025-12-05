@@ -6,9 +6,10 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 export default defineConfig({
   plugins: [
     react(),
-    basicSsl() // Enable HTTPS for local development - creates self-signed certificate
+    //basicSsl() // Enable HTTPS for local development - needed for camera access
   ],
   server: {
     host: true,  // Allow network access (0.0.0.0)
+    port: 5173,
   }
 })

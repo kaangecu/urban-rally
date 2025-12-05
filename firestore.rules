@@ -68,10 +68,29 @@ service cloud.firestore {
       // Teams can update their own data after authentication
       // Allow setting uid on first login, then normal updates
       // But CANNOT change tenantId, eventId, or accessCode (prevent hijacking)
+      // ALLOW updating profile fields: displayName, email, profilePhotoUrl, consentGiven, teamDisplayName
       allow update: if (isAuthenticated() && request.auth.uid == request.resource.data.uid)
                     && request.resource.data.tenantId == resource.data.tenantId
                     && request.resource.data.eventId == resource.data.eventId
-                    && request.resource.data.accessCode == resource.data.accessCode;
+                    && request.resource.data.accessCode == resource.data.accessCode
+                    && (
+                      // Allow profile field updates only
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        'displayName',
+                        'email', 
+                        'profilePhotoUrl',
+                        'teamDisplayName',
+                        'consentGiven',
+                        'currentLocation',
+                        'lastKnownPosition',
+                        'lastLoginAt',
+                        'updatedAt',
+                        'score',
+                        'completedTaskIds',
+                        'inventory',
+                        'uid'
+                      ])
+                    );
       
       // ⚠️ DEVELOPMENT: Allow creates for test data setup
       // TODO: Change to 'if false' in production

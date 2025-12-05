@@ -21,6 +21,7 @@
   "dependencies": {
     "browser-image-compression": "^2.0.2",
     "firebase": "^12.6.0",
+    "framer-motion": "^12.23.25",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",

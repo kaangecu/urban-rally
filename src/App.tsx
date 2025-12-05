@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
+import { useTeamSync } from './hooks/useTeamSync';
 import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
@@ -9,6 +10,9 @@ import { applyTheme, isCyberpunkTheme } from './utils/theme';
 function App() {
   const { isAuthenticated, team, tenant, logout } = useAuthStore();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  
+  // Real-time sync team data with Firestore
+  useTeamSync();
   
   // Check if current tenant uses cyberpunk theme
   const useCyberpunk = tenant ? isCyberpunkTheme(tenant) : false;

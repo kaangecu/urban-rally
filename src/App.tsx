@@ -5,6 +5,7 @@ import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
+import { BottomNav } from './components/navigation/BottomNav';
 import { applyTheme, isCyberpunkTheme } from './utils/theme';
 
 function App() {
@@ -73,43 +74,11 @@ function App() {
               </button>
             </div>
           </div>
-          
-          {/* View Toggle */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                viewMode === 'list'
-                  ? useCyberpunk
-                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white neon-glow'
-                    : 'bg-blue-600 text-white'
-                  : useCyberpunk
-                    ? 'glass-card-subtle neon-border text-gray-300'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📋 List View
-            </button>
-            <button
-              onClick={() => setViewMode('map')}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                viewMode === 'map'
-                  ? useCyberpunk
-                    ? 'bg-gradient-to-r from-pink-500 to-cyan-500 text-white neon-glow'
-                    : 'bg-blue-600 text-white'
-                  : useCyberpunk
-                    ? 'glass-card-subtle neon-border text-gray-300'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              🗺️ Map View
-            </button>
-          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-32">
         {viewMode === 'list' ? (
           <TaskList />
         ) : (
@@ -118,6 +87,14 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation */}
+      <BottomNav
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        teamScore={team.score}
+        completedTasks={team.completedTaskIds.length}
+      />
 
       {/* Task Detail Modal - Renders at document level with high z-index */}
       <TaskDetail />

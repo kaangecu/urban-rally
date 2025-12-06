@@ -9,6 +9,10 @@ interface QuizInputProps {
   onSubmit: (answer: string | number) => void;
   onCancel: () => void;
   maxLength?: number;
+  // Phase 3: Attempt tracking
+  currentAttempt?: number; // Current attempt number (1-based)
+  maxAttempts?: number; // Maximum allowed attempts
+  progressiveHints?: string[]; // Array of hints to show based on attempt
 }
 
 export const QuizInput: React.FC<QuizInputProps> = ({ 
@@ -18,7 +22,11 @@ export const QuizInput: React.FC<QuizInputProps> = ({
   hint,
   onSubmit, 
   onCancel,
-  maxLength = 500 
+  maxLength = 500,
+  // Phase 3: Attempt tracking
+  currentAttempt = 0,
+  maxAttempts = 3,
+  progressiveHints = [],
 }) => {
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string>('');
@@ -45,6 +53,11 @@ export const QuizInput: React.FC<QuizInputProps> = ({
     : answer.trim().length > 0;
   
   const remainingChars = maxLength - answer.length;
+  
+  // Phase 3: Get progressive hint based on current attempt
+  const currentHint = currentAttempt > 0 && currentAttempt <= progressiveHints.length
+    ? progressiveHints[currentAttempt - 1]
+    : hint;
 
   return (
     <div 
@@ -63,7 +76,39 @@ export const QuizInput: React.FC<QuizInputProps> = ({
         <div className="relative z-10">
           {/* Header */}
           <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 backdrop-blur-xl bg-gray-900/80">
-            <h2 className="text-lg sm:text-xl font-bold text-white">Quiz Question</h2>
+            <div className="flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-white">Quiz Question</h2>
+              
+              {/* Phase 3: Attempt Counter */}
+              {currentAttempt > 0 && maxAttempts > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs sm:text-sm text-gray-400">
+                    Attempt {currentAttempt} of {maxAttempts}
+                  </span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: maxAttempts }).map((_, index) => (
+                      <div
+                        key={index}
+                        className={`h-2 w-2 rounded-full transition-all ${
+                          index < currentAttempt - 1
+                            ? 'bg-red-500' // Used attempts
+                            : index === currentAttempt - 1
+                            ? 'bg-cyan-500 ring-2 ring-cyan-400/50 scale-125' // Current attempt
+                            : 'bg-gray-600' // Remaining attempts
+                        }`}
+                        title={
+                          index < currentAttempt - 1
+                            ? 'Attempt used'
+                            : index === currentAttempt - 1
+                            ? 'Current attempt'
+                            : 'Remaining'
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={onCancel}
               className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white touch-manipulation"
@@ -89,13 +134,25 @@ export const QuizInput: React.FC<QuizInputProps> = ({
               </div>
             </div>
 
-            {/* Hint (if provided) */}
-            {hint && (
-              <div className="relative overflow-hidden rounded-lg border border-yellow-500/30 bg-yellow-950/20 p-3 backdrop-blur-sm">
+            {/* Phase 3: Progressive Hint (shows different hints based on attempt) */}
+            {currentHint && (
+              <div className={`relative overflow-hidden rounded-lg border p-3 backdrop-blur-sm ${
+                currentAttempt > 1 
+                  ? 'border-orange-500/30 bg-orange-950/20' // More urgent hint for later attempts
+                  : 'border-yellow-500/30 bg-yellow-950/20'
+              }`}>
                 <div className="flex items-start gap-2">
-                  <span className="text-yellow-400 text-sm font-bold">💡</span>
-                  <p className="text-yellow-200/90 text-sm leading-relaxed">
-                    <span className="font-semibold">Hint:</span> {hint}
+                  <span className={`text-sm font-bold ${
+                    currentAttempt > 1 ? 'text-orange-400' : 'text-yellow-400'
+                  }`}>
+                    {currentAttempt > 1 ? '🔥' : '💡'}
+                  </span>
+                  <p className={`text-sm leading-relaxed ${
+                    currentAttempt > 1 ? 'text-orange-200/90' : 'text-yellow-200/90'
+                  }`}>
+                    <span className="font-semibold">
+                      {currentAttempt > 1 ? `Hint #${currentAttempt}:` : 'Hint:'}
+                    </span> {currentHint}
                   </p>
                 </div>
               </div>

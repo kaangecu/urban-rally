@@ -6,6 +6,7 @@ import { QuizInput } from './QuizInput';
 import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
+import { validateQuizAnswer } from '../../utils/quizValidation';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
@@ -14,7 +15,7 @@ interface TaskSubmissionProps {
   onCancel: () => void;
 }
 
-type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error';
+type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 'failed';
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
   const { team, tenant } = useAuthStore();
@@ -23,6 +24,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   const [uploadProgress, setUploadProgress] = useState(0);
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
   const [distanceFromTask, setDistanceFromTask] = useState<number | null>(null);
+  
+  // Quiz attempt tracking (Phase 1)
+  const [quizAttempts, setQuizAttempts] = useState<number>(0);
+  const maxQuizAttempts = 3;
 
   console.log('🎯 TaskSubmission rendered', { 
     taskType: task.type, 
@@ -170,19 +175,70 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       return;
     }
 
+    // Phase 1: Check attempt limits BEFORE submission
+    const currentAttempt = quizAttempts + 1;
+    
+    if (currentAttempt > maxQuizAttempts) {
+      setError(`❌ Maximum attempts (${maxQuizAttempts}) reached for this quiz.`);
+      setState('failed');
+      return;
+    }
+
     setState('uploading');
     setError(null);
 
     try {
-      // Check if answer is correct (if we have the correct answer stored)
-      const isCorrect = task.quizCorrectAnswer !== undefined 
-        ? String(answer).toLowerCase().trim() === String(task.quizCorrectAnswer).toLowerCase().trim()
-        : true; // If no correct answer is set, accept any answer
+      // Phase 2: Use fuzzy matching for answer validation
+      let validationResult;
       
-      // Award points based on correctness
-      const pointsAwarded = isCorrect ? task.points : Math.floor(task.points * 0.5); // Half points for wrong answer
+      if (task.quizCorrectAnswer !== undefined) {
+        validationResult = validateQuizAnswer(answer, task.quizCorrectAnswer, {
+          caseSensitive: false, // Case-insensitive by default
+          fuzzyThreshold: 0.65, // 65% similarity - catches most single-char typos
+          allowFuzzy: true, // Enable typo forgiveness
+          fuzzyPointsMultiplier: 0.95, // Award 95% points for close matches
+        });
+      } else {
+        // If no correct answer is set, accept any answer
+        validationResult = {
+          isCorrect: true,
+          similarity: 1.0,
+          pointsMultiplier: 1.0,
+          feedback: '✅ Answer submitted',
+          isFuzzyMatch: false,
+        };
+      }
       
-      // Create submission with text answer
+      // Phase 1 + 2: Calculate points based on attempt number AND fuzzy match
+      const pointsMultipliers = [1.0, 0.75, 0.50]; // 100%, 75%, 50% for attempts 1, 2, 3
+      const attemptMultiplier = pointsMultipliers[currentAttempt - 1] || 0.25;
+      
+      // Combine attempt multiplier with fuzzy match multiplier
+      // Award points ONLY if correct, decreasing with each attempt
+      const pointsAwarded = validationResult.isCorrect 
+        ? Math.floor(task.points * attemptMultiplier * validationResult.pointsMultiplier)
+        : 0; // Zero points for wrong answers
+      
+      // If answer is wrong, increment attempts and show feedback
+      if (!validationResult.isCorrect) {
+        setQuizAttempts(currentAttempt);
+        const attemptsRemaining = maxQuizAttempts - currentAttempt;
+        
+        if (attemptsRemaining > 0) {
+          setError(
+            `${validationResult.feedback}\nYou have ${attemptsRemaining} ${
+              attemptsRemaining === 1 ? 'attempt' : 'attempts'
+            } remaining.`
+          );
+          setState('idle'); // Allow retry
+        } else {
+          setError(`${validationResult.feedback}\n❌ Maximum attempts reached. Task failed.`);
+          setState('failed');
+        }
+        return;
+      }
+      
+      // Correct answer - create submission
       await createSubmission(task.id, team.id, tenant.id, team.eventId, {
         type: 'text',
         textResponse: String(answer),
@@ -197,6 +253,16 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       });
 
       setState('success');
+      
+      // Show success message with points info (including fuzzy match indicator)
+      if (validationResult.isFuzzyMatch) {
+        setError(`${validationResult.feedback} +${pointsAwarded} points (typo forgiven)`);
+      } else if (currentAttempt === 1) {
+        setError(`✅ Correct! Perfect score: +${pointsAwarded} points`);
+      } else {
+        setError(`✅ Correct! +${pointsAwarded} points (${currentAttempt} attempts)`);
+      }
+      
       setTimeout(() => {
         onSuccess();
       }, 1500);
@@ -256,6 +322,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           hint={task.quizHint}
           onSubmit={handleQuizSubmit}
           onCancel={() => setState('idle')}
+          // Phase 3: Pass attempt tracking props
+          currentAttempt={quizAttempts + 1} // Next attempt number
+          maxAttempts={maxQuizAttempts}
+          progressiveHints={[
+            task.quizHint || '',  // First hint (from task)
+            '🔍 Think carefully about the answer...',  // Second attempt hint
+            '💭 Consider alternative spellings or common variations...', // Third attempt hint
+          ]}
         />
       );
     }

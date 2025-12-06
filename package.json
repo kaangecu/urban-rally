@@ -17,10 +17,18 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "setup-test-data": "tsx src/scripts/setup-test-data.ts",
+    "add-event": "tsx scripts/add-event.ts",
     "add-tasks": "tsx scripts/add-quiz-photo-tasks.ts",
+    "add-teams": "tsx scripts/add-teams.ts",
+    "setup-all": "npm run add-event && npm run add-tasks && npm run add-teams",
     "dev-setup": "./scripts/dev-setup.sh",
+    "migrate:dry-run": "tsx scripts/migrate-database.ts",
+    "migrate:live": "tsx scripts/migrate-database.ts --live",
+    "migrate:rollback": "tsx scripts/migrate-database.ts --rollback",
+    "deploy:indexes": "firebase deploy --only firestore:indexes",
     "deploy:rules:dev": "firebase deploy --only firestore:rules",
     "deploy:rules:prod": "cp firestore.rules.prod firestore.rules && firebase deploy --only firestore:rules",
+    "deploy:rules:enhanced": "cp firestore.rules.enhanced firestore.rules && firebase deploy --only firestore:rules",
     "firebase:backup-rules": "firebase firestore:rules get > firestore.backup.rules"
   },
   "dependencies": {

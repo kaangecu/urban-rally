@@ -70,8 +70,41 @@ export interface Event extends MultiTenantEntity {
 }
 
 /**
+ * User
+ * Individual user/player entity with persistent identity
+ */
+export interface User extends MultiTenantEntity {
+  id: string; // Firebase Auth UID
+  
+  // Profile
+  displayName: string; // Required: User's name
+  email?: string; // Optional: For notifications
+  profilePhotoUrl?: string; // Optional: Avatar
+  
+  // GDPR Consent Tracking (Required for German compliance)
+  consentGiven: {
+    terms: boolean; // Accepted Terms of Service
+    privacy: boolean; // Accepted Privacy Policy
+    termsVersion: string; // Version accepted (e.g., "1.0")
+    privacyVersion: string; // Version accepted
+    termsAcceptedAt: Date; // Timestamp for legal compliance
+    privacyAcceptedAt: Date; // Timestamp for legal compliance
+    ipAddress?: string; // IP address when consent given (GDPR requirement)
+  };
+  
+  // Statistics (aggregated across all teams/events)
+  totalScore: number; // Total points earned across all teams
+  totalSubmissions: number; // Total tasks submitted
+  eventsParticipated: number; // Number of events joined
+  
+  // Timestamps
+  lastLoginAt?: Date;
+}
+
+/**
  * Team
  * The player entity - a group of students playing together
+ * NOW SUPPORTS MULTIPLE USERS PER TEAM
  */
 export interface Team extends MultiTenantEntity {
   id: string;
@@ -79,32 +112,35 @@ export interface Team extends MultiTenantEntity {
   
   // Authentication
   accessCode: string; // Unique code, e.g., "BER-42"
-  uid?: string; // Firebase Auth UID (linked after first login)
   
-  // User Profile (GDPR-compliant)
-  displayName?: string; // User's personal name/nickname
-  email?: string; // Optional email for notifications
-  profilePhotoUrl?: string; // Optional avatar
-  
-  // GDPR Consent Tracking (Required for German compliance)
+  // DEPRECATED FIELDS (kept for backward compatibility during migration)
+  uid?: string; // OLD: Single Firebase Auth UID - use ownerUserId instead
+  displayName?: string; // OLD: Single user's name - moved to User collection
+  email?: string; // OLD: Single user's email - moved to User collection
+  profilePhotoUrl?: string; // OLD: Avatar - moved to User collection
   consentGiven?: {
-    terms: boolean; // Accepted Terms of Service
-    privacy: boolean; // Accepted Privacy Policy
-    termsVersion: string; // Version accepted (e.g., "1.0")
-    privacyVersion: string; // Version accepted
-    termsAcceptedAt?: Date; // Timestamp for legal compliance
-    privacyAcceptedAt?: Date; // Timestamp for legal compliance
-    ipAddress?: string; // IP address when consent given (GDPR requirement)
-  };
+    terms: boolean;
+    privacy: boolean;
+    termsVersion: string;
+    privacyVersion: string;
+    termsAcceptedAt?: Date;
+    privacyAcceptedAt?: Date;
+    ipAddress?: string;
+  }; // OLD: Consent - moved to User collection
+  
+  // Team Membership (NEW - Multi-User Support)
+  ownerUserId: string; // User ID of team creator/owner
+  memberUserIds: string[]; // Array of all member User IDs
+  maxMembers: number; // Team size limit (default: 50, can be event-specific)
   
   // Team Info
   teamName?: string; // Optional custom name
   teamDisplayName?: string; // Friendly team name for leaderboard
-  memberCount?: number;
+  memberCount?: number; // Cached count for performance (should match memberUserIds.length)
   
   // Game State
-  score: number;
-  completedTaskIds: string[]; // Task IDs they've completed
+  score: number; // Team total score (sum of all member contributions)
+  completedTaskIds: string[]; // Task IDs completed by any team member
   inventory: InventoryItem[]; // Purchased hints, power-ups
   
   // Location Tracking (optional, for live leaderboard)
@@ -116,6 +152,30 @@ export interface Team extends MultiTenantEntity {
   
   // Status
   isActive: boolean;
+}
+
+/**
+ * TeamMember
+ * Detailed tracking of user membership and contributions to a specific team
+ */
+export interface TeamMember extends MultiTenantEntity {
+  id: string; // Composite: "{teamId}-{userId}"
+  teamId: string; // Reference to Team
+  userId: string; // Reference to User
+  eventId: string; // Reference to Event (for scoping)
+  
+  // Contribution Tracking
+  personalScore: number; // This user's contribution to team score
+  submissionIds: string[]; // IDs of submissions made by this user
+  tasksCompleted: string[]; // Task IDs this user completed
+  
+  // Role & Permissions
+  role: 'owner' | 'member'; // Owner has special permissions
+  
+  // Membership Status
+  isActive: boolean; // Can be set to false when user leaves team
+  joinedAt: Date;
+  leftAt?: Date; // Timestamp when user left team
 }
 
 /**
@@ -217,12 +277,14 @@ export interface TaskHint {
 /**
  * Task Submission
  * When a team completes a task
+ * NOW TRACKS INDIVIDUAL USER WHO SUBMITTED
  */
 export interface TaskSubmission extends MultiTenantEntity {
   id: string;
   eventId: string;
   taskId: string;
   teamId: string;
+  userId: string; // NEW: User who made this submission
   
   // Submission Data
   photoUrls?: string[];

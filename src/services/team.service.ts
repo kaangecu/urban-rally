@@ -6,11 +6,13 @@ import {
   doc, 
   getDoc, 
   updateDoc,
-  serverTimestamp 
+  serverTimestamp,
+  increment,
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
 import type { Team } from '../types/schema';
+import { getTeamMembers } from './teamMember.service';
 
 /**
  * Find a team by their access code
@@ -197,5 +199,102 @@ export async function updateTeamProfile(
   } catch (error) {
     console.error('Error updating team profile:', error);
     throw new Error('Failed to update profile');
+  }
+}
+
+/**
+ * Get team with all member details
+ * Returns team data along with full member information
+ */
+export async function getTeamWithMembers(teamId: string): Promise<{
+  team: Team;
+  members: Array<{
+    userId: string;
+    displayName: string;
+    email?: string;
+    personalScore: number;
+    tasksCompleted: number;
+    role: 'owner' | 'member';
+    joinedAt: Date;
+  }>;
+} | null> {
+  try {
+    // Get team data
+    const team = await getTeamById(teamId);
+    if (!team) {
+      return null;
+    }
+
+    // Get all members with details
+    const members = await getTeamMembers(teamId);
+
+    return {
+      team,
+      members,
+    };
+  } catch (error) {
+    console.error('Error fetching team with members:', error);
+    throw new Error('Failed to fetch team with members');
+  }
+}
+
+/**
+ * Update team score by incrementing
+ * Used when a submission is approved
+ */
+export async function incrementTeamScore(
+  teamId: string,
+  pointsToAdd: number
+): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    const teamRef = doc(db, 'teams', teamId);
+
+    await updateDoc(teamRef, {
+      score: increment(pointsToAdd),
+      updatedAt: serverTimestamp(),
+    });
+
+    console.log(`✅ Team score incremented by ${pointsToAdd} points:`, teamId);
+  } catch (error) {
+    console.error('Error incrementing team score:', error);
+    throw new Error('Failed to update team score');
+  }
+}
+
+/**
+ * Check if team has reached maximum member capacity
+ */
+export async function isTeamFull(teamId: string): Promise<boolean> {
+  try {
+    const team = await getTeamById(teamId);
+    if (!team) {
+      return true; // Consider non-existent team as "full"
+    }
+
+    const currentMembers = team.memberUserIds?.length || 0;
+    const maxMembers = team.maxMembers || 50;
+
+    return currentMembers >= maxMembers;
+  } catch (error) {
+    console.error('Error checking team capacity:', error);
+    return true; // Fail safe - consider full if error
+  }
+}
+
+/**
+ * Get team member count
+ */
+export async function getTeamMemberCount(teamId: string): Promise<number> {
+  try {
+    const team = await getTeamById(teamId);
+    if (!team) {
+      return 0;
+    }
+
+    return team.memberUserIds?.length || 0;
+  } catch (error) {
+    console.error('Error getting team member count:', error);
+    return 0;
   }
 }

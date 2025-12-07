@@ -12,11 +12,15 @@ service cloud.firestore {
     }
     
     function isTeamOwner(teamId) {
-      return isAuthenticated() && request.auth.uid == resource.data.uid;
+      return isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.ownerUserId;
     }
     
     function isTeamMember(teamId) {
-      return isAuthenticated() && get(/databases/$(database)/documents/teams/$(teamId)).data.uid == request.auth.uid;
+      return isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.memberUserIds;
+    }
+    
+    function isUserOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
     
     function belongsToTenant(tenantId) {
@@ -60,35 +64,31 @@ service cloud.firestore {
     
     match /teams/{teamId} {
       // Allow reading by accessCode for login (before auth)
-      // OR if user owns the team (after auth)
-      allow read: if isTeamOwner(teamId) 
+      // OR if user is a team member (after auth)
+      allow read: if isTeamMember(teamId) 
                   || (!isAuthenticated() && request.query != null)
                   || true; // ⚠️ DEVELOPMENT: Open read access
       
-      // Teams can update their own data after authentication
-      // Allow setting uid on first login, then normal updates
-      // But CANNOT change tenantId, eventId, or accessCode (prevent hijacking)
-      // ALLOW updating profile fields: displayName, email, profilePhotoUrl, consentGiven, teamDisplayName
-      allow update: if (isAuthenticated() && request.auth.uid == request.resource.data.uid)
+      // Only team owner can update team settings
+      // CANNOT change tenantId, eventId, or accessCode (prevent hijacking)
+      // CAN update: teamDisplayName, maxMembers, ownerUserId (for ownership transfer)
+      allow update: if isTeamOwner(teamId)
                     && request.resource.data.tenantId == resource.data.tenantId
                     && request.resource.data.eventId == resource.data.eventId
                     && request.resource.data.accessCode == resource.data.accessCode
                     && (
-                      // Allow profile field updates only
+                      // Allow team settings updates only
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                        'displayName',
-                        'email', 
-                        'profilePhotoUrl',
                         'teamDisplayName',
-                        'consentGiven',
-                        'currentLocation',
-                        'lastKnownPosition',
-                        'lastLoginAt',
-                        'updatedAt',
+                        'maxMembers',
+                        'ownerUserId',
+                        'memberUserIds',
                         'score',
                         'completedTaskIds',
                         'inventory',
-                        'uid'
+                        'currentLocation',
+                        'lastKnownPosition',
+                        'updatedAt'
                       ])
                     );
       
@@ -122,13 +122,68 @@ service cloud.firestore {
       allow read: if isAuthenticated() 
                   && isTeamMember(resource.data.teamId);
       
-      // Teams can submit photos/videos for tasks
+      // Users can submit photos/videos for tasks (must be team member)
       allow create: if isAuthenticated()
                     && isTeamMember(request.resource.data.teamId)
+                    && request.auth.uid == request.resource.data.userId
                     && belongsToTenant(request.resource.data.tenantId);
       
       // Only Cloud Functions can approve/reject (update status, award points)
       allow update, delete: if false;
+    }
+    
+    // ====================================
+    // USERS COLLECTION (User Profiles)
+    // ====================================
+    
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isUserOwner(userId);
+      
+      // Users can create their own profile during registration
+      allow create: if isAuthenticated() 
+                    && request.auth.uid == userId
+                    && request.resource.data.uid == userId;
+      
+      // Users can update their own profile (displayName, email, consentGiven)
+      allow update: if isUserOwner(userId)
+                    && request.resource.data.uid == userId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'displayName',
+                      'email',
+                      'consentGiven',
+                      'updatedAt'
+                    ]);
+      
+      // Users can delete their own profile (GDPR compliance)
+      allow delete: if isUserOwner(userId);
+    }
+    
+    // ====================================
+    // TEAM MEMBERS COLLECTION
+    // ====================================
+    
+    match /teamMembers/{teamMemberId} {
+      // Team members can read all memberships for their team
+      allow read: if isAuthenticated() 
+                  && isTeamMember(resource.data.teamId);
+      
+      // Users can create their own team membership when joining
+      allow create: if isAuthenticated()
+                    && request.auth.uid == request.resource.data.userId
+                    && isTeamMember(request.resource.data.teamId);
+      
+      // Team members can update their own membership record (personal score)
+      allow update: if isAuthenticated()
+                    && request.auth.uid == resource.data.userId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'personalScore',
+                      'updatedAt'
+                    ]);
+      
+      // Users can leave team (delete their membership)
+      allow delete: if isAuthenticated()
+                    && request.auth.uid == resource.data.userId;
     }
     
     // ====================================
@@ -144,11 +199,11 @@ service cloud.firestore {
     }
     
     // ====================================
-    // USER PROFILES (Admins/Organizers)
+    // ADMIN USER PROFILES (Organizers)
     // ====================================
     
-    match /users/{userId} {
-      // Users can read their own profile
+    match /admins/{userId} {
+      // Admin users can read their own profile
       allow read: if isAuthenticated() && request.auth.uid == userId;
       
       // Only via Admin SDK

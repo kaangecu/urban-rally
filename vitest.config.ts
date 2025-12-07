@@ -40,6 +40,7 @@ export default defineConfig({
       '.git',
       '.cache',
       '**/*.manual-test.ts',
+      'src/__tests__/examples/**', // Exclude example/template tests
     ],
     testTimeout: 10000,
     hookTimeout: 10000,

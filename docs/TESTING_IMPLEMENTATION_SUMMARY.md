@@ -53,15 +53,20 @@
    - Helper functions
    - Reusable test data
 
-7. **`src/utils/__example__.test.ts`**
+7. **`src/__tests__/examples/comprehensive-test-template.test.ts`**
    - Comprehensive test template
    - 6 different testing patterns
    - Best practices demonstrated
    - Copy-paste examples
 
+8. **`src/__tests__/examples/README.md`**
+   - Examples directory guide
+   - How to use test templates
+   - Co-location best practices
+
 ### 🚀 Setup Tools
 
-8. **`scripts/setup-testing.sh`**
+9. **`scripts/setup-testing.sh`**
    - Automated dependency installation
    - One-command setup
    - Playwright browser installation
@@ -167,7 +172,7 @@ The existing `quizValidation.test.ts` will run!
 - [ ] Update package.json with test scripts
 - [ ] Verify setup with `npm test`
 - [ ] Read `docs/TESTING_QUICK_START.md`
-- [ ] Explore `src/utils/__example__.test.ts`
+- [ ] Explore `src/__tests__/examples/comprehensive-test-template.test.ts`
 
 ### Phase 2: Utils Tests (6-8 hours)
 - [x] `src/utils/quizValidation.test.ts` (already exists!)
@@ -328,12 +333,14 @@ docs/
 
 src/
 ├── __tests__/
+│   ├── examples/
+│   │   ├── README.md                           ← Examples guide
+│   │   └── comprehensive-test-template.test.ts ← Test template
 │   └── setup/
 │       ├── test-setup.ts        ← Global setup
 │       ├── test-utils.tsx       ← Custom render
 │       └── firebase-mock.ts     ← Mocks & data
 └── utils/
-    ├── __example__.test.ts      ← Test template
     └── quizValidation.test.ts   ← Existing test
 
 scripts/
@@ -349,7 +356,7 @@ vitest.config.ts                 ← Test runner config
 1. **Start Here:**
    - Read `docs/TESTING_QUICK_START.md`
    - Run the setup script
-   - Explore `__example__.test.ts`
+   - Explore `src/__tests__/examples/comprehensive-test-template.test.ts`
 
 2. **Learn by Doing:**
    - Write test for a util function

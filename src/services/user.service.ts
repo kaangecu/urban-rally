@@ -7,7 +7,6 @@ import {
   collection,
   doc,
   getDoc,
-  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -17,11 +16,20 @@ import {
   increment,
 } from 'firebase/firestore';
 import { signInAnonymously, deleteUser as deleteAuthUser } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
 import type { User } from '../types/schema';
 
 /**
  * Create a new user
+ * 
+ * This function now uses a Cloud Function to create the user document,
+ * which bypasses client-side security rules and fixes the permission error.
+ * 
+ * Flow:
+ * 1. Sign in anonymously to get Firebase Auth UID
+ * 2. Call Cloud Function to create user document (uses Admin SDK)
+ * 3. Fetch and return the created user document
  */
 export async function createUser(data: {
   displayName: string;
@@ -40,14 +48,14 @@ export async function createUser(data: {
   try {
     const auth = getFirebaseAuth();
     const db = getFirebaseFirestore();
+    const functions = getFunctions();
 
-    console.log('🔵 Starting user creation process...');
+    console.log('🔵 Starting user creation process (via Cloud Function)...');
     console.log('📋 Input data:', {
       displayName: data.displayName,
       hasEmail: !!data.email,
       email: data.email,
       tenantId: data.tenantId,
-      consentGiven: data.consentGiven
     });
 
     // 1. Create Firebase Anonymous Auth user
@@ -55,73 +63,37 @@ export async function createUser(data: {
     const userCredential = await signInAnonymously(auth);
     const uid = userCredential.user.uid;
     console.log('✅ Auth user created, UID:', uid);
-    console.log('📱 Auth state:', {
-      uid: userCredential.user.uid,
-      isAnonymous: userCredential.user.isAnonymous,
-      providerId: userCredential.user.providerId
+
+    // 2. Call Cloud Function to create user document
+    console.log('☁️ Calling Cloud Function to create user document...');
+    const createUserDocument = httpsCallable(functions, 'createUserDocument');
+    
+    const result = await createUserDocument({
+      displayName: data.displayName,
+      email: data.email || undefined,
+      tenantId: data.tenantId,
+      consentGiven: data.consentGiven,
     });
 
-    // 2. Create user document
+    console.log('✅ Cloud Function response:', result.data);
+
+    // 3. Fetch the created user document
+    console.log('� Fetching created user document...');
     const userRef = doc(db, 'users', uid);
-    const now = new Date();
+    const userDoc = await getDoc(userRef);
 
-    // Build user object - only include email if provided (Firestore rejects undefined)
-    const user: User = {
-      id: uid,
-      tenantId: data.tenantId,
-      displayName: data.displayName,
-      consentGiven: data.consentGiven,
-      totalScore: 0,
-      totalSubmissions: 0,
-      eventsParticipated: 0,
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: now,
-      ...(data.email && { email: data.email }), // Only add email if provided
-    };
-
-    // Prepare data for Firestore (omit undefined values)
-    const userData: any = {
-      uid: uid, // Firestore rules expect 'uid' field
-      id: uid,
-      tenantId: data.tenantId,
-      displayName: data.displayName,
-      consentGiven: data.consentGiven,
-      totalScore: 0,
-      totalSubmissions: 0,
-      eventsParticipated: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
-    };
-
-    // Only add email if provided (Firestore rejects undefined)
-    if (data.email) {
-      userData.email = data.email;
+    if (!userDoc.exists()) {
+      throw new Error('User document was not created by Cloud Function');
     }
 
-    console.log('📄 Document to be created:', {
-      path: `users/${uid}`,
-      fields: Object.keys(userData),
-      uid: userData.uid,
-      id: userData.id,
-      tenantId: userData.tenantId,
-      hasEmail: !!userData.email
+    const userData = userDoc.data() as User;
+    console.log('✅ User created successfully:', {
+      uid,
+      displayName: userData.displayName,
+      hasEmail: !!userData.email,
     });
 
-    console.log('🔍 Auth check before setDoc:');
-    const currentUser = auth.currentUser;
-    console.log('Current user:', {
-      exists: !!currentUser,
-      uid: currentUser?.uid,
-      matchesDocId: currentUser?.uid === uid
-    });
-
-    console.log('💾 Attempting to write document...');
-    await setDoc(userRef, userData);
-
-    console.log('✅ User created successfully:', uid, data.email ? `with email: ${data.email}` : 'without email');
-    return user;
+    return userData;
   } catch (error) {
     console.error('❌ Error creating user:', error);
     
@@ -130,7 +102,7 @@ export async function createUser(data: {
       console.error('Error details:', {
         name: error.name,
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     }
     
@@ -139,7 +111,20 @@ export async function createUser(data: {
       console.error('Firebase error code:', (error as any).code);
     }
     
-    throw new Error('Failed to create user');
+    // Handle specific Cloud Function errors
+    if ((error as any).code === 'functions/unauthenticated') {
+      throw new Error('Authentication failed. Please try again.');
+    }
+    
+    if ((error as any).code === 'functions/already-exists') {
+      throw new Error('User profile already exists. Please reload the page.');
+    }
+    
+    if ((error as any).code === 'functions/invalid-argument') {
+      throw new Error('Invalid user data. Please check your inputs.');
+    }
+    
+    throw new Error('Failed to create user profile. Please try again.');
   }
 }
 

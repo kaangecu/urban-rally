@@ -1,19 +1,20 @@
 import {
   collection,
   doc,
-  setDoc,
   getDoc,
   getDocs,
   query,
   where,
-  updateDoc,
   increment,
   arrayUnion,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
 import { calculateDistance } from '../utils/geo.utils';
 import type { TaskSubmission, GeoLocation } from '../types/schema';
+import { updateMemberStats } from './teamMember.service';
+import { updateUserStats } from './user.service';
 
 /**
  * Verify if user is within GPS radius of task location
@@ -33,10 +34,12 @@ export function verifyGPSLocation(
 
 /**
  * Create a new task submission
+ * NOW TRACKS INDIVIDUAL USER AND UPDATES BOTH TEAM AND USER STATS
  */
 export async function createSubmission(
   taskId: string,
   teamId: string,
+  userId: string, // NEW: Who is submitting
   tenantId: string,
   eventId: string,
   data: {
@@ -61,6 +64,7 @@ export async function createSubmission(
       id: submissionId,
       taskId,
       teamId,
+      userId, // NEW: Track who submitted
       tenantId,
       eventId,
       ...(data.photoUrls && { photoUrls: data.photoUrls }),
@@ -74,49 +78,55 @@ export async function createSubmission(
       updatedAt: new Date(),
     };
 
-    await setDoc(submissionRef, submission);
+    // Use batch write for atomicity
+    const batch = writeBatch(db);
 
-    // Update team score and completed tasks
-    await updateTeamScore(teamId, taskId, data.points);
+    // 1. Create submission
+    batch.set(submissionRef, {
+      ...submission,
+      submittedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
 
-    return submissionId;
-  } catch (error) {
-    console.error('Error creating submission:', error);
-    throw new Error('Failed to create submission');
-  }
-}
-
-/**
- * Update team score and mark task as completed
- */
-async function updateTeamScore(
-  teamId: string,
-  taskId: string,
-  points: number
-): Promise<void> {
-  try {
-    const db = getFirebaseFirestore();
+    // 2. Update team (check if task already completed)
     const teamRef = doc(db, 'teams', teamId);
-
-    // Check if task is already completed
     const teamDoc = await getDoc(teamRef);
+    
     if (!teamDoc.exists()) {
       throw new Error('Team not found');
     }
 
     const team = teamDoc.data();
     if (team.completedTaskIds?.includes(taskId)) {
-      throw new Error('Task already completed');
+      throw new Error('Task already completed by this team');
     }
 
-    // Update team document
-    await updateDoc(teamRef, {
-      score: increment(points),
+    batch.update(teamRef, {
+      score: increment(data.points),
       completedTaskIds: arrayUnion(taskId),
       updatedAt: serverTimestamp(),
     });
+
+    await batch.commit();
+
+    // 3. Update team member stats (separate from batch to avoid conflicts)
+    await updateMemberStats(teamId, userId, {
+      scoreIncrement: data.points,
+      submissionId,
+      taskId,
+    });
+
+    // 4. Update user stats
+    await updateUserStats(userId, {
+      scoreIncrement: data.points,
+      submissionsIncrement: 1,
+    });
+
+    console.log('✅ Submission created:', { submissionId, userId, points: data.points });
+    return submissionId;
   } catch (error) {
-    console.error('Error updating team score:', error);
+    console.error('Error creating submission:', error);
     throw error;
   }
 }

@@ -82,18 +82,26 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       });
 
       // Create submission
-      await createSubmission(task.id, team.id, tenant.id, team.eventId, {
-        type: 'photo',
-        photoUrls: [photoUrl],
-        points: task.points,
-        submittedLocation: userLocation
-          ? {
-              lat: userLocation.coords.latitude,
-              lng: userLocation.coords.longitude,
-              accuracy: userLocation.coords.accuracy,
-            }
-          : undefined,
-      });
+      // TODO: After migration, replace team.uid with actual user.id from auth store
+      await createSubmission(
+        task.id, 
+        team.id, 
+        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        tenant.id, 
+        team.eventId, 
+        {
+          type: 'photo',
+          photoUrls: [photoUrl],
+          points: task.points,
+          submittedLocation: userLocation
+            ? {
+                lat: userLocation.coords.latitude,
+                lng: userLocation.coords.longitude,
+                accuracy: userLocation.coords.accuracy,
+              }
+            : undefined,
+        }
+      );
 
       setState('success');
       setTimeout(() => {
@@ -134,18 +142,26 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       });
 
       // Create submission
-      await createSubmission(task.id, team.id, tenant.id, team.eventId, {
-        type: 'video',
-        videoUrl,
-        points: task.points,
-        submittedLocation: userLocation
-          ? {
-              lat: userLocation.coords.latitude,
-              lng: userLocation.coords.longitude,
-              accuracy: userLocation.coords.accuracy,
-            }
-          : undefined,
-      });
+      // TODO: After migration, replace team.uid with actual user.id from auth store
+      await createSubmission(
+        task.id, 
+        team.id, 
+        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        tenant.id, 
+        team.eventId, 
+        {
+          type: 'video',
+          videoUrl,
+          points: task.points,
+          submittedLocation: userLocation
+            ? {
+                lat: userLocation.coords.latitude,
+                lng: userLocation.coords.longitude,
+                accuracy: userLocation.coords.accuracy,
+              }
+            : undefined,
+        }
+      );
 
       setState('success');
       setTimeout(() => {
@@ -239,15 +255,22 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       }
       
       // Correct answer - create submission
-      await createSubmission(task.id, team.id, tenant.id, team.eventId, {
-        type: 'text',
-        textResponse: String(answer),
-        points: pointsAwarded,
-        submittedLocation: userLocation
-          ? {
-              lat: userLocation.coords.latitude,
-              lng: userLocation.coords.longitude,
-              accuracy: userLocation.coords.accuracy,
+      // TODO: After migration, replace team.uid with actual user.id from auth store
+      await createSubmission(
+        task.id, 
+        team.id, 
+        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        tenant.id, 
+        team.eventId, 
+        {
+          type: 'text',
+          textResponse: String(answer),
+          points: pointsAwarded,
+          submittedLocation: userLocation
+            ? {
+                lat: userLocation.coords.latitude,
+                lng: userLocation.coords.longitude,
+                accuracy: userLocation.coords.accuracy,
             }
           : undefined,
       });

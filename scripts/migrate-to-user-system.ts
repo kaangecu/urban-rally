@@ -19,12 +19,12 @@
  * - Rollback capability
  * 
  * Usage:
- *   npm run migrate -- --dry-run          # Preview changes (safe)
- *   npm run migrate -- --execute          # Actually run migration
- *   npm run migrate -- --verify           # Verify migration success
- *   npm run migrate -- --rollback         # Rollback to backup
+ *   npm run migrate-users                 # Preview changes (safe)
+ *   npm run migrate-users:execute         # Actually run migration
+ *   npm run migrate-users:verify          # Verify migration success
  */
 
+import { config } from 'dotenv';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
@@ -42,7 +42,10 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Firebase config - replace with your actual config
+// Load environment variables from .env file
+config();
+
+// Firebase config - loaded from environment variables
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -51,6 +54,19 @@ const firebaseConfig = {
   messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.VITE_FIREBASE_APP_ID,
 };
+
+// Validate Firebase config
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Error: Firebase configuration is missing!');
+  console.error('Please ensure your .env file has the following variables:');
+  console.error('  - VITE_FIREBASE_API_KEY');
+  console.error('  - VITE_FIREBASE_AUTH_DOMAIN');
+  console.error('  - VITE_FIREBASE_PROJECT_ID');
+  console.error('  - VITE_FIREBASE_STORAGE_BUCKET');
+  console.error('  - VITE_FIREBASE_MESSAGING_SENDER_ID');
+  console.error('  - VITE_FIREBASE_APP_ID');
+  process.exit(1);
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -273,7 +289,19 @@ async function migrateTeam(
       collection(db, 'submissions'),
       where('teamId', '==', team.id)
     );
-    const submissionsSnapshot = await getDocs(submissionsQuery);
+    
+    let submissionsSnapshot;
+    try {
+      submissionsSnapshot = await getDocs(submissionsQuery);
+    } catch (error) {
+      // In dry-run mode, if we get permission errors, just estimate
+      if (dryRun) {
+        console.log(`  [DRY RUN] Would query submissions (skipped due to permissions)`);
+        result.submissionsUpdated = 0;
+        return result;
+      }
+      throw error;
+    }
 
     if (!dryRun && !submissionsSnapshot.empty) {
       const batch = writeBatch(db);
@@ -297,8 +325,9 @@ async function migrateTeam(
       console.log(`  ✓ Updated ${submissionIds.length} submissions with userId`);
       result.submissionsUpdated = submissionIds.length;
     } else {
-      console.log(`  [DRY RUN] Would update ${submissionsSnapshot.size} submissions`);
-      result.submissionsUpdated = submissionsSnapshot.size;
+      const count = submissionsSnapshot?.size || 0;
+      console.log(`  [DRY RUN] Would update ${count} submissions`);
+      result.submissionsUpdated = count;
     }
 
     return result;

@@ -48,7 +48,8 @@ export async function createUser(data: {
   try {
     const auth = getFirebaseAuth();
     const db = getFirebaseFirestore();
-    const functions = getFunctions();
+    // Specify europe-west3 region to match deployed function
+    const functions = getFunctions(undefined, 'europe-west3');
 
     console.log('🔵 Starting user creation process (via Cloud Function)...');
     console.log('📋 Input data:', {

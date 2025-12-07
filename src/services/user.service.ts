@@ -316,7 +316,8 @@ export async function userExists(userId: string): Promise<boolean> {
 
 /**
  * Get or create user
- * Useful for login flows where user might already exist
+ * For anonymous auth: Always creates a new user
+ * Email is optional and only used for notifications
  */
 export async function getOrCreateUser(data: {
   displayName: string;
@@ -333,18 +334,16 @@ export async function getOrCreateUser(data: {
   };
 }): Promise<User> {
   try {
-    // Try to find existing user by email
-    if (data.email) {
-      const existingUser = await getUserByEmail(data.email, data.tenantId);
-      if (existingUser) {
-        // Update last login
-        await updateLastLogin(existingUser.id);
-        console.log('✅ Existing user found:', existingUser.id);
-        return existingUser;
-      }
-    }
-
-    // Create new user
+    // For anonymous auth, we always create a new user
+    // Email lookup is not possible before authentication due to security rules
+    // Each anonymous session gets a new user ID
+    
+    console.log('Creating new user with:', {
+      displayName: data.displayName,
+      hasEmail: !!data.email,
+      tenantId: data.tenantId
+    });
+    
     return await createUser(data);
   } catch (error) {
     console.error('Error in getOrCreateUser:', error);

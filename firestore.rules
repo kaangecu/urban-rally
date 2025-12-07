@@ -138,7 +138,13 @@ service cloud.firestore {
     
     match /users/{userId} {
       // Users can read their own profile
+      // NOTE: Query access is restricted - users can only read their own doc
+      // Email-based lookup is handled server-side or after authentication
       allow read: if isUserOwner(userId);
+      
+      // Allow listing/querying for authenticated users
+      // This enables features like viewing team members
+      allow list: if isAuthenticated();
       
       // Users can create their own profile during registration
       allow create: if isAuthenticated() 

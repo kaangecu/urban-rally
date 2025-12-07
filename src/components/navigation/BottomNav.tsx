@@ -1,8 +1,9 @@
 import React from 'react';
+import { Users } from 'lucide-react';
 
 interface BottomNavProps {
-  viewMode: 'list' | 'map';
-  onViewModeChange: (mode: 'list' | 'map') => void;
+  viewMode: 'list' | 'map' | 'team';
+  onViewModeChange: (mode: 'list' | 'map' | 'team') => void;
   teamScore: number;
   completedTasks: number;
 }
@@ -82,6 +83,30 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             }`}
           >
             Map
+          </span>
+        </button>
+
+        {/* Team View Button */}
+        <button
+          onClick={() => onViewModeChange('team')}
+          className={`relative flex flex-col items-center gap-1 transition-colors ${
+            viewMode === 'team' ? 'text-purple-400' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          {viewMode === 'team' && (
+            <div className="absolute -top-4 w-8 h-8 bg-purple-500/40 rounded-full blur-lg"></div>
+          )}
+          <Users
+            className={`w-6 h-6 ${
+              viewMode === 'team' ? 'drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : ''
+            }`}
+          />
+          <span
+            className={`text-[9px] font-bold uppercase ${
+              viewMode === 'team' ? 'drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]' : ''
+            }`}
+          >
+            Team
           </span>
         </button>
 

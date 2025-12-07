@@ -5,12 +5,13 @@ import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
+import { TeamMembersTab } from './features/team/TeamMembersTab';
 import { BottomNav } from './components/navigation/BottomNav';
 import { applyTheme, isCyberpunkTheme } from './utils/theme';
 
 function App() {
   const { isAuthenticated, team, tenant, logout } = useAuthStore();
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'team'>('list');
   
   // Real-time sync team data with Firestore
   useTeamSync();
@@ -81,10 +82,12 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 py-6 pb-32">
         {viewMode === 'list' ? (
           <TaskList />
-        ) : (
+        ) : viewMode === 'map' ? (
           <div className="h-[calc(100vh-200px)] -mx-4 -my-6">
             <GameMap />
           </div>
+        ) : (
+          <TeamMembersTab />
         )}
       </main>
 

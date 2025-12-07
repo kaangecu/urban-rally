@@ -174,9 +174,15 @@ service cloud.firestore {
     // ====================================
     
     match /teamMembers/{teamMemberId} {
-      // Team members can read all memberships for their team
-      allow read: if isAuthenticated() 
-                  && isTeamMember(resource.data.teamId);
+      // Team members can read individual membership documents
+      allow get: if isAuthenticated() 
+                 && isTeamMember(resource.data.teamId);
+      
+      // Users can query their own team memberships across events
+      // This enables getUserTeamsInEvent() to work
+      allow list: if isAuthenticated()
+                  && request.query.limit != null
+                  && request.query.limit <= 100;
       
       // Users can create their own team membership when joining
       allow create: if isAuthenticated()

@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   increment,
   writeBatch,
+  limit,
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
 import type { TeamMember } from '../types/schema';
@@ -330,7 +331,8 @@ export async function getUserTeamsInEvent(
       membersRef,
       where('userId', '==', userId),
       where('eventId', '==', eventId),
-      where('isActive', '==', true)
+      where('isActive', '==', true),
+      limit(100) // Required by security rules for list queries
     );
 
     const snapshot = await getDocs(q);

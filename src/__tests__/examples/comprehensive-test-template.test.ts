@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '../__tests__/setup/test-utils';
-import { validateQuizAnswer } from './quizValidation';
-import { mockTaskQuiz, createMockPosition } from '../__tests__/setup/firebase-mock';
+import { validateQuizAnswer } from '../../utils/quizValidation';
+import { createMockPosition, mockTaskQuiz } from '../setup/firebase-mock';
+import { waitFor } from '@testing-library/react';
 
 // ============================================================================
 // EXAMPLE 1: Testing a Pure Function (Utils)

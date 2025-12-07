@@ -49,11 +49,11 @@ export async function createUser(data: {
     const userRef = doc(db, 'users', uid);
     const now = new Date();
 
+    // Build user object - only include email if provided (Firestore rejects undefined)
     const user: User = {
       id: uid,
       tenantId: data.tenantId,
       displayName: data.displayName,
-      email: data.email,
       consentGiven: data.consentGiven,
       totalScore: 0,
       totalSubmissions: 0,
@@ -61,16 +61,32 @@ export async function createUser(data: {
       createdAt: now,
       updatedAt: now,
       lastLoginAt: now,
+      ...(data.email && { email: data.email }), // Only add email if provided
     };
 
-    await setDoc(userRef, {
-      ...user,
+    // Prepare data for Firestore (omit undefined values)
+    const userData: any = {
+      uid: uid, // Firestore rules expect 'uid' field
+      id: uid,
+      tenantId: data.tenantId,
+      displayName: data.displayName,
+      consentGiven: data.consentGiven,
+      totalScore: 0,
+      totalSubmissions: 0,
+      eventsParticipated: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
-    });
+    };
 
-    console.log('✅ User created:', uid);
+    // Only add email if provided (Firestore rejects undefined)
+    if (data.email) {
+      userData.email = data.email;
+    }
+
+    await setDoc(userRef, userData);
+
+    console.log('✅ User created:', uid, data.email ? `with email: ${data.email}` : 'without email');
     return user;
   } catch (error) {
     console.error('Error creating user:', error);

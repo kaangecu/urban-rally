@@ -45,12 +45,13 @@ export async function createUser(data: {
     ipAddress?: string;
   };
 }): Promise<User> {
-  try {
-    const auth = getFirebaseAuth();
-    const db = getFirebaseFirestore();
-    // Specify europe-west3 region to match deployed function
-    const functions = getFunctions(undefined, 'europe-west3');
+  const auth = getFirebaseAuth();
+  const db = getFirebaseFirestore();
+  // Specify europe-west3 region to match deployed function
+  const functions = getFunctions(undefined, 'europe-west3');
+  let uid: string | undefined;
 
+  try {
     console.log('🔵 Starting user creation process (via Cloud Function)...');
     console.log('📋 Input data:', {
       displayName: data.displayName,
@@ -62,7 +63,7 @@ export async function createUser(data: {
     // 1. Create Firebase Anonymous Auth user
     console.log('🔐 Creating anonymous auth user...');
     const userCredential = await signInAnonymously(auth);
-    const uid = userCredential.user.uid;
+    uid = userCredential.user.uid;
     console.log('✅ Auth user created, UID:', uid);
 
     // 2. Call Cloud Function to create user document
@@ -118,7 +119,32 @@ export async function createUser(data: {
     }
     
     if ((error as any).code === 'functions/already-exists') {
-      throw new Error('User profile already exists. Please reload the page.');
+      // User document already exists - fetch and return it instead of failing
+      console.log('⚠️ User already exists, fetching existing document...');
+      
+      if (!uid) {
+        throw new Error('Cannot fetch existing user without UID');
+      }
+      
+      try {
+        const userRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          console.log('✅ Fetched existing user:', {
+            uid,
+            displayName: userData.displayName,
+          });
+          return userData;
+        }
+        
+        // User should exist but doesn't - this is an inconsistent state
+        throw new Error('User profile exists in auth but not in database. Please contact support.');
+      } catch (fetchError) {
+        console.error('Failed to fetch existing user:', fetchError);
+        throw new Error('User profile already exists. Please reload the page.');
+      }
     }
     
     if ((error as any).code === 'functions/invalid-argument') {

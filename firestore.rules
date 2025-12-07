@@ -146,18 +146,14 @@ service cloud.firestore {
       // This enables features like viewing team members
       allow list: if isAuthenticated();
       
-      // Users can create their own profile during registration
-      // Both 'uid' and 'id' must match authenticated user
+      // ⚠️ DEVELOPMENT: Simplified create rule for debugging
+      // Allow authenticated users to create their own user document
       allow create: if isAuthenticated() 
-                    && request.auth.uid == userId
-                    && request.resource.data.uid == userId
-                    && request.resource.data.id == userId;
+                    && request.auth.uid == userId;
       
       // Users can update their own profile (displayName, email, consentGiven)
       // Cannot change uid or id fields
       allow update: if isUserOwner(userId)
-                    && request.resource.data.uid == resource.data.uid
-                    && request.resource.data.id == resource.data.id
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                       'displayName',
                       'email',

@@ -41,9 +41,25 @@ export async function createUser(data: {
     const auth = getFirebaseAuth();
     const db = getFirebaseFirestore();
 
+    console.log('🔵 Starting user creation process...');
+    console.log('📋 Input data:', {
+      displayName: data.displayName,
+      hasEmail: !!data.email,
+      email: data.email,
+      tenantId: data.tenantId,
+      consentGiven: data.consentGiven
+    });
+
     // 1. Create Firebase Anonymous Auth user
+    console.log('🔐 Creating anonymous auth user...');
     const userCredential = await signInAnonymously(auth);
     const uid = userCredential.user.uid;
+    console.log('✅ Auth user created, UID:', uid);
+    console.log('📱 Auth state:', {
+      uid: userCredential.user.uid,
+      isAnonymous: userCredential.user.isAnonymous,
+      providerId: userCredential.user.providerId
+    });
 
     // 2. Create user document
     const userRef = doc(db, 'users', uid);
@@ -84,12 +100,45 @@ export async function createUser(data: {
       userData.email = data.email;
     }
 
+    console.log('📄 Document to be created:', {
+      path: `users/${uid}`,
+      fields: Object.keys(userData),
+      uid: userData.uid,
+      id: userData.id,
+      tenantId: userData.tenantId,
+      hasEmail: !!userData.email
+    });
+
+    console.log('🔍 Auth check before setDoc:');
+    const currentUser = auth.currentUser;
+    console.log('Current user:', {
+      exists: !!currentUser,
+      uid: currentUser?.uid,
+      matchesDocId: currentUser?.uid === uid
+    });
+
+    console.log('💾 Attempting to write document...');
     await setDoc(userRef, userData);
 
-    console.log('✅ User created:', uid, data.email ? `with email: ${data.email}` : 'without email');
+    console.log('✅ User created successfully:', uid, data.email ? `with email: ${data.email}` : 'without email');
     return user;
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('❌ Error creating user:', error);
+    
+    // Enhanced error logging
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    
+    // Log Firebase-specific error details
+    if ((error as any).code) {
+      console.error('Firebase error code:', (error as any).code);
+    }
+    
     throw new Error('Failed to create user');
   }
 }

@@ -69,9 +69,8 @@ service cloud.firestore {
                   || (!isAuthenticated() && request.query != null)
                   || true; // ⚠️ DEVELOPMENT: Open read access
       
-      // Only team owner can update team settings
+      // Team owner can update team settings
       // CANNOT change tenantId, eventId, or accessCode (prevent hijacking)
-      // CAN update: teamDisplayName, maxMembers, ownerUserId (for ownership transfer)
       allow update: if isTeamOwner(teamId)
                     && request.resource.data.tenantId == resource.data.tenantId
                     && request.resource.data.eventId == resource.data.eventId
@@ -83,6 +82,7 @@ service cloud.firestore {
                         'maxMembers',
                         'ownerUserId',
                         'memberUserIds',
+                        'memberCount',
                         'score',
                         'completedTaskIds',
                         'inventory',
@@ -91,6 +91,19 @@ service cloud.firestore {
                         'updatedAt'
                       ])
                     );
+      
+      // Users can add themselves to team (join team)
+      // Only allowed to update: memberUserIds (add self), memberCount, updatedAt
+      allow update: if isAuthenticated()
+                    && !isTeamMember(teamId)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'memberUserIds',
+                      'memberCount',
+                      'updatedAt'
+                    ])
+                    && request.resource.data.memberUserIds.hasAll(resource.data.memberUserIds)
+                    && request.resource.data.memberUserIds.hasOnly([request.auth.uid].toSet().union(resource.data.memberUserIds.toSet()))
+                    && request.resource.data.memberCount == resource.data.memberCount + 1;
       
       // ⚠️ DEVELOPMENT: Allow creates for test data setup
       // TODO: Change to 'if false' in production
@@ -185,9 +198,11 @@ service cloud.firestore {
                   && request.query.limit <= 100;
       
       // Users can create their own team membership when joining
+      // Note: Cannot check isTeamMember because user is added to team in same batch write
       allow create: if isAuthenticated()
                     && request.auth.uid == request.resource.data.userId
-                    && isTeamMember(request.resource.data.teamId);
+                    && request.resource.data.keys().hasAll(['teamId', 'userId', 'eventId', 'tenantId'])
+                    && request.resource.data.userId == request.auth.uid;
       
       // Team members can update their own membership record (personal score)
       allow update: if isAuthenticated()

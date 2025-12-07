@@ -1,0 +1,114 @@
+--- a/src/features/auth/TeamCodeLogin.tsx
++++ b/src/features/auth/TeamCodeLogin.tsx
+@@ -17,8 +17,10 @@ import {
+   Trophy
+ } from 'lucide-react';
+ import { useAuthStore } from '../../store/authStore';
+-import { getTeamByAccessCode, linkTeamToUser, updateTeamProfile } from '../../services/team.service';
++import { getTeamByAccessCode, isTeamFull } from '../../services/team.service';
+ import { getTenantById, applyTenantTheme } from '../../services/tenant.service';
++import { getOrCreateUser } from '../../services/user.service';
++import { addUserToTeam } from '../../services/teamMember.service';
+ import { LegalModal } from '../../components/legal/LegalModal';
+ import { TermsOfService } from '../../components/legal/TermsOfService';
+ import { PrivacyPolicy } from '../../components/legal/PrivacyPolicy';
+@@ -63,7 +65,7 @@ export function TeamCodeLogin() {
+   const [showTerms, setShowTerms] = useState(false);
+   const [showPrivacy, setShowPrivacy] = useState(false);
+ 
+-  const { setTeam, setTenant, setError, setLoading, error, isLoading } = useAuthStore();
++  const { setUser, setTeam, setTenant, setError, setLoading, error, isLoading } = useAuthStore();
+ 
+   // Validation for each step
+   const validateStep = (step: number): boolean => {
+@@ -147,8 +149,15 @@ export function TeamCodeLogin() {
+         setError('This team has been deactivated. Contact your organizer.');
+         return;
+       }
++
++      // 3. Check if team is full
++      const teamFull = await isTeamFull(team.id);
++      if (teamFull) {
++        setError(`This team is full (max ${team.maxMembers || 50} members). Contact your organizer.`);
++        return;
++      }
+       
+-      // 3. Get tenant/organization info
++      // 4. Get tenant/organization info
+       const tenant = await getTenantById(team.tenantId);
+       
+       if (!tenant || !tenant.isActive) {
+@@ -156,43 +165,50 @@ export function TeamCodeLogin() {
+         return;
+       }
+       
+-      // 4. Link team to Firebase Anonymous Auth
+-      await linkTeamToUser(team.id);
+-      
+-      // 5. Update team profile with user data and GDPR consent
+-      // Build profile data - conditionally include email only if provided
+-      const baseProfileData = {
++      // 5. Create or get User document (this also creates Firebase Auth user)
++      const user = await getOrCreateUser({
+         displayName: formData.displayName,
++        email: formData.email || undefined,
++        tenantId: tenant.id,
+         consentGiven: {
+           terms: true,
+           privacy: true,
+@@ -201,33 +187,36 @@ export function TeamCodeLogin() {
+           termsAcceptedAt: new Date(),
+           privacyAcceptedAt: new Date(),
+         },
+-      };
+-      
+-      // Conditionally add email to create proper TypeScript type
+-      const profileData = formData.email && formData.email.trim() !== ''
+-        ? { ...baseProfileData, email: formData.email }
+-        : baseProfileData;
++      });
+       
+-      await updateTeamProfile(team.id, profileData);
++      // 6. Add user to team (creates TeamMember record)
++      await addUserToTeam(team.id, user.id, 'member');
+       
+-      // 6. Apply tenant branding
++      // 7. Apply tenant branding
+       applyTenantTheme(tenant);
+       
+-      // 7. Update auth store
+-      const updatedTeam = {
+-        ...team,
+-        displayName: formData.displayName,
+-        ...(formData.email && formData.email.trim() !== '' && { email: formData.email }),
+-      };
+-      
+-      setTenant(tenant);
+-      setTeam(updatedTeam);
++      // 8. Update auth store with user, team, and tenant
++      setUser(user);
++      setTenant(tenant);
++      setTeam(team);
+       
+-      console.log('✅ Team logged in with profile:', formData.displayName);
++      console.log('✅ User logged in:', { userId: user.id, teamId: team.id, displayName: user.displayName });
+       
+     } catch (err) {
+       console.error('Login error:', err);
+-      setError('Something went wrong. Please try again.');
++      
++      // Handle specific error cases
++      if (err instanceof Error) {
++        if (err.message.includes('already a member')) {
++          setError('You are already a member of this team!');
++        } else if (err.message.includes('Team is full')) {
++          setError('This team has reached maximum capacity.');
++        } else {
++          setError(err.message);
++        }
++      } else {
++        setError('Something went wrong. Please try again.');
++      }
+     } finally {
+       setIsSubmitting(false);
+       setLoading(false);

@@ -18,7 +18,7 @@ interface TaskSubmissionProps {
 type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 'failed';
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
-  const { team, tenant } = useAuthStore();
+  const { user, team, tenant } = useAuthStore();
   const [state, setState] = useState<SubmissionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -66,7 +66,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   }, [task]);
 
   const handlePhotoCapture = async (file: File) => {
-    if (!team || !tenant) {
+    if (!team || !tenant || !user) {
       setError('Missing authentication data');
       return;
     }
@@ -126,7 +126,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   };
 
   const handleVideoCapture = async (file: File) => {
-    if (!team || !tenant) {
+    if (!team || !tenant || !user) {
       setError('Missing authentication data');
       return;
     }
@@ -142,11 +142,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       });
 
       // Create submission
-      // TODO: After migration, replace team.uid with actual user.id from auth store
       await createSubmission(
         task.id, 
         team.id, 
-        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        user.id, // Use actual user ID from auth store
         tenant.id, 
         team.eventId, 
         {
@@ -186,7 +185,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   };
 
   const handleQuizSubmit = async (answer: string | number) => {
-    if (!team || !tenant) {
+    if (!team || !tenant || !user) {
       setError('Missing authentication data');
       return;
     }
@@ -255,11 +254,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       }
       
       // Correct answer - create submission
-      // TODO: After migration, replace team.uid with actual user.id from auth store
       await createSubmission(
         task.id, 
         team.id, 
-        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        user.id, // Use actual user ID from auth store
         tenant.id, 
         team.eventId, 
         {

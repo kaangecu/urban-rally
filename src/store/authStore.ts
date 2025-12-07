@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Team, Tenant } from '../types/schema';
+import type { Team, Tenant, User } from '../types/schema';
 
 interface AuthState {
   // State
+  user: User | null; // NEW: Current authenticated user
   team: Team | null;
   tenant: Tenant | null;
   isAuthenticated: boolean;
@@ -11,6 +12,7 @@ interface AuthState {
   error: string | null;
 
   // Actions
+  setUser: (user: User) => void; // NEW: Set current user
   setTeam: (team: Team) => void;
   setTenant: (tenant: Tenant) => void;
   setError: (error: string | null) => void;
@@ -22,6 +24,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       // Initial state
+      user: null, // NEW
       team: null,
       tenant: null,
       isAuthenticated: false,
@@ -29,6 +32,12 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       // Actions
+      setUser: (user) => // NEW
+        set({
+          user,
+          error: null,
+        }),
+
       setTeam: (team) =>
         set({
           team,
@@ -56,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () =>
         set({
+          user: null, // NEW: Clear user on logout
           team: null,
           tenant: null,
           isAuthenticated: false,
@@ -66,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'urban-rally-auth', // Storage key
       partialize: (state) => ({
+        user: state.user, // NEW: Persist user
         team: state.team,
         tenant: state.tenant,
         isAuthenticated: state.isAuthenticated,

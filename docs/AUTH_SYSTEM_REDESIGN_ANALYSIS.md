@@ -1307,7 +1307,923 @@ match /events/{eventId} {
 
 ---
 
-**Document Version:** 1.0  
+## 🎬 Real-World Scenario Analysis
+
+### Overview
+
+This section analyzes two concrete event scenarios to determine the optimal authentication and team joining model. Based on actual use cases, we evaluate how different auth approaches perform under real-world constraints.
+
+---
+
+### **Scenario 1: Large Corporate/Community Event (200 People)**
+
+#### Event Profile
+- **Participants:** 200 people
+- **Location:** Designated starting point (park, plaza, venue)
+- **Team Formation:** Self-organized (friends want same team)
+- **Team Size:** 10-15 people per team (13-20 teams needed)
+- **Time Constraint:** Must start event within 15-20 minutes
+- **Late Arrivals:** 10-20% arrive after event starts
+- **Dynamic Requirement:** Organizers must add teams on-the-fly if needed
+
+#### User Journey
+```
+T=0:  200 people arrive at starting point
+T=0:  Organizer: "Split into teams of 10-15 people"
+T=1:  Friends group together, look for team options
+T=5:  People start joining teams
+T=15: Event should start (waiting for everyone to join)
+T=30: Late arrival shows up, needs to join quickly
+```
+
+#### Critical Requirements
+- ⚡ **Speed:** Cannot have 200 people spend >30 seconds each
+- 👥 **Self-Organization:** Users need to see team names/sizes
+- 📱 **Mobile-First:** Everyone on phones, standing up
+- 🔄 **Dynamic:** Teams created ad-hoc, not all pre-planned
+- ⏰ **Late Joins:** Latecomers can't hold up event
+- 🤝 **Friend Coordination:** Groups of 3-8 friends want same team
+
+---
+
+### **Scenario 2: Tourist Groups (Variable Sizes)**
+
+#### Event Profile
+- **Participants:** 50-100 people in pre-existing groups
+- **Group Sizes:** 5-20 people per group
+- **Team Formation:** Organizer-controlled pairing
+- **Example:** Group A (8 people) + Group B (7 people) = Team 1 (15 people)
+- **Time Constraint:** Lower pressure, groups arrive staggered
+- **Language:** International (English, German, Spanish, Chinese, etc.)
+- **Organizer Role:** Active (assigns groups to teams)
+
+#### User Journey
+```
+T=0:   Group A (8 people) arrives at meeting point
+T=0:   Organizer: "You're Team 1, please join"
+T=1:   All 8 people join Team 1
+T=2:   Ready to start
+---
+T=10:  Group B (5 people) arrives
+T=10:  Organizer: "You're also Team 1" (pairing with Group A)
+T=11:  All 5 join, now Team 1 has 13 people
+T=12:  Start exploration
+```
+
+#### Critical Requirements
+- 🧩 **Flexibility:** Organizer control over team composition
+- 🌍 **Language-Agnostic:** Visual/QR codes better than text
+- 🎯 **Pre-Planning Possible:** Organizer can create teams in advance
+- 📊 **Group Tracking:** See which groups joined which teams
+- ⚡ **Speed per Group:** 1-2 minutes to get entire group onboarded
+
+---
+
+## 🔍 Auth Model Evaluation for Scenarios
+
+### **Option A: Current Anonymous Auth + Team Codes**
+
+#### Implementation
+```
+1. Organizer creates teams with codes (TEAM-RED, TEAM-BLUE, etc.)
+2. Displays codes on screen/poster/whiteboard
+3. Users: Open app → Enter code → Join team
+4. Late arrivals: Get code from organizer → Join
+```
+
+#### **Scenario 1 (200 people) Performance:**
+
+**Time Estimate:**
+- Per person: 5 seconds (open app, type code, join)
+- 200 people sequentially: 1,000 seconds = **16.7 minutes**
+- 200 people parallel (realistic): **15-25 minutes**
+
+**Pros ✅**
+- Fast per-person (5 seconds)
+- No registration required
+- Works offline (codes cached locally)
+- Late arrivals join instantly (just need code)
+- Proven to work (current system)
+
+**Cons ❌**
+- **Visibility Problem:** Users can't see team sizes/members
+  - Result: Unbalanced teams (one has 25, another has 5)
+  - No way to know if friends are on a team before joining
+- **Code Distribution Bottleneck:** How do 200 people see codes simultaneously?
+  - Solutions: Print posters, project on screen, WhatsApp groups
+  - Still causes crowding around poster/screen
+- **Self-Organization Friction:** Friends must coordinate outside app
+  - "Hey everyone, let's join TEAM-RED!" (via verbal agreement)
+  - If one friend joins wrong team, others have no way to find them
+- **No Team Browser:** Can't explore options before committing
+- **Organizer Workload:** Must create all teams in advance
+  - If need more teams mid-event: Create → Share code → Announce
+  - Manual process (not scalable)
+
+**Real-World Flow:**
+```
+T=0:  Organizer projects 15 team codes on screen
+      TEAM-RED: ABC123
+      TEAM-BLUE: DEF456
+      ... (15 teams)
+      
+T=5:  First 50 people crowd around screen, typing codes
+      Some typos: "ABC132" → "Team not found" error
+      
+T=10: TEAM-RED reaches 20 people (no indicator)
+      Person joins RED, sees 20 members, too many
+      Leaves team, tries BLUE
+      
+T=15: 180/200 people joined
+      20 people confused about which team to join
+      
+T=20: Organizer realizes need 2 more teams
+      Creates TEAM-GOLD (GHI789), TEAM-SILVER (JKL012)
+      Announces: "New teams! GOLD and SILVER codes on screen"
+      
+T=22: Remaining 20 people join
+T=25: Event starts (10 min delay)
+```
+
+**Verdict:** ⚠️ **Works but suboptimal.** 15-25 min is acceptable but creates bottlenecks and poor self-organization.
+
+---
+
+#### **Scenario 2 (Tourist Groups) Performance:**
+
+**Time Estimate:**
+- Per group (8 people): 8 × 5 seconds = **40 seconds**
+- 10 groups: 400 seconds = **6-7 minutes total**
+
+**Pros ✅**
+- Simple: Organizer says "Team code is XYZ123"
+- Each person enters code independently
+- Works for all group sizes
+
+**Cons ❌**
+- **Redundant:** If organizer assigns teams, why enter code manually?
+  - Better: Organizer adds users directly
+- **Manual:** Every person in group types same code
+  - 20-person group = 20 × 5 sec = 100 seconds (1.7 minutes)
+- **Error-Prone:** Typos cause failed joins
+  - Tourist: "Was it ABC123 or ACB123?"
+
+**Real-World Flow:**
+```
+T=0:  Group A (8 people) arrives
+T=0:  Organizer: "You're Team 1, code is RED2025"
+T=1:  Person 1 opens app, types RED2025, joins
+T=2:  Person 2 types RED2025, joins
+      ...
+T=8:  All 8 joined (some had typos, retried)
+```
+
+**Verdict:** ⚠️ **Works but inefficient.** Manual code entry for each person is slow. QR codes would be 5x faster.
+
+---
+
+### **Option B: Email/Password Authentication**
+
+#### Implementation
+```
+1. User: Register (email + password) → Verify email
+2. Login → Browse teams → Join team
+3. Late arrivals: Register → Verify → Join
+```
+
+#### **Scenario 1 (200 people) Performance:**
+
+**Time Estimate:**
+- Per person registration: 60 seconds (email, password, verify)
+- 200 people sequentially: 12,000 seconds = **3.3 hours**
+- 200 people parallel (realistic): **60-90 minutes**
+
+**Why So Slow:**
+```
+Person 1:
+T=0:  Opens app, sees "Create Account"
+T=10: Typing email on mobile keyboard (slow)
+T=20: Typing password (must meet requirements: 8 chars, uppercase, number)
+T=25: "Password too weak" error, retypes
+T=30: Submits registration
+T=35: "Check your email for verification"
+T=40: Opens Gmail app, searches for email
+T=45: Not in inbox, checks spam folder
+T=50: Finds email, clicks verification link
+T=55: Returns to app, now logged in
+T=60: Browses teams, joins TEAM-RED
+---
+Meanwhile: 199 people waiting, checking phones, frustrated
+```
+
+**Pros ✅**
+- Users can see team sizes/members (prevents imbalance)
+- Friends can search for each other in app
+- Better analytics (track who joined, completion rates)
+- Persistent user identity (useful for future events)
+
+**Cons ❌**
+- ⏰ **Too Slow:** 60-90 minutes for 200 people (UNACCEPTABLE)
+- 📱 **Mobile UX Nightmare:** Typing email/password while standing
+  - Small screen, autocorrect issues, password requirements
+- 📧 **Email Verification Delay:** Each person waits 30-60 sec for email
+  - If 200 people register simultaneously: Email service throttling
+  - Spam filter issues (Gmail flags verification emails)
+- 🚫 **Blockers:** Forgot password, typo in email, wrong email domain
+  - "I can't remember my password!" → Reset flow → More delay
+- 😤 **User Frustration:** "Why do I need to register for a scavenger hunt?"
+  - High abandonment rate (30-40% drop off at registration)
+- 🎯 **Event Start Delay:** Organizer can't start event until everyone joins
+  - Options: Start without full teams (unfair) OR wait 90 min (unacceptable)
+
+**Real-World Flow:**
+```
+T=0:   Organizer: "Everyone, download the app and register"
+T=5:   50 people start registering
+T=10:  20 people registered, 30 stuck on email verification
+T=15:  "I didn't get the email!" complaints start
+T=20:  Organizer troubleshooting: "Check spam folder"
+T=30:  80 people registered, 120 still waiting
+T=45:  Frustrated users: "Can we just start without the app?"
+T=60:  120 people registered, 80 gave up
+T=90:  Organizer gives up, starts event with incomplete teams
+```
+
+**Verdict:** ❌ **DOES NOT WORK for Scenario 1.** Completely impractical for high-volume, time-sensitive events.
+
+---
+
+#### **Scenario 2 (Tourist Groups) Performance:**
+
+**Time Estimate:**
+- Per group (8 people): 8 × 60 sec = **8 minutes**
+- 10 groups: **80 minutes total** (staggered arrivals)
+
+**Cons ❌**
+- **Too Slow:** 8 minutes per group is unacceptable
+  - Groups want to start exploring, not register
+- **Language Barriers:** UI in English, tourists speak Spanish/Chinese
+  - Form fields confusing ("Confirm Password" = ?)
+- **Connectivity Issues:** Tourists may not have roaming data
+  - Can't receive verification emails without internet
+- **Support Burden:** "I can't log in" × 50 people × 5 languages
+  - Organizer becomes tech support (not their role)
+
+**Real-World Flow:**
+```
+T=0:   Group A (8 Spanish tourists) arrives
+T=0:   Organizer: "Please register in the app"
+T=1:   Tourist 1: "¿Qué es 'Confirm Password'?" (What is confirm password?)
+T=3:   Tourist 2: "No tengo internet" (I don't have internet)
+T=5:   Tourist 3 registers, waits for email, doesn't arrive
+T=10:  Organizer frustrated, trying to help 8 people register
+T=20:  Still not done, other groups waiting behind
+```
+
+**Verdict:** ❌ **DOES NOT WORK for Scenario 2.** Language barriers, connectivity issues, and support burden make this impractical.
+
+---
+
+### **Option C: Hybrid (Anonymous + Optional Accounts)**
+
+#### Implementation
+```
+1. User: Choose "Join as Guest" (anonymous, instant)
+2. Enter team code OR browse teams → Join
+3. After event: "Create account to save progress" (optional)
+```
+
+#### **Scenario 1 & 2 Performance:**
+
+**Pros ✅**
+- Same speed as Option A (15-25 min for Scenario 1)
+- No forced registration (preserves low barrier)
+- Upgrade path for engaged users
+- Best of both worlds (speed + optional persistence)
+
+**Cons ❌**
+- Same visibility issues as Option A (can't see team sizes before joining)
+- Doesn't solve self-organization problem
+- Account creation still slow if user chooses to register
+
+**Verdict:** ✅ **Works for both scenarios** (equivalent to current system). Better than email/password but doesn't solve core issues.
+
+---
+
+### **Option D: QR Code-Based Team Joining** ⭐
+
+#### Implementation
+```
+1. Organizer creates teams in dashboard
+2. Each team gets a unique QR code (auto-generated)
+3. Displays QR codes: Project on screen, print posters, show on tablet
+4. Users: Open app → Camera opens → Scan QR → Auto-join team (no typing)
+```
+
+#### **Scenario 1 (200 people) Performance:**
+
+**Time Estimate:**
+- Per person: 2-3 seconds (QR scan + auto-join)
+- 200 people: 200 × 3 sec = 600 seconds = **10 minutes**
+
+**Pros ✅**
+- ⚡ **Fastest:** 2-3 sec per person (vs 5 sec typing, 60 sec email)
+- 🎯 **Visual:** Users see team names on screen, scan the one they want
+- 👥 **Self-Organization:** Friends agree "Let's scan TEAM-RED together"
+  - All friends scan same QR in 5 seconds (parallel)
+- 📱 **Mobile-Native:** Built-in camera, no keyboard needed
+- 🌐 **Works Offline:** QR encodes team ID, no network needed for scan
+- 🔄 **Dynamic:** Organizer creates new team → QR generated → Display instantly
+- 🚫 **No Typos:** QR scan is error-free (vs typing codes)
+- 🎨 **Professional:** QR codes look polished (vs handwritten codes)
+
+**Cons ❌**
+- **Requires Prep:** Organizer must print/display QR codes
+  - Mitigation: App generates QR codes automatically, organizer projects on screen
+  - Or print PDF with all QR codes (5 min prep time)
+- **Screen Size:** If projecting, QR must be large enough to scan from distance
+  - Mitigation: Generate high-contrast QR codes, test scanability
+
+**Real-World Flow:**
+```
+T=0:  Organizer opens dashboard → "Generate QR Codes"
+      App creates PDF with 15 QR codes (one per team)
+      Projects PDF on large screen at starting point
+      
+T=1:  200 people arrive, see screen with QR codes
+      Each QR labeled: "TEAM-RED", "TEAM-BLUE", etc.
+      
+T=2:  Group of 5 friends: "Let's join TEAM-RED"
+      All 5 walk to screen, scan RED QR code
+      
+T=3:  All 5 auto-joined TEAM-RED (no typing, no confirmation)
+      App shows: "You're on TEAM-RED! 5 members"
+      
+T=5:  100 people joined (fast, organized)
+      Teams filling up evenly (users can see QR labels)
+      
+T=8:  Organizer notices TEAM-RED has 22 people (too many)
+      Creates new team: TEAM-PINK
+      Projects new QR code on screen
+      
+T=9:  Announces: "New team available! Join PINK if you haven't yet"
+      Remaining 30 people scan PINK QR
+      
+T=12: All 200 people joined
+T=15: Event starts (on time!)
+```
+
+**Verdict:** ✅ **BEST OPTION for Scenario 1.** 10-15 min total time, smooth experience, professional appearance.
+
+---
+
+#### **Scenario 2 (Tourist Groups) Performance:**
+
+**Time Estimate:**
+- Per group (8 people): 8 × 3 sec = **24 seconds**
+- 10 groups: **4 minutes total**
+
+**Pros ✅**
+- 🌍 **Language-Agnostic:** QR is universal (no translation needed)
+- 👥 **Group-Friendly:** Entire group scans same QR in parallel
+- 🎯 **Organizer Control:** Show QR on tablet, control who scans
+- ⚡ **5x Faster than codes:** 24 sec vs 2 min per group
+- 📱 **No Typing:** Eliminates typo errors
+
+**Real-World Flow:**
+```
+T=0:  Group A (8 people, Spanish tourists) arrives
+T=0:  Organizer opens tablet, shows TEAM-1 QR code
+      "Por favor, escanea esto" (Please scan this)
+      
+T=0:  All 8 people open app (camera auto-opens)
+      Scan QR from organizer's tablet
+      
+T=0.5: All 8 auto-joined TEAM-1
+      App shows checkmark: "✓ Joined Team 1"
+      
+T=1:  Ready to go (24 seconds total for 8 people)
+---
+T=10: Group B (5 people, Chinese tourists) arrives
+T=10: Organizer shows same TEAM-1 QR
+      "请扫描此二维码" (Please scan this QR code)
+      
+T=10.5: All 5 scan, now TEAM-1 has 13 people
+T=11: Start exploration
+```
+
+**Verdict:** ✅ **BEST OPTION for Scenario 2.** Fast, language-agnostic, organizer-controlled.
+
+---
+
+### **Option E: Magic Link (Passwordless Email)**
+
+#### Implementation
+```
+1. User enters email → Receives magic link via email
+2. Clicks link → Auto-logged in (no password)
+3. Joins team
+```
+
+#### **Scenario 1 Performance:**
+
+**Time Estimate:**
+- Per person: 30-50 seconds (type email, wait for email, click link)
+- 200 people: **30-50 minutes** (still too slow)
+
+**Cons ❌**
+- Still requires typing email (20-30 sec per person)
+- Email delivery delays (30-60 sec per person)
+- 200 simultaneous emails = potential spam triggers
+- Mobile UX: Typing email while standing is slow
+- Email verification still a blocker
+
+**Verdict:** ❌ **Too slow for Scenario 1.** Not as bad as email/password, but still 3x slower than QR codes.
+
+---
+
+#### **Scenario 2 Performance:**
+
+**Cons ❌**
+- Tourists may not have internet/roaming for email
+- Email delays while exploring city (can't wait for verification)
+- Language barriers (UI asking for email)
+
+**Verdict:** ❌ **Not ideal for Scenario 2.** Connectivity and language issues remain.
+
+---
+
+## 📊 Comparative Performance Matrix
+
+| Auth Model | Scenario 1 (200 people) | Scenario 2 (Groups 5-20) | Time (S1) | Time (S2 per group) | Mobile UX | Self-Org | Dynamic |
+|------------|-------------------------|--------------------------|-----------|---------------------|-----------|----------|---------|
+| **Anonymous + Codes** | ⚠️ Works | ⚠️ Works | 15-25 min | 40-100 sec | Good | Poor | Good |
+| **Email/Password** | ❌ Too slow | ❌ Too slow | 60-90 min | 8-10 min | Poor | Good | Good |
+| **Hybrid (Anon + Acct)** | ⚠️ Same as Anon | ⚠️ Same as Anon | 15-25 min | 40-100 sec | Good | Poor | Good |
+| **QR Code** ⭐ | ✅ **BEST** | ✅ **BEST** | **10-15 min** | **24-60 sec** | Excellent | Good | Excellent |
+| **Magic Link** | ❌ Too slow | ❌ Connectivity | 30-50 min | 5-8 min | Fair | Good | Good |
+
+**Key Takeaways:**
+- QR Code is **2x faster** than anonymous codes, **6x faster** than email/password
+- Email/password is impractical for high-volume, time-sensitive events
+- QR codes excel in mobile-first, multilingual, and organizer-controlled scenarios
+
+---
+
+## 🎯 Recommended Solution
+
+### **Primary: QR Code-Based Joining + Anonymous Auth** ⭐
+
+#### Why This Wins:
+
+**For Scenario 1 (200 people at starting point):**
+- ⚡ **10-15 min total** (vs 60-90 min for email)
+- 🎯 **Self-organization:** Friends scan same QR together
+- 📱 **Mobile-native:** Camera-first UX (no typing)
+- 🔄 **Dynamic:** Organizer adds teams on-the-fly, QR generated instantly
+- 📊 **Visibility (if enhanced):** Add "Browse Teams" alongside QR scan
+
+**For Scenario 2 (Tourist groups):**
+- 🌍 **Language-agnostic:** QR works for all nationalities
+- 👥 **Group-friendly:** Entire group scans same QR (parallel)
+- 🎯 **Organizer control:** Show QR on tablet, control assignments
+- ⚡ **24-60 sec per group** (vs 8-10 min for email)
+
+---
+
+### **Enhanced Feature: Team Browser (Solves Self-Organization)**
+
+For Scenario 1's friend coordination problem, add this alongside QR codes:
+
+#### UI Design:
+```
+┌──────────────────────────────────────┐
+│  Join a Team                         │
+├──────────────────────────────────────┤
+│  🎯 Scan QR Code                     │ ← Primary (fast, recommended)
+│  📋 Browse Teams                     │ ← Secondary (visibility)
+└──────────────────────────────────────┘
+```
+
+**Browse Teams View:**
+```
+┌──────────────────────────────────────┐
+│  Available Teams                     │
+├──────────────────────────────────────┤
+│  🔴 TEAM-RED          👥 15/20       │ ← Has space
+│  🔵 TEAM-BLUE         👥 18/20       │ ← Almost full
+│  🟢 TEAM-GREEN        👥 8/20        │ ← Lots of space
+│  🟡 TEAM-YELLOW       👥 12/20       │
+│  🟣 TEAM-PURPLE       👥 20/20 FULL  │ ← Can't join
+└──────────────────────────────────────┘
+
+Tap TEAM-GREEN to see details:
+┌──────────────────────────────────────┐
+│  🟢 TEAM-GREEN                       │
+│  👥 8 members (12 spots left)        │
+│  📍 Currently in 3rd place           │
+│  ⭐ 120 points                       │
+│                                      │
+│  Recent Members:                     │
+│  • Alex K. (joined 2 min ago)       │ ← See if friend is here
+│  • Sarah M. (joined 3 min ago)      │
+│  • Mike T. (joined 5 min ago)       │
+│  • ... and 5 more                    │
+│                                      │
+│  [Join TEAM-GREEN]                   │
+└──────────────────────────────────────┘
+```
+
+#### How This Helps:
+1. **Friend Coordination:**
+   - Friend A: "I'm joining TEAM-GREEN" (text to group)
+   - Friend B: Opens app → Browse Teams → Sees TEAM-GREEN
+   - Friend B: Checks members → Sees "Alex K." → Confirms it's the right team
+   - Friend B: Joins TEAM-GREEN (self-organized!)
+
+2. **Load Balancing:**
+   - Users see team sizes in real-time
+   - Naturally join teams with fewer members
+   - Prevents 25-person teams vs 5-person teams
+
+3. **Engagement:**
+   - See current rankings ("We're in 3rd place!")
+   - Creates excitement before event starts
+
+---
+
+### **Implementation Architecture**
+
+#### Tech Stack:
+```typescript
+// QR Code Generation (Organizer Dashboard)
+import QRCode from 'qrcode.react';
+
+const TeamQRCode = ({ teamId, teamName, eventId }) => {
+  const qrData = JSON.stringify({
+    type: 'team-join',
+    teamId,
+    eventId,
+    timestamp: Date.now()
+  });
+  
+  return (
+    <div className="qr-container">
+      <QRCode 
+        value={qrData} 
+        size={256} 
+        level="H" 
+        includeMargin={true}
+      />
+      <h3>{teamName}</h3>
+    </div>
+  );
+};
+
+// QR Scanner (Participant App)
+import { QrReader } from 'react-qr-reader';
+
+const QRScanner = () => {
+  const handleScan = async (data) => {
+    if (data) {
+      const { teamId, eventId } = JSON.parse(data);
+      
+      // Auto-join team (no confirmation needed)
+      await addDoc(collection(db, 'teamMembers'), {
+        teamId,
+        userId: auth.currentUser.uid,
+        eventId,
+        joinedAt: serverTimestamp()
+      });
+      
+      router.push(`/event/${eventId}/tasks`);
+    }
+  };
+  
+  return (
+    <QrReader
+      onResult={handleScan}
+      constraints={{ facingMode: 'environment' }}
+      className="qr-scanner"
+    />
+  );
+};
+
+// Team Browser (Realtime Updates)
+const TeamBrowser = ({ eventId }) => {
+  const { data: teams } = useFirestoreQuery(
+    query(
+      collection(db, 'teams'),
+      where('eventId', '==', eventId),
+      orderBy('memberCount', 'asc') // Show teams with space first
+    )
+  );
+  
+  return (
+    <div className="team-list">
+      {teams.map(team => (
+        <TeamCard 
+          key={team.id}
+          team={team}
+          onJoin={() => joinTeam(team.id)}
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+---
+
+## 🛠️ Implementation Roadmap
+
+### **Phase 1: QR Code Core (Weeks 1-2)** 🎯
+
+**Tasks:**
+- [ ] **Backend: QR Data Schema**
+  - Define QR payload: `{ teamId, eventId, type: 'team-join', timestamp }`
+  - Add validation: Check team exists, event active, not full
+
+- [ ] **Organizer Dashboard: QR Generation**
+  - Add "Generate QR Codes" button to event dashboard
+  - Use `qrcode.react` to generate SVG QR codes
+  - Auto-generate QR when team is created
+  - Display QR codes in grid (4 per page for printing)
+
+- [ ] **Organizer Dashboard: PDF Export**
+  - Create print-friendly layout (A4 size)
+  - Include: Team name, QR code, event name, date
+  - Download as PDF for printing
+  - Test: Print → Scan from 6 feet away (should work)
+
+- [ ] **Participant App: QR Scanner**
+  - Add "Scan QR Code" button on join team screen
+  - Use `react-qr-reader` or native camera API
+  - Parse QR data → Validate → Auto-join team
+  - Show success message: "Joined TEAM-RED! 15 members"
+  - Error handling: Invalid QR, team full, network error
+
+- [ ] **Testing:**
+  - Create 15 teams → Generate QR codes → Print
+  - 5 test users scan QR codes simultaneously
+  - Measure: Time per person, success rate, error types
+  - Target: <3 sec per person, >95% success rate
+
+**Deliverable:** Organizers can generate/print QR codes, participants can scan to join teams.
+
+---
+
+### **Phase 2: Team Browser (Weeks 3-4)** 📋
+
+**Tasks:**
+- [ ] **UI: Browse Teams Screen**
+  - Show list of teams for current event
+  - Display: Team name, color/icon, member count, capacity
+  - Real-time updates (Firestore listeners)
+  - Sort: By space available (most space first)
+
+- [ ] **UI: Team Detail View**
+  - Tap team → Show details
+  - Members list (first 10, then "... and X more")
+  - Current ranking (if event started)
+  - Total points earned
+  - "Join Team" button (disabled if full)
+
+- [ ] **Backend: Realtime Team Stats**
+  - Cloud Function: Calculate team stats on member join/leave
+  - Update: `teams/{teamId}/memberCount`
+  - Update: `teams/{teamId}/currentRank`
+  - Firestore listener: Broadcast updates to all clients
+
+- [ ] **UX: Smooth Animations**
+  - Fade in team cards (stagger animation)
+  - Loading skeleton while fetching teams
+  - Empty state: "No teams yet. Check back soon!"
+  - Full state: "Team is full" badge
+
+- [ ] **Testing:**
+  - 20 people browse teams simultaneously
+  - Verify real-time updates (person joins, count updates)
+  - Test edge cases: All teams full, no teams, 1 team
+  - Measure: Page load time (<1 sec), animation smoothness
+
+**Deliverable:** Users can browse teams, see sizes/members, and join without QR codes.
+
+---
+
+### **Phase 3: Dynamic Team Management (Week 5)** 🔄
+
+**Tasks:**
+- [ ] **Organizer Dashboard: Add Team Mid-Event**
+  - "Add Team" button (always visible during event)
+  - Modal: Team name, color, capacity
+  - Auto-generate QR code on creation
+  - Instantly visible to participants (no refresh needed)
+
+- [ ] **Organizer Dashboard: Team Capacity Limits**
+  - Set max members per team (default: 20)
+  - Prevent joins when team reaches capacity
+  - Show "FULL" badge in team browser
+  - Allow organizer to increase capacity mid-event
+
+- [ ] **Organizer Dashboard: Archive/Delete Teams**
+  - Mark team as inactive (e.g., if dissolved)
+  - Hide from browser and QR join flows
+  - Preserve data (don't actually delete)
+  - Confirmation dialog: "Are you sure?"
+
+- [ ] **Participant App: Late Joiner Flow**
+  - If event already started: Show warning
+    "Event is in progress. Join now?"
+  - Auto-assign to team with fewest members (optional)
+  - Or let user choose team (browse/QR)
+
+- [ ] **Testing:**
+  - Start event with 10 teams
+  - Mid-event: Add 2 teams, verify participants can join
+  - Set team capacity to 10, verify 11th person blocked
+  - Archive team, verify no longer visible
+
+**Deliverable:** Organizers can manage teams dynamically during live events.
+
+---
+
+### **Phase 4: Advanced Features (Weeks 6-8)** ✨
+
+**Optional enhancements based on feedback:**
+
+- [ ] **Pre-Registration System**
+  - Users register before event day
+  - Choose team in advance
+  - Day-of: Just check in (no team selection needed)
+
+- [ ] **Check-In Mode for Organizers**
+  - Dashboard shows registered users per team
+  - Tap name to mark as "Present"
+  - Track attendance for analytics
+
+- [ ] **Group Leader Invite Links**
+  - Group leader creates team, gets shareable link
+  - Example: `urbanrally.app/join/team-red-abc123`
+  - Share in WhatsApp group → All members click link → Auto-join
+
+- [ ] **Team Profiles**
+  - Team description field (editable by members)
+  - Team photo upload
+  - Team motto/tagline
+  - Visible in team browser
+
+- [ ] **Friend Finding**
+  - "Find My Friends" feature
+  - Enter friend's name → See which team they're on
+  - Option to join same team
+
+---
+
+## 📊 Success Metrics
+
+### **Phase 1-3 KPIs:**
+
+| Metric | Baseline (Codes) | Target (QR + Browser) | Measurement |
+|--------|------------------|----------------------|-------------|
+| **Avg Time to Join (per person)** | 5-10 sec | 2-5 sec | Track from app open → team joined |
+| **Total Onboarding Time (200 people)** | 15-25 min | 10-15 min | Event start time - first arrival |
+| **Team Balance (Std Dev of sizes)** | ±5 people | ±2 people | Calculate after everyone joined |
+| **Late Joiner Success Rate** | 80% | 95% | % who successfully join mid-event |
+| **User Satisfaction (NPS)** | Baseline TBD | >70 | Post-event survey |
+| **QR Scan Success Rate** | N/A | >95% | % of scans that result in team join |
+| **Team Browser Usage** | N/A | >40% | % who use browser vs QR |
+
+### **Data Collection:**
+```typescript
+// Track join method
+analytics.track('team_joined', {
+  method: 'qr_scan' | 'team_browser' | 'team_code',
+  time_taken_seconds: 3.5,
+  team_size_at_join: 12,
+  event_status: 'not_started' | 'in_progress'
+});
+```
+
+---
+
+## 💡 Key Insights from Scenario Analysis
+
+### **1. Time is the Critical Constraint**
+- **Scenario 1:** 200 people × 60 sec (email) = 3+ hours (impossible)
+- **Scenario 1:** 200 people × 3 sec (QR) = 10 minutes (feasible)
+- **Lesson:** Optimize for per-person time, not feature richness
+
+### **2. Mobile Context Dictates UX**
+- Users are standing, not sitting at desks
+- Typing is slow and error-prone
+- Camera-first UX is faster (QR scan)
+- One-handed operation preferred
+
+### **3. Self-Organization Requires Visibility**
+- **Problem:** Friends want same team, but can't see team sizes/members
+- **Solution:** Team browser + real-time updates
+- **Result:** Users self-balance teams, reducing organizer workload
+
+### **4. Organizer Control vs User Freedom**
+- **Scenario 1:** Users need freedom (self-organize)
+- **Scenario 2:** Organizers need control (assign groups)
+- **Solution:** Support both flows (QR scan + team browser)
+
+### **5. Language-Agnostic Design Wins**
+- QR codes work for all nationalities
+- No translation needed (universal symbol)
+- Critical for tourist groups (Scenario 2)
+
+### **6. Dynamic Beats Static**
+- Can't predict exact number of teams needed
+- Must add teams mid-event (late arrivals, unbalanced teams)
+- QR codes generated on-demand support this
+
+### **7. Authentication is Secondary**
+- Primary goal: Get people into teams FAST
+- User identity doesn't matter for one-off events
+- Anonymous auth sufficient (persistent accounts optional)
+
+---
+
+## 🎯 Final Recommendations by Scenario
+
+### **Scenario 1: 200-Person Event**
+
+**Recommended Auth Model:**
+✅ **Anonymous Auth** (instant, no registration)
+✅ **QR Code Joining** (10-15 min for 200 people)
+✅ **Team Browser** (self-organization, visibility)
+✅ **Dynamic Team Creation** (organizer adds teams mid-event)
+
+**User Flow:**
+```
+1. Arrive at venue
+2. See projected QR codes on screen (15 teams)
+3. Friends agree: "Let's scan TEAM-RED"
+4. All scan RED QR code together (2-3 sec each)
+5. Auto-joined TEAM-RED (no confirmation)
+6. OR browse teams to find friends
+7. Event starts in 10-15 minutes
+```
+
+**Why NOT Email/Password:**
+- ❌ 60-90 min for 200 people (too slow)
+- ❌ 30-40% drop-off at registration (lose participants)
+- ❌ Poor mobile UX (typing while standing)
+- ❌ Email verification delays
+- ❌ High support burden ("I can't log in!")
+
+---
+
+### **Scenario 2: Tourist Groups**
+
+**Recommended Auth Model:**
+✅ **Anonymous Auth** (no barriers for tourists)
+✅ **QR Code Joining** (language-agnostic)
+✅ **Organizer-Controlled Assignment** (show QR on tablet)
+
+**User Flow:**
+```
+1. Group arrives at meeting point
+2. Organizer: "You're Team 1, please scan this"
+3. Shows TEAM-1 QR on tablet/phone
+4. All group members scan (24-60 sec per group)
+5. If pairing needed: Multiple groups scan same QR
+6. Start exploring
+```
+
+**Why NOT Email/Password:**
+- ❌ Tourists lack connectivity (no roaming data)
+- ❌ Language barriers (UI not translated)
+- ❌ 8-10 min per group (vs 24-60 sec for QR)
+- ❌ Typing email on mobile while standing (slow)
+
+---
+
+## 📋 Decision Framework
+
+### **Use QR Codes if:**
+✅ High-volume events (50+ people)
+✅ Time-sensitive (must start on schedule)
+✅ Mobile-first environment (everyone on phones)
+✅ Multilingual audiences (tourists, international events)
+✅ Organizer can display QR codes (screen/poster/tablet)
+
+### **Use Team Codes if:**
+⚠️ Low-volume events (<20 people)
+⚠️ QR display not feasible (virtual events, remote teams)
+⚠️ Users familiar with code entry (tech-savvy audience)
+
+### **Use Email/Password if:**
+❌ Never for high-volume, time-sensitive events
+⚠️ Only if persistent identity critical (multi-event subscriptions)
+⚠️ Only if users willing to register (e.g., paid events)
+
+---
+
+**Document Version:** 1.1  
 **Last Updated:** December 11, 2025  
 **Next Review:** January 11, 2026  
 **Owner:** Product Team

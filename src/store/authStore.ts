@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Team, Tenant, User } from '../types/schema';
+import { getFirebaseAuth } from '../services/firebase.service';
 
 interface AuthState {
   // State
@@ -12,12 +13,12 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  setUser: (user: User) => void; // NEW: Set current user
-  setTeam: (team: Team) => void;
-  setTenant: (tenant: Tenant) => void;
+  setUser: (user: User | null) => void;
+  setTeam: (team: Team | null) => void;
+  setTenant: (tenant: Tenant | null) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -32,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       // Actions
-      setUser: (user) => // NEW
+      setUser: (user) =>
         set({
           user,
           error: null,
@@ -41,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
       setTeam: (team) =>
         set({
           team,
-          isAuthenticated: true,
+          isAuthenticated: team !== null,
           error: null,
         }),
 
@@ -63,15 +64,29 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         }),
 
-      logout: () =>
-        set({
-          user: null, // NEW: Clear user on logout
-          team: null,
-          tenant: null,
-          isAuthenticated: false,
-          error: null,
-          isLoading: false,
-        }),
+      logout: async () => {
+        try {
+          const auth = getFirebaseAuth();
+          
+          // Sign out from Firebase Auth
+          await auth.signOut();
+          
+          console.log('✅ User signed out from Firebase');
+        } catch (error) {
+          console.error('❌ Error signing out from Firebase:', error);
+          // Continue with logout even if Firebase signOut fails
+        } finally {
+          // Always clear local state (Zustand store + localStorage)
+          set({
+            user: null,
+            team: null,
+            tenant: null,
+            isAuthenticated: false,
+            error: null,
+            isLoading: false,
+          });
+        }
+      },
     }),
     {
       name: 'urban-rally-auth', // Storage key

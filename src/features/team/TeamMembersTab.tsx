@@ -9,6 +9,7 @@ import { Users, Trophy, CheckCircle, Crown, Loader2, AlertCircle } from 'lucide-
 import { useAuthStore } from '../../store/authStore';
 import { getTeamMembers } from '../../services/teamMember.service';
 import { isCyberpunkTheme } from '../../utils/theme';
+import { LeaveTeamButton } from '../../components/team/LeaveTeamButton';
 
 interface TeamMemberDisplay {
   userId: string;
@@ -24,7 +25,7 @@ interface TeamMemberDisplay {
 }
 
 export const TeamMembersTab: React.FC = () => {
-  const { team, tenant } = useAuthStore();
+  const { team, tenant, user } = useAuthStore();
   const [members, setMembers] = useState<TeamMemberDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,10 @@ export const TeamMembersTab: React.FC = () => {
 
     loadMembers();
   }, [team]);
+
+  // Find current user's membership to check if they're owner
+  const currentUserMembership = members.find(m => m.userId === user?.id);
+  const isCurrentUserOwner = currentUserMembership?.role === 'owner';
 
   if (!team || !tenant) {
     return null;
@@ -345,6 +350,20 @@ export const TeamMembersTab: React.FC = () => {
               </p>
             </motion.div>
           )}
+        </div>
+      )}
+
+      {/* Leave Team Section */}
+      {!isLoading && !error && members.length > 0 && (
+        <div className={`mt-6 pt-6 border-t ${
+          useCyberpunk ? 'border-white/10' : 'border-gray-200'
+        }`}>
+          <LeaveTeamButton
+            teamId={team.id}
+            teamName={team.teamName || team.accessCode}
+            eventId={team.eventId}
+            isOwner={isCurrentUserOwner}
+          />
         </div>
       )}
     </div>

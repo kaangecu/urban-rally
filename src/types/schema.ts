@@ -47,6 +47,9 @@ export interface Event extends MultiTenantEntity {
   name: string; // "Welcome Week 2025"
   description?: string;
   
+  // Access Code (NEW - for easy event joining)
+  eventCode?: string; // Unique 6-12 char code (e.g., "BERLIN2025", "RALLY2025")
+  
   // Timing
   startDate: Date;
   endDate: Date;
@@ -72,6 +75,13 @@ export interface Event extends MultiTenantEntity {
 /**
  * User
  * Individual user/player entity with persistent identity
+ * 
+ * Multi-Event Support:
+ * - User can participate in multiple events across different tenants
+ * - Multi-event participation is tracked via TeamMember records (not User.tenantId)
+ * - User.tenantId represents "home tenant" (first tenant joined)
+ * 
+ * @version 2.0 - Added accountType, recovery codes, and multi-event support
  */
 export interface User extends MultiTenantEntity {
   id: string; // Firebase Auth UID
@@ -80,6 +90,15 @@ export interface User extends MultiTenantEntity {
   displayName: string; // Required: User's name
   email?: string; // Optional: For notifications
   profilePhotoUrl?: string; // Optional: Avatar
+  
+  // Account Management (NEW in v2.0)
+  accountType?: 'anonymous' | 'linked'; // Account type (default: 'anonymous')
+  linkedAccountId?: string; // UID of linked email/password account (if accountType='linked')
+  
+  // Recovery Mechanism (NEW in v2.0)
+  recoveryCode?: string; // 6-digit alphanumeric code for account recovery
+  recoveryCodeExpiresAt?: Date; // Expiration timestamp (30 days from generation)
+  recoveryCodeGeneratedAt?: Date; // When the code was created
   
   // GDPR Consent Tracking (Required for German compliance)
   consentGiven: {
@@ -164,6 +183,9 @@ export interface TeamMember extends MultiTenantEntity {
   userId: string; // Reference to User
   eventId: string; // Reference to Event (for scoping)
   
+  // Denormalized User Data (for efficient queries)
+  displayName?: string; // User's display name (denormalized for search)
+  
   // Contribution Tracking
   personalScore: number; // This user's contribution to team score
   submissionIds: string[]; // IDs of submissions made by this user
@@ -176,6 +198,7 @@ export interface TeamMember extends MultiTenantEntity {
   isActive: boolean; // Can be set to false when user leaves team
   joinedAt: Date;
   leftAt?: Date; // Timestamp when user left team
+  lastActiveAt?: Date; // NEW: Track when user was last active (for cleanup jobs)
 }
 
 /**

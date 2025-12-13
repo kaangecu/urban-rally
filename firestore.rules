@@ -32,6 +32,21 @@ service cloud.firestore {
       return request.query.limit == null || 'tenantId' in request.query;
     }
     
+    // NEW: Multi-event validation helpers
+    function isValidEvent(eventId) {
+      return exists(/databases/$(database)/documents/events/$(eventId))
+          && get(/databases/$(database)/documents/events/$(eventId)).data.isActive == true;
+    }
+    
+    function isValidTenant(tenantId) {
+      return exists(/databases/$(database)/documents/tenants/$(tenantId))
+          && get(/databases/$(database)/documents/tenants/$(tenantId)).data.isActive == true;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
     // ====================================
     // TENANTS COLLECTION
     // ====================================
@@ -120,11 +135,23 @@ service cloud.firestore {
     // ====================================
     
     match /users/{userId} {
-      // ⚠️ DEVELOPMENT: Simplified rules for debugging
-      // Allow authenticated users to read all users and update their own profile
-      allow read, list: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can update their own profile (restricted fields)
+      allow update: if isOwner(userId)
+                    // Prevent changing critical fields
+                    && !('tenantId' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('id' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('accountType' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('linkedAccountId' in request.resource.data.diff(resource.data).affectedKeys());
+      
+      // Only Cloud Function can create users
+      allow create: if false;
       allow delete: if isUserOwner(userId);
+      
+      // Allow listing for authenticated users (needed for search)
+      allow list: if isAuthenticated();
     }
     
     // ====================================
@@ -132,9 +159,28 @@ service cloud.firestore {
     // ====================================
     
     match /teamMembers/{teamMemberId} {
-      // ⚠️ DEVELOPMENT: Simplified rules for debugging
-      // Allow authenticated users to read, create, update their own team memberships
-      allow read, create, update, delete: if isAuthenticated();
+      // Public read for browse teams (scoped by query)
+      allow read: if true;
+      
+      // User can create membership for themselves
+      allow create: if isAuthenticated()
+                    && request.auth.uid == request.resource.data.userId
+                    && isValidEvent(request.resource.data.eventId)
+                    && isValidTenant(request.resource.data.tenantId)
+                    && request.resource.data.isActive == true
+                    && request.resource.data.personalScore == 0
+                    && request.resource.data.role in ['owner', 'member'];
+      
+      // User can delete their own membership (leave team)
+      allow delete: if isOwner(resource.data.userId);
+      
+      // User can update their own membership (limited fields)
+      allow update: if isOwner(resource.data.userId)
+                    // Prevent changing critical fields
+                    && !('userId' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('teamId' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('eventId' in request.resource.data.diff(resource.data).affectedKeys())
+                    && !('tenantId' in request.resource.data.diff(resource.data).affectedKeys());
     }
     
     // ====================================

@@ -8,6 +8,8 @@ import {
   updateDoc,
   serverTimestamp,
   increment,
+  onSnapshot,
+  orderBy,
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
@@ -296,5 +298,273 @@ export async function getTeamMemberCount(teamId: string): Promise<number> {
   } catch (error) {
     console.error('Error getting team member count:', error);
     return 0;
+  }
+}
+
+// ============================================================================
+// MULTI-EVENT SUPPORT FUNCTIONS (NEW in v2.0)
+// ============================================================================
+
+/**
+ * Subscribe to teams for specific event (real-time updates)
+ * Returns teams ordered by availability (fewest members first)
+ * 
+ * @param tenantId - Tenant/organization ID
+ * @param eventId - Event ID to filter teams
+ * @param callback - Function called with updated teams array
+ * @returns Unsubscribe function to stop listening
+ */
+export function subscribeToEventTeams(
+  tenantId: string,
+  eventId: string,
+  callback: (teams: Team[]) => void
+): () => void {
+  const db = getFirebaseFirestore();
+  
+  const q = query(
+    collection(db, 'teams'),
+    where('tenantId', '==', tenantId),
+    where('eventId', '==', eventId),
+    where('isActive', '==', true),
+    orderBy('memberCount', 'asc') // Show teams with space first
+  );
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const teams = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Team[];
+    
+    callback(teams);
+  }, (error) => {
+    console.error('Error in teams subscription:', error);
+  });
+  
+  return unsubscribe;
+}
+
+/**
+ * Check if team has space and can accept new members
+ * 
+ * @param teamId - Team ID to check
+ * @returns Object with canJoin boolean and optional reason
+ */
+export async function canJoinTeam(teamId: string): Promise<{
+  canJoin: boolean;
+  reason?: string;
+}> {
+  try {
+    const team = await getTeamById(teamId);
+    
+    if (!team) {
+      return { canJoin: false, reason: 'Team not found' };
+    }
+    
+    if (!team.isActive) {
+      return { canJoin: false, reason: 'Team is inactive' };
+    }
+    
+    const currentMembers = team.memberUserIds?.length || 0;
+    const maxMembers = team.maxMembers || 50;
+    
+    if (currentMembers >= maxMembers) {
+      return { canJoin: false, reason: 'Team is full' };
+    }
+    
+    return { canJoin: true };
+  } catch (error) {
+    console.error('Error checking if can join team:', error);
+    return { canJoin: false, reason: 'Error checking team capacity' };
+  }
+}
+
+/**
+ * Get accurate team member count from TeamMember collection
+ * 
+ * @param teamId - Team ID
+ * @param eventId - Event ID (for scoping)
+ * @returns Number of active members
+ */
+export async function getTeamMemberCountFromMembers(
+  teamId: string,
+  eventId: string
+): Promise<number> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('teamId', '==', teamId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  } catch (error) {
+    console.error('Error getting team member count:', error);
+    return 0;
+  }
+}
+
+/**
+ * Update team's cached member count
+ * Should be called after adding/removing members
+ * 
+ * @param teamId - Team ID
+ * @param eventId - Event ID (for scoping)
+ */
+export async function updateTeamMemberCount(
+  teamId: string,
+  eventId: string
+): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    const count = await getTeamMemberCountFromMembers(teamId, eventId);
+    
+    await updateDoc(doc(db, 'teams', teamId), {
+      memberCount: count,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Team ${teamId} member count updated: ${count}`);
+  } catch (error) {
+    console.error('Error updating team member count:', error);
+    throw new Error('Failed to update team member count');
+  }
+}
+
+/**
+ * Get team with all member details (multi-event aware)
+ * 
+ * @param teamId - Team ID
+ * @param eventId - Event ID (for scoping members)
+ * @returns Team with members array, or null if not found
+ */
+export async function getTeamWithMembersByEvent(
+  teamId: string,
+  eventId: string
+): Promise<{ team: Team; members: any[] } | null> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Get team
+    const team = await getTeamById(teamId);
+    if (!team) return null;
+    
+    // Get members for this specific event
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('teamId', '==', teamId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true),
+      orderBy('joinedAt', 'asc')
+    );
+    
+    const memberSnapshot = await getDocs(q);
+    const members = memberSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    return { team, members };
+  } catch (error) {
+    console.error('Error fetching team with members:', error);
+    throw new Error('Failed to fetch team with members');
+  }
+}
+
+/**
+ * Search teams by name in specific event
+ * Client-side filtering (Firestore has no full-text search)
+ * 
+ * @param tenantId - Tenant ID
+ * @param eventId - Event ID
+ * @param searchTerm - Search query
+ * @returns Filtered teams array
+ */
+export async function searchTeams(
+  tenantId: string,
+  eventId: string,
+  searchTerm: string
+): Promise<Team[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teams'),
+      where('tenantId', '==', tenantId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    const allTeams = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Team[];
+    
+    // Client-side filter (case-insensitive)
+    const searchLower = searchTerm.toLowerCase();
+    return allTeams.filter(team => 
+      team.teamName?.toLowerCase().includes(searchLower) ||
+      team.teamDisplayName?.toLowerCase().includes(searchLower) ||
+      team.accessCode?.toLowerCase().includes(searchLower)
+    );
+  } catch (error) {
+    console.error('Error searching teams:', error);
+    throw new Error('Failed to search teams');
+  }
+}
+
+/**
+ * Get all teams for an event
+ * Returns teams ordered by member count (teams with space first)
+ * 
+ * @param eventId - Event ID
+ * @param tenantId - Tenant ID (for security)
+ * @returns Array of teams with member counts
+ * 
+ * @example
+ * const teams = await getTeamsForEvent('berlin-winter-2025', 'esn-berlin');
+ * // Returns: [Team Green (8/20), Team Red (15/20), Team Blue (18/20), Team Yellow (20/20)]
+ */
+export async function getTeamsForEvent(
+  eventId: string, 
+  tenantId: string
+): Promise<Team[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Query teams for this event
+    const q = query(
+      collection(db, 'teams'),
+      where('eventId', '==', eventId),
+      where('tenantId', '==', tenantId)
+      // Note: orderBy removed to avoid composite index requirement
+      // We'll sort in memory instead
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    const teams = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Team));
+    
+    // Sort teams by memberCount in memory (teams with space first)
+    const sortedTeams = teams.sort((a, b) => {
+      const aCount = a.memberCount || 0;
+      const bCount = b.memberCount || 0;
+      return aCount - bCount;
+    });
+    
+    console.log(`✅ Found ${sortedTeams.length} teams for event ${eventId}`);
+    
+    return sortedTeams;
+    
+  } catch (error) {
+    console.error('Error fetching teams for event:', error);
+    throw new Error('Failed to fetch teams');
   }
 }

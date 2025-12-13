@@ -300,6 +300,7 @@ export async function getUserTeams(userId: string): Promise<
         teamName: teamData.teamName || teamData.teamDisplayName,
         accessCode: teamData.accessCode,
         eventId: memberData.eventId,
+        tenantId: teamData.tenantId, // Add tenantId
         personalScore: memberData.personalScore,
         role: memberData.role,
         joinedAt: memberData.joinedAt,
@@ -539,5 +540,377 @@ export async function isTeamMember(
   } catch (error) {
     console.error('Error checking team membership:', error);
     return false;
+  }
+}
+
+// ============================================================================
+// MULTI-EVENT SUPPORT FUNCTIONS (NEW in v2.0)
+// ============================================================================
+
+/**
+ * Join team (creates TeamMember record)
+ * Validates event uniqueness (user can only be in one team per event)
+ * 
+ * @param params - Join parameters
+ * @returns Created TeamMember record
+ * @throws Error if user already in event or team is full
+ */
+export async function joinTeam(params: {
+  userId: string;
+  teamId: string;
+  eventId: string;
+  tenantId: string;
+  role: 'owner' | 'member';
+}): Promise<TeamMember> {
+  const db = getFirebaseFirestore();
+  const { userId, teamId, eventId, tenantId, role } = params;
+  
+  try {
+    // Check if user already in this event
+    const existing = await getUserParticipationInEvent(userId, eventId);
+    if (existing) {
+      throw new Error(
+        `You are already in a team for this event (Team: ${existing.teamId}). ` +
+        `You can only join one team per event.`
+      );
+    }
+    
+    // Check if team has space
+    const teamRef = doc(db, 'teams', teamId);
+    const teamDoc = await getDoc(teamRef);
+    
+    if (!teamDoc.exists()) {
+      throw new Error('Team not found');
+    }
+    
+    const teamData = teamDoc.data();
+    const currentMembers = teamData.memberUserIds?.length || 0;
+    const maxMembers = teamData.maxMembers || 50;
+    
+    if (currentMembers >= maxMembers) {
+      throw new Error('Team is full');
+    }
+    
+    // Get user display name
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const displayName = userDoc.exists() ? userDoc.data().displayName : 'Unknown';
+    
+    // Create TeamMember record
+    const memberId = `${teamId}-${userId}`;
+    const memberData: TeamMember = {
+      id: memberId,
+      userId,
+      teamId,
+      eventId,
+      tenantId,
+      displayName, // Denormalized for search
+      personalScore: 0,
+      submissionIds: [],
+      tasksCompleted: [],
+      role,
+      isActive: true,
+      joinedAt: new Date(),
+      lastActiveAt: new Date(), // NEW: Set initial activity
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    // Use batch write for atomicity
+    const batch = writeBatch(db);
+    
+    // Add TeamMember document
+    batch.set(doc(db, 'teamMembers', memberId), {
+      ...memberData,
+      joinedAt: serverTimestamp(),
+      lastActiveAt: serverTimestamp(), // NEW: Set initial activity
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // Update team memberUserIds array
+    batch.update(teamRef, {
+      memberUserIds: arrayUnion(userId),
+      memberCount: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // Update user stats
+    batch.update(doc(db, 'users', userId), {
+      eventsParticipated: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+    
+    await batch.commit();
+    
+    console.log(`✅ User ${userId} joined team ${teamId} in event ${eventId}`);
+    return memberData;
+  } catch (error) {
+    console.error('Error joining team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Leave team (soft delete TeamMember record)
+ * 
+ * @param params - Leave parameters
+ */
+export async function leaveTeam(params: {
+  userId: string;
+  teamId: string;
+  eventId: string;
+}): Promise<void> {
+  const db = getFirebaseFirestore();
+  const { userId, teamId, eventId } = params;
+  
+  try {
+    // Find TeamMember record
+    const membersRef = collection(db, 'teamMembers');
+    const q = query(
+      membersRef,
+      where('userId', '==', userId),
+      where('teamId', '==', teamId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      throw new Error('Membership not found');
+    }
+    
+    const memberDoc = snapshot.docs[0];
+    
+    // Use batch write
+    const batch = writeBatch(db);
+    
+    // Soft delete (set isActive = false)
+    batch.update(memberDoc.ref, {
+      isActive: false,
+      leftAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // Update team memberUserIds array
+    const team = await getDoc(doc(db, 'teams', teamId));
+    const teamData = team.data();
+    const updatedMemberIds = (teamData?.memberUserIds || []).filter(
+      (id: string) => id !== userId
+    );
+    
+    batch.update(doc(db, 'teams', teamId), {
+      memberUserIds: updatedMemberIds,
+      memberCount: increment(-1),
+      updatedAt: serverTimestamp(),
+    });
+    
+    await batch.commit();
+    
+    console.log(`✅ User ${userId} left team ${teamId}`);
+  } catch (error) {
+    console.error('Error leaving team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get user's participation in specific event
+ * Returns null if user is not in event
+ * 
+ * @param userId - User's Firebase UID
+ * @param eventId - Event ID to check
+ * @returns TeamMember record or null
+ */
+export async function getUserParticipationInEvent(
+  userId: string,
+  eventId: string
+): Promise<TeamMember | null> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('userId', '==', userId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    
+    return {
+      id: snapshot.docs[0].id,
+      ...snapshot.docs[0].data()
+    } as TeamMember;
+  } catch (error) {
+    console.error('Error fetching user participation:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all team members for event (with user details)
+ * 
+ * @param eventId - Event ID
+ * @returns Array of TeamMembers with user data
+ */
+export async function getEventMembers(eventId: string): Promise<any[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    const members = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Fetch user details for each member
+    const membersWithUsers = await Promise.all(
+      members.map(async (member: any) => {
+        const userDoc = await getDoc(doc(db, 'users', member.userId));
+        const user = userDoc.exists() ? userDoc.data() : null;
+        
+        return {
+          ...member,
+          user: user || { displayName: 'Unknown User' }
+        };
+      })
+    );
+    
+    return membersWithUsers;
+  } catch (error) {
+    console.error('Error fetching event members:', error);
+    throw new Error('Failed to fetch event members');
+  }
+}
+
+/**
+ * Search members by name in event (prefix search)
+ * 
+ * @param eventId - Event ID
+ * @param searchTerm - Search query (name prefix)
+ * @returns Filtered TeamMembers
+ */
+export async function searchMembersInEvent(
+  eventId: string,
+  searchTerm: string
+): Promise<TeamMember[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    const allMembers = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as TeamMember[];
+    
+    // Client-side filter (case-insensitive)
+    const searchLower = searchTerm.toLowerCase();
+    return allMembers.filter(member => 
+      member.displayName?.toLowerCase().includes(searchLower)
+    );
+  } catch (error) {
+    console.error('Error searching members:', error);
+    throw new Error('Failed to search members');
+  }
+}
+
+/**
+ * Update member personal score
+ * 
+ * @param memberId - TeamMember ID
+ * @param scoreIncrement - Points to add
+ */
+export async function updateMemberScore(
+  memberId: string,
+  scoreIncrement: number
+): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    await updateDoc(doc(db, 'teamMembers', memberId), {
+      personalScore: increment(scoreIncrement),
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Member ${memberId} score updated (+${scoreIncrement})`);
+  } catch (error) {
+    console.error('Error updating member score:', error);
+    throw new Error('Failed to update member score');
+  }
+}
+
+/**
+ * Get team members for specific event
+ * 
+ * @param teamId - Team ID
+ * @param eventId - Event ID
+ * @returns Array of TeamMembers sorted by score
+ */
+export async function getTeamMembersByEvent(
+  teamId: string,
+  eventId: string
+): Promise<TeamMember[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('teamId', '==', teamId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    const members = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as TeamMember[];
+    
+    // Sort by personal score (descending)
+    return members.sort((a, b) => b.personalScore - a.personalScore);
+  } catch (error) {
+    console.error('Error fetching team members:', error);
+    throw new Error('Failed to fetch team members');
+  }
+}
+
+/**
+ * Update last active timestamp for a team member
+ * Call this whenever user performs an action (login, complete task, etc.)
+ * 
+ * @param teamId - Team ID
+ * @param userId - User ID
+ */
+export async function updateLastActive(
+  teamId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    const memberId = `${teamId}-${userId}`;
+    const memberRef = doc(db, 'teamMembers', memberId);
+
+    await updateDoc(memberRef, {
+      lastActiveAt: serverTimestamp(),
+    });
+
+    console.log(`📍 Updated lastActiveAt for user ${userId} in team ${teamId}`);
+  } catch (error) {
+    console.error('Error updating last active:', error);
+    // Don't throw - this is non-critical tracking
+    // We don't want to break the user's flow if this fails
   }
 }

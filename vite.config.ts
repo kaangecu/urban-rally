@@ -11,5 +11,16 @@ export default defineConfig({
   server: {
     host: true,  // Allow network access (0.0.0.0)
     port: 5173,
+    strictPort: false,  // Try next port if 5173 is taken
+    hmr: {
+      host: 'localhost',  // HMR should use localhost
+    },
+    // Allow ngrok and other tunneling services
+    allowedHosts: [
+      '.ngrok-free.dev',
+      '.ngrok-free.app',
+      '.ngrok.io',
+      'localhost',
+    ],
   }
 })

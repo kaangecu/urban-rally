@@ -32,9 +32,10 @@ export default defineConfig({
       branches: 80,
       statements: 80,
     },
-    include: ['**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: [
       'node_modules',
+      'functions/node_modules',
       'dist',
       '.idea',
       '.git',

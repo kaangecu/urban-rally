@@ -36,6 +36,7 @@ setGlobalOptions({
  * @param data.email - User's email (optional)
  * @param data.tenantId - Organization/tenant ID (required)
  * @param data.consentGiven - GDPR consent object (required)
+ * @param data.accountType - Account type: 'anonymous' or 'linked' (optional, defaults to 'anonymous')
  * 
  * @returns {success: boolean, userId: string}
  * 
@@ -59,7 +60,13 @@ export const createUserDocument = onCall(async (request) => {
   logger.info("User creation request", {uid, hasEmail: !!data.email});
 
   // 2. Validate input data
-  const {displayName, email, tenantId, consentGiven} = data;
+  const {
+    displayName,
+    email,
+    tenantId,
+    consentGiven,
+    accountType = "anonymous", // NEW: Default to 'anonymous'
+  } = data;
 
   if (!displayName || typeof displayName !== "string") {
     throw new HttpsError(
@@ -96,6 +103,14 @@ export const createUserDocument = onCall(async (request) => {
     );
   }
 
+  // NEW: Validate accountType if provided
+  if (accountType && !["anonymous", "linked"].includes(accountType)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Account type must be 'anonymous' or 'linked'."
+    );
+  }
+
   // 3. Check if user document already exists
   const db = admin.firestore();
   const userRef = db.collection("users").doc(uid);
@@ -116,6 +131,14 @@ export const createUserDocument = onCall(async (request) => {
     displayName: displayName,
     tenantId: tenantId,
     consentGiven: consentGiven,
+    
+    // NEW: Multi-event support fields (v2.0)
+    accountType: accountType, // 'anonymous' or 'linked'
+    linkedAccountId: null, // Initially null, set when account is linked
+    recoveryCode: null, // Initially null, generated on request
+    recoveryCodeExpiresAt: null, // Initially null
+    recoveryCodeGeneratedAt: null, // Initially null
+    
     totalScore: 0,
     totalSubmissions: 0,
     eventsParticipated: 0,
@@ -136,6 +159,7 @@ export const createUserDocument = onCall(async (request) => {
       uid,
       displayName,
       tenantId,
+      accountType, // NEW: Log account type
       hasEmail: !!email,
     });
 

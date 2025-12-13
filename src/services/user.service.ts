@@ -35,6 +35,7 @@ export async function createUser(data: {
   displayName: string;
   email?: string;
   tenantId: string;
+  accountType?: 'anonymous' | 'linked'; // NEW: Multi-event support
   consentGiven: {
     terms: boolean;
     privacy: boolean;
@@ -74,6 +75,7 @@ export async function createUser(data: {
       displayName: data.displayName,
       email: data.email || undefined,
       tenantId: data.tenantId,
+      accountType: data.accountType || 'anonymous', // NEW: Pass accountType
       consentGiven: data.consentGiven,
     });
 
@@ -425,5 +427,219 @@ export async function getOrCreateUser(data: {
   } catch (error) {
     console.error('Error in getOrCreateUser:', error);
     throw new Error('Failed to get or create user');
+  }
+}
+
+// ============================================================================
+// MULTI-EVENT SUPPORT FUNCTIONS (NEW in v2.0)
+// ============================================================================
+
+/**
+ * Get all events user participates in
+ * Queries TeamMember collection to find all events user has joined
+ * 
+ * @param userId - User's Firebase UID
+ * @returns Array of Event objects user participates in
+ */
+export async function getUserEvents(userId: string): Promise<any[]> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Step 1: Get all TeamMember records for user
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('userId', '==', userId),
+      where('isActive', '==', true)
+    );
+    
+    const memberSnapshot = await getDocs(q);
+    
+    // Step 2: Extract unique eventIds
+    const eventIds = [...new Set(
+      memberSnapshot.docs.map(doc => doc.data().eventId)
+    )];
+    
+    if (eventIds.length === 0) {
+      return [];
+    }
+    
+    // Step 3: Fetch event details
+    const events = await Promise.all(
+      eventIds.map(async (eventId) => {
+        const eventDoc = await getDoc(doc(db, 'events', eventId));
+        if (!eventDoc.exists()) return null;
+        return { id: eventDoc.id, ...eventDoc.data() };
+      })
+    );
+    
+    const validEvents = events.filter(e => e !== null);
+    
+    console.log(`✅ Found ${validEvents.length} events for user ${userId}`);
+    return validEvents;
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    throw new Error('Failed to fetch user events');
+  }
+}
+
+/**
+ * Check if user is in specific event
+ * 
+ * @param userId - User's Firebase UID
+ * @param eventId - Event ID to check
+ * @returns true if user has active membership in event
+ */
+export async function isUserInEvent(
+  userId: string,
+  eventId: string
+): Promise<boolean> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    const q = query(
+      collection(db, 'teamMembers'),
+      where('userId', '==', userId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  } catch (error) {
+    console.error('Error checking user event participation:', error);
+    return false;
+  }
+}
+
+/**
+ * Get user's team in specific event
+ * Returns both team details and membership record
+ * 
+ * @param userId - User's Firebase UID
+ * @param eventId - Event ID to check
+ * @returns Team and membership info, or null if not in event
+ */
+export async function getUserTeamInEvent(
+  userId: string,
+  eventId: string
+): Promise<{ team: any; membership: any } | null> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Get TeamMember record
+    const memberQuery = query(
+      collection(db, 'teamMembers'),
+      where('userId', '==', userId),
+      where('eventId', '==', eventId),
+      where('isActive', '==', true)
+    );
+    
+    const memberSnapshot = await getDocs(memberQuery);
+    if (memberSnapshot.empty) return null;
+    
+    const membershipData = memberSnapshot.docs[0].data();
+    const membership = {
+      id: memberSnapshot.docs[0].id,
+      ...membershipData
+    };
+    
+    // Get Team document
+    const teamDoc = await getDoc(doc(db, 'teams', membershipData.teamId as string));
+    if (!teamDoc.exists()) return null;
+    
+    const team = { id: teamDoc.id, ...teamDoc.data() };
+    
+    return { team, membership };
+  } catch (error) {
+    console.error('Error fetching user team in event:', error);
+    throw new Error('Failed to fetch user team');
+  }
+}
+
+/**
+ * Generate recovery code for account recovery
+ * Creates a 6-digit alphanumeric code that expires in 30 days
+ * 
+ * @param userId - User's Firebase UID
+ * @returns The generated recovery code
+ */
+export async function generateRecoveryCode(userId: string): Promise<string> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Generate 6-digit alphanumeric code
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Set expiration (30 days)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    
+    // Update user document
+    await updateDoc(doc(db, 'users', userId), {
+      recoveryCode: code,
+      recoveryCodeExpiresAt: expiresAt,
+      recoveryCodeGeneratedAt: new Date(),
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Recovery code generated for user ${userId}: ${code}`);
+    return code;
+  } catch (error) {
+    console.error('Error generating recovery code:', error);
+    throw new Error('Failed to generate recovery code');
+  }
+}
+
+/**
+ * Validate recovery code and find user
+ * 
+ * @param code - Recovery code entered by user
+ * @returns User document if code is valid, null otherwise
+ */
+export async function validateRecoveryCode(code: string): Promise<User | null> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    // Find user with this recovery code (not expired)
+    const q = query(
+      collection(db, 'users'),
+      where('recoveryCode', '==', code.toUpperCase()),
+      where('recoveryCodeExpiresAt', '>', new Date())
+    );
+    
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      console.log('❌ Invalid or expired recovery code');
+      return null;
+    }
+    
+    const user = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as User;
+    console.log(`✅ Valid recovery code for user: ${user.id}`);
+    return user;
+  } catch (error) {
+    console.error('Error validating recovery code:', error);
+    throw new Error('Failed to validate recovery code');
+  }
+}
+
+/**
+ * Invalidate recovery code (after successful use)
+ * 
+ * @param userId - User's Firebase UID
+ */
+export async function invalidateRecoveryCode(userId: string): Promise<void> {
+  try {
+    const db = getFirebaseFirestore();
+    
+    await updateDoc(doc(db, 'users', userId), {
+      recoveryCode: null,
+      recoveryCodeExpiresAt: null,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Recovery code invalidated for user ${userId}`);
+  } catch (error) {
+    console.error('Error invalidating recovery code:', error);
+    throw new Error('Failed to invalidate recovery code');
   }
 }

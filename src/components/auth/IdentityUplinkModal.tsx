@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createUser } from '../../services/user.service';
-import { useAuthStore } from '../../store/authStore';
+// Note: useAuthStore not needed here - useFirebaseAuthListener handles user state
 import type { User } from '../../types/schema';
 
 interface IdentityUplinkModalProps {
@@ -22,7 +22,7 @@ export function IdentityUplinkModal({
   tenantId,
   teamId,
 }: IdentityUplinkModalProps) {
-  const { setUser } = useAuthStore();
+  // Note: User state is managed by useFirebaseAuthListener, not here
   
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -173,8 +173,10 @@ export function IdentityUplinkModal({
       
       console.log('✅ User created successfully:', user.id);
       
-      // Update auth store with user
-      setUser(user);
+      // ⚡ OPTIMIZATION: Don't set user here - let useFirebaseAuthListener handle it
+      // This eliminates a duplicate state update since Firebase auth listener 
+      // will fire automatically after createUser() calls signInAnonymously()
+      // Previous code: setUser(user); ← REMOVED
       
       // Track analytics (optional)
       if (typeof window !== 'undefined' && (window as any).analytics) {
@@ -186,6 +188,7 @@ export function IdentityUplinkModal({
       }
       
       // Call success callback (this will handle team join)
+      // Note: useFirebaseAuthListener will set the user in store
       console.log('🎯 Calling onSuccess callback to join team...');
       onSuccess(user);
       

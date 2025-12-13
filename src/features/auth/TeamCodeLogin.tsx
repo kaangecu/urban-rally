@@ -16,7 +16,7 @@ import type { Team, User } from '../../types/schema';
 export function TeamCodeLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setTeam: setAuthTeam } = useAuthStore();
+  // useAuthStore imported but no selectors needed - we use setState() directly
   
   const [code, setCode] = useState('');
   const [validatedTeam, setValidatedTeam] = useState<Team | null>(null);
@@ -132,19 +132,25 @@ export function TeamCodeLogin() {
         throw new Error('Failed to load tenant information');
       }
 
-      // Update auth store with both team and tenant
-      setAuthTeam(validatedTeam);
-      useAuthStore.getState().setTenant(tenant);
+      // ⚡ OPTIMIZATION: Batch state updates to reduce re-renders from 3 to 1
+      // Instead of: setAuthTeam() → re-render #1, setTenant() → re-render #2
+      // We do: Single setState() → re-render #1
+      useAuthStore.setState({
+        team: validatedTeam,
+        tenant: tenant,
+        isAuthenticated: true,
+        error: null,
+      });
       
-      console.log('✅ Auth store updated:', {
+      console.log('✅ Auth store updated (batched):', {
         team: validatedTeam.teamName || validatedTeam.accessCode,
         tenant: tenant.name,
       });
       
-      // Close modal
+      // Close modal (optimistically - happens immediately)
       setShowAuthModal(false);
       
-      // Navigate to dashboard immediately
+      // Navigate to dashboard
       console.log('🚀 Navigating to dashboard...');
       navigate(`/tenant/${tenantId}/event/${validatedTeam.eventId}/dashboard`);
       

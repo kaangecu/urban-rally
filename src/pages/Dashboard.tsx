@@ -25,7 +25,16 @@ export function Dashboard() {
   const navigate = useNavigate();
   const auth = getFirebaseAuth();
   const user = auth.currentUser;
-  const { isAuthenticated, team, tenant, setTeam, setTenant, logout } = useAuthStore();
+  
+  // ⚡ OPTIMIZATION: Use selective subscriptions to reduce re-renders
+  // Only subscribe to the specific fields this component needs
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const team = useAuthStore(state => state.team);
+  const tenant = useAuthStore(state => state.tenant);
+  const setTeam = useAuthStore(state => state.setTeam);
+  const setTenant = useAuthStore(state => state.setTenant);
+  const logout = useAuthStore(state => state.logout);
+  
   const [viewMode, setViewMode] = useState<'list' | 'map' | 'team'>('list');
   const [isValidating, setIsValidating] = useState(true);
   const [isLoadingEventData, setIsLoadingEventData] = useState(false);

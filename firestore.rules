@@ -84,11 +84,9 @@ service cloud.firestore {
                   || (!isAuthenticated() && request.query != null)
                   || true; // ⚠️ DEVELOPMENT: Open read access
       
-      // ⚠️ DEVELOPMENT: Simplified update rules for debugging
-      // Allow team updates for authenticated users (owner or joining members)
-      allow update: if isAuthenticated()
-                    && request.resource.data.tenantId == resource.data.tenantId
-                    && request.resource.data.eventId == resource.data.eventId;
+      // 🔒 SECURITY FIX: Only Cloud Functions can update teams
+      // Prevents unauthorized changes to memberUserIds, scores, etc.
+      allow update: if false;
       
       // ⚠️ DEVELOPMENT: Allow creates for test data setup
       // TODO: Change to 'if false' in production
@@ -138,13 +136,9 @@ service cloud.firestore {
       // Users can read their own profile
       allow read: if isOwner(userId);
       
-      // Users can update their own profile (restricted fields)
-      allow update: if isOwner(userId)
-                    // Prevent changing critical fields
-                    && !('tenantId' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('id' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('accountType' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('linkedAccountId' in request.resource.data.diff(resource.data).affectedKeys());
+      // 🔒 SECURITY FIX: Only Cloud Functions can update users
+      // Prevents unauthorized changes to eventsParticipated, scores, etc.
+      allow update: if false;
       
       // Only Cloud Function can create users
       allow create: if false;
@@ -159,28 +153,16 @@ service cloud.firestore {
     // ====================================
     
     match /teamMembers/{teamMemberId} {
-      // Public read for browse teams (scoped by query)
-      allow read: if true;
+      // 🔒 SECURITY FIX: Users can only read their own memberships
+      // Prevents privacy leak of all team memberships
+      allow read: if isAuthenticated() 
+                  && request.auth.uid == resource.data.userId;
       
-      // User can create membership for themselves
-      allow create: if isAuthenticated()
-                    && request.auth.uid == request.resource.data.userId
-                    && isValidEvent(request.resource.data.eventId)
-                    && isValidTenant(request.resource.data.tenantId)
-                    && request.resource.data.isActive == true
-                    && request.resource.data.personalScore == 0
-                    && request.resource.data.role in ['owner', 'member'];
-      
-      // User can delete their own membership (leave team)
-      allow delete: if isOwner(resource.data.userId);
-      
-      // User can update their own membership (limited fields)
-      allow update: if isOwner(resource.data.userId)
-                    // Prevent changing critical fields
-                    && !('userId' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('teamId' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('eventId' in request.resource.data.diff(resource.data).affectedKeys())
-                    && !('tenantId' in request.resource.data.diff(resource.data).affectedKeys());
+      // 🔒 SECURITY FIX: Only Cloud Functions can create/update/delete memberships
+      // Prevents race conditions and unauthorized team joins
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
     
     // ====================================

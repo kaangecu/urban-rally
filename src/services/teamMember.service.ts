@@ -18,6 +18,7 @@ import {
   writeBatch,
   limit,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore } from './firebase.service';
 import type { TeamMember } from '../types/schema';
 import { getUserById } from './user.service';
@@ -562,90 +563,71 @@ export async function joinTeam(params: {
   tenantId: string;
   role: 'owner' | 'member';
 }): Promise<TeamMember> {
-  const db = getFirebaseFirestore();
-  const { userId, teamId, eventId, tenantId, role } = params;
+  const { teamId, eventId, tenantId, role } = params;
   
   try {
-    // Check if user already in this event
-    const existing = await getUserParticipationInEvent(userId, eventId);
-    if (existing) {
-      throw new Error(
-        `You are already in a team for this event (Team: ${existing.teamId}). ` +
-        `You can only join one team per event.`
-      );
-    }
+    // Call Cloud Function for secure team join
+    const functions = getFunctions(undefined, 'europe-west3');
+    const joinTeamFn = httpsCallable(functions, 'joinTeamSecure');
     
-    // Check if team has space
-    const teamRef = doc(db, 'teams', teamId);
-    const teamDoc = await getDoc(teamRef);
+    console.log(`🔐 Calling joinTeamSecure Cloud Function...`, { teamId, eventId, role });
     
-    if (!teamDoc.exists()) {
-      throw new Error('Team not found');
-    }
-    
-    const teamData = teamDoc.data();
-    const currentMembers = teamData.memberUserIds?.length || 0;
-    const maxMembers = teamData.maxMembers || 50;
-    
-    if (currentMembers >= maxMembers) {
-      throw new Error('Team is full');
-    }
-    
-    // Get user display name
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    const displayName = userDoc.exists() ? userDoc.data().displayName : 'Unknown';
-    
-    // Create TeamMember record
-    const memberId = `${teamId}-${userId}`;
-    const memberData: TeamMember = {
-      id: memberId,
-      userId,
+    const result = await joinTeamFn({
       teamId,
       eventId,
       tenantId,
-      displayName, // Denormalized for search
-      personalScore: 0,
-      submissionIds: [],
-      tasksCompleted: [],
       role,
-      isActive: true,
-      joinedAt: new Date(),
-      lastActiveAt: new Date(), // NEW: Set initial activity
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    });
     
-    // Use batch write for atomicity
-    const batch = writeBatch(db);
+    const data = result.data as { success: boolean; memberId: string; teamName: string };
     
-    // Add TeamMember document
-    batch.set(doc(db, 'teamMembers', memberId), {
+    if (!data.success) {
+      throw new Error('Failed to join team');
+    }
+    
+    console.log(`✅ Successfully joined team ${data.teamName} (${teamId})`);
+    
+    // Fetch the created team member document
+    const db = getFirebaseFirestore();
+    const memberDoc = await getDoc(doc(db, 'teamMembers', data.memberId));
+    
+    if (!memberDoc.exists()) {
+      throw new Error('Team member document not found after creation');
+    }
+    
+    const memberData = memberDoc.data() as TeamMember;
+    
+    return {
       ...memberData,
-      joinedAt: serverTimestamp(),
-      lastActiveAt: serverTimestamp(), // NEW: Set initial activity
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    
-    // Update team memberUserIds array
-    batch.update(teamRef, {
-      memberUserIds: arrayUnion(userId),
-      memberCount: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-    
-    // Update user stats
-    batch.update(doc(db, 'users', userId), {
-      eventsParticipated: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-    
-    await batch.commit();
-    
-    console.log(`✅ User ${userId} joined team ${teamId} in event ${eventId}`);
-    return memberData;
+      // Convert Firestore timestamps to Date objects
+      joinedAt: memberData.joinedAt instanceof Date ? memberData.joinedAt : new Date(),
+      lastActiveAt: memberData.lastActiveAt instanceof Date ? memberData.lastActiveAt : new Date(),
+      createdAt: memberData.createdAt instanceof Date ? memberData.createdAt : new Date(),
+      updatedAt: memberData.updatedAt instanceof Date ? memberData.updatedAt : new Date(),
+    };
   } catch (error) {
     console.error('Error joining team:', error);
+    
+    // Handle Cloud Function errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const functionsError = error as { code: string; message: string };
+      
+      switch (functionsError.code) {
+        case 'unauthenticated':
+          throw new Error('You must be logged in to join a team');
+        case 'already-exists':
+          throw new Error('You are already in a team for this event. Leave your current team first.');
+        case 'resource-exhausted':
+          throw new Error('Team is full');
+        case 'not-found':
+          throw new Error('Team not found');
+        case 'failed-precondition':
+          throw new Error('This team is no longer active');
+        default:
+          throw new Error(functionsError.message || 'Failed to join team');
+      }
+    }
+    
     throw error;
   }
 }

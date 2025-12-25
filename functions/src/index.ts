@@ -166,6 +166,7 @@ export const createUserDocument = onCall(async (request) => {
     return {
       success: true,
       userId: uid,
+      user: userData,
     };
   } catch (error) {
     logger.error("Failed to create user document", {

@@ -81,39 +81,14 @@ export async function createUser(data: {
 
     console.log('✅ Cloud Function response:', result.data);
 
-    // 3. Fetch the created user document (with retry for replication delay)
-    console.log('📖 Fetching created user document...');
-    const userRef = doc(db, 'users', uid);
+    // 3. Use the user data returned by Cloud Function (avoids permission issues)
+    const responseData = result.data as { success: boolean; userId: string; user: any };
     
-    // Retry logic: Cloud Function creates document, but there might be a slight delay
-    // before Firestore replicates it to the client's region
-    let userDoc;
-    let attempts = 0;
-    const maxAttempts = 5;
-    const delayMs = 500; // 500ms between attempts
-    
-    while (attempts < maxAttempts) {
-      attempts++;
-      console.log(`📖 Attempt ${attempts}/${maxAttempts} to fetch user document...`);
-      
-      userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        break;
-      }
-      
-      if (attempts < maxAttempts) {
-        console.log(`⏳ User document not found yet, waiting ${delayMs}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
+    if (!responseData.success || !responseData.user) {
+      throw new Error('User document was not returned by Cloud Function');
     }
 
-    if (!userDoc || !userDoc.exists()) {
-      console.error('❌ User document not found after', maxAttempts, 'attempts');
-      throw new Error('User document was not created by Cloud Function. Please try again.');
-    }
-
-    const userData = userDoc.data() as User;
+    const userData = responseData.user as User;
     console.log('✅ User created successfully:', {
       uid,
       displayName: userData.displayName,

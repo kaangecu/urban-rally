@@ -81,17 +81,19 @@ export async function createUser(data: {
 
     console.log('✅ Cloud Function response:', result.data);
 
-    // 3. Fetch the created user document
-    console.log('� Fetching created user document...');
-    const userRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userRef);
+    // 3. Fetch the created user document via Cloud Function (avoids replication delay)
+    console.log('📖 Fetching created user document via Cloud Function...');
+    const getUserFn = httpsCallable(functions, 'getUser');
+    
+    const getUserResult = await getUserFn({ userId: uid });
+    const getUserData = getUserResult.data as { success: boolean; user: User };
 
-    if (!userDoc.exists()) {
-      throw new Error('User document was not created by Cloud Function');
+    if (!getUserData.success || !getUserData.user) {
+      throw new Error('User document was not returned by Cloud Function');
     }
 
-    const userData = userDoc.data() as User;
-    console.log('✅ User created successfully:', {
+    const userData = getUserData.user;
+    console.log('✅ User created and fetched successfully:', {
       uid,
       displayName: userData.displayName,
       hasEmail: !!userData.email,

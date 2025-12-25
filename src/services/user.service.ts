@@ -81,19 +81,40 @@ export async function createUser(data: {
 
     console.log('✅ Cloud Function response:', result.data);
 
-    // 3. Fetch the created user document via Cloud Function (avoids replication delay)
-    console.log('📖 Fetching created user document via Cloud Function...');
-    const getUserFn = httpsCallable(functions, 'getUser');
+    // 3. Fetch the created user document (with retry for replication delay)
+    console.log('📖 Fetching created user document...');
+    const userRef = doc(db, 'users', uid);
     
-    const getUserResult = await getUserFn({ userId: uid });
-    const getUserData = getUserResult.data as { success: boolean; user: User };
-
-    if (!getUserData.success || !getUserData.user) {
-      throw new Error('User document was not returned by Cloud Function');
+    // Retry logic: Cloud Function creates document, but there might be a slight delay
+    // before Firestore replicates it to the client's region
+    let userDoc;
+    let attempts = 0;
+    const maxAttempts = 5;
+    const delayMs = 500; // 500ms between attempts
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`📖 Attempt ${attempts}/${maxAttempts} to fetch user document...`);
+      
+      userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        break;
+      }
+      
+      if (attempts < maxAttempts) {
+        console.log(`⏳ User document not found yet, waiting ${delayMs}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
     }
 
-    const userData = getUserData.user;
-    console.log('✅ User created and fetched successfully:', {
+    if (!userDoc || !userDoc.exists()) {
+      console.error('❌ User document not found after', maxAttempts, 'attempts');
+      throw new Error('User document was not created by Cloud Function. Please try again.');
+    }
+
+    const userData = userDoc.data() as User;
+    console.log('✅ User created successfully:', {
       uid,
       displayName: userData.displayName,
       hasEmail: !!userData.email,

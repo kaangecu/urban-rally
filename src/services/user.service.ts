@@ -19,6 +19,7 @@ import { signInAnonymously, deleteUser as deleteAuthUser } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
 import type { User } from '../types/schema';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Create a new user
@@ -27,25 +28,33 @@ import type { User } from '../types/schema';
  * which bypasses client-side security rules and fixes the permission error.
  * 
  * Flow:
- * 1. Sign in anonymously to get Firebase Auth UID
- * 2. Call Cloud Function to create user document (uses Admin SDK)
- * 3. Fetch and return the created user document
+ * 1. Set auth state to 'creating' (disables auth listener)
+ * 2. Sign in anonymously to get Firebase Auth UID
+ * 3. Call Cloud Function to create user document (uses Admin SDK)
+ * 4. Set user in store
+ * 5. Set auth state to 'authenticated'
+ * 
+ * @param data User creation data
+ * @param setAuthState Function to update auth state (from AuthContext)
  */
-export async function createUser(data: {
-  displayName: string;
-  email?: string;
-  tenantId: string;
-  accountType?: 'anonymous' | 'linked'; // NEW: Multi-event support
-  consentGiven: {
-    terms: boolean;
-    privacy: boolean;
-    termsVersion: string;
-    privacyVersion: string;
-    termsAcceptedAt: Date;
-    privacyAcceptedAt: Date;
-    ipAddress?: string;
-  };
-}): Promise<User> {
+export async function createUser(
+  data: {
+    displayName: string;
+    email?: string;
+    tenantId: string;
+    accountType?: 'anonymous' | 'linked';
+    consentGiven: {
+      terms: boolean;
+      privacy: boolean;
+      termsVersion: string;
+      privacyVersion: string;
+      termsAcceptedAt: Date;
+      privacyAcceptedAt: Date;
+      ipAddress?: string;
+    };
+  },
+  setAuthState?: (state: 'idle' | 'creating' | 'restoring' | 'authenticated' | 'error') => void
+): Promise<User> {
   const auth = getFirebaseAuth();
   const db = getFirebaseFirestore();
   // Specify europe-west3 region to match deployed function
@@ -61,13 +70,20 @@ export async function createUser(data: {
       tenantId: data.tenantId,
     });
 
-    // 1. Create Firebase Anonymous Auth user
+    // STEP 1: Set auth state to 'creating' to disable auth listener
+    // This prevents race condition where listener fires before creation completes
+    if (setAuthState) {
+      setAuthState('creating');
+      console.log('🔒 Auth listener disabled (state: creating)');
+    }
+
+    // STEP 2: Create Firebase Anonymous Auth user
     console.log('🔐 Creating anonymous auth user...');
     const userCredential = await signInAnonymously(auth);
     uid = userCredential.user.uid;
     console.log('✅ Auth user created, UID:', uid);
 
-    // 2. Call Cloud Function to create user document
+    // STEP 3: Call Cloud Function to create user document
     console.log('☁️ Calling Cloud Function to create user document...');
     const createUserDocument = httpsCallable(functions, 'createUserDocument');
     
@@ -75,13 +91,13 @@ export async function createUser(data: {
       displayName: data.displayName,
       email: data.email || undefined,
       tenantId: data.tenantId,
-      accountType: data.accountType || 'anonymous', // NEW: Pass accountType
+      accountType: data.accountType || 'anonymous',
       consentGiven: data.consentGiven,
     });
 
     console.log('✅ Cloud Function response:', result.data);
 
-    // 3. Use the user data returned by Cloud Function (avoids permission issues)
+    // STEP 4: Use the user data returned by Cloud Function
     const responseData = result.data as { success: boolean; userId: string; user: any };
     
     if (!responseData.success || !responseData.user) {
@@ -89,6 +105,16 @@ export async function createUser(data: {
     }
 
     const userData = responseData.user as User;
+    
+    // STEP 5: Set user in store
+    useAuthStore.getState().setUser(userData);
+    
+    // STEP 6: Set auth state to 'authenticated'
+    if (setAuthState) {
+      setAuthState('authenticated');
+      console.log('🔓 Auth listener enabled (state: authenticated)');
+    }
+    
     console.log('✅ User created successfully:', {
       uid,
       displayName: userData.displayName,
@@ -98,6 +124,12 @@ export async function createUser(data: {
     return userData;
   } catch (error) {
     console.error('❌ Error creating user:', error);
+    
+    // Reset auth state on error
+    if (setAuthState) {
+      setAuthState('error');
+      console.log('⚠️  Auth state set to error');
+    }
     
     // Enhanced error logging
     if (error instanceof Error) {

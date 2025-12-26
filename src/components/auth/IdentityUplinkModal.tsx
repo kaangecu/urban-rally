@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createUser } from '../../services/user.service';
-// Note: useAuthStore not needed here - useFirebaseAuthListener handles user state
+import { useAuth } from '../../contexts/AuthContext';
 import type { User } from '../../types/schema';
 
 interface IdentityUplinkModalProps {
@@ -22,7 +22,8 @@ export function IdentityUplinkModal({
   tenantId,
   teamId,
 }: IdentityUplinkModalProps) {
-  // Note: User state is managed by useFirebaseAuthListener, not here
+  // Get auth context for state management
+  const { setAuthState } = useAuth();
   
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -156,6 +157,7 @@ export function IdentityUplinkModal({
     
     try {
       // Create user with Firebase
+      // Pass setAuthState to control auth listener during creation
       const user = await createUser({
         displayName: `${firstName.trim()} ${lastName.trim()}`,
         email: email.trim() || undefined,
@@ -169,7 +171,7 @@ export function IdentityUplinkModal({
           termsAcceptedAt: new Date(),
           privacyAcceptedAt: new Date(),
         },
-      });
+      }, setAuthState); // ← Pass setAuthState to manage auth lifecycle
       
       console.log('✅ User created successfully:', user.id);
       

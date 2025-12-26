@@ -29,24 +29,31 @@ export function useFirebaseAuthListener() {
       try {
         setLoading(true);
 
-        // 1. Get user document from Firestore
-        const userDoc = await getUserById(firebaseUser.uid);
+        // Check if user was just set by createUser() to avoid redundant fetch
+        // This prevents race condition where auth listener fires during user creation
+        const { user: storeUser } = useAuthStore.getState();
         
-        if (!userDoc) {
-          // Check if this is a newly created anonymous user (within last 5 seconds)
-          const userCreationTime = firebaseUser.metadata.creationTime;
-          const createdAt = userCreationTime ? new Date(userCreationTime).getTime() : 0;
-          const now = Date.now();
-          const isNewUser = (now - createdAt) < 5000;
+        if (storeUser && storeUser.id === firebaseUser.uid) {
+          // User already in store - likely just created or recently set
+          // Check if this is a fresh user (within last 10 seconds as safety net)
+          const userAge = Date.now() - new Date(storeUser.createdAt).getTime();
+          const isFreshUser = userAge < 10000; // 10 second safety window
           
-          if (isNewUser) {
-            // This is likely a user being created right now - don't logout
-            console.log('ℹ️ New anonymous user detected, waiting for Firestore document creation...');
+          if (isFreshUser) {
+            console.log('✅ User already in store (just created), skipping session restore');
             setLoading(false);
             return;
           }
           
-          // Not a new user but no document exists - inconsistent state
+          // User exists in store but is old - proceed with normal restore
+          // This handles the case where auth state changed (e.g., page refresh)
+          console.log('ℹ️ User in store but stale, proceeding with session restore');
+        }
+
+        // Normal session restoration: fetch user document from Firestore
+        const userDoc = await getUserById(firebaseUser.uid);
+        
+        if (!userDoc) {
           console.warn('Firebase user exists but no Firestore user document found');
           await logout();
           return;

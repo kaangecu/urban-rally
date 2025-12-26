@@ -6,7 +6,7 @@
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { useFirebaseAuthListener } from './hooks/useFirebaseAuthListener';
+import { AuthProvider } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoading } from './components/LoadingSpinner';
 import { LoginMethodSelector } from './features/auth/LoginMethodSelector';
@@ -19,14 +19,12 @@ import { AccountSettings } from './pages/AccountSettings';
 
 export function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
-  
-  // Listen to Firebase auth state changes (restores session on refresh)
-  useFirebaseAuthListener();
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <Suspense fallback={<PageLoading />}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoading />}>
           <Routes>
             {/* Public Routes - New Hybrid Login Flow */}
             <Route 
@@ -73,6 +71,7 @@ export function AppRoutes() {
       </Routes>
         </Suspense>
       </BrowserRouter>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

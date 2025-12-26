@@ -399,3 +399,132 @@ export const joinTeamSecure = onCall(async (request) => {
     );
   }
 });
+
+// ============================================================================
+// TEAM MEMBER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get Team Members Securely
+ * 
+ * Fetches all active members of a team with their user details.
+ * Uses Admin SDK to bypass client-side security rules.
+ * 
+ * @param data - Request data
+ * @param data.teamId - Team ID to fetch members for
+ * 
+ * @returns Array of team members with user details
+ * 
+ * @throws {unauthenticated} - Caller must be authenticated
+ * @throws {invalid-argument} - Invalid team ID
+ * @throws {not-found} - Team not found
+ */
+export const getTeamMembersSecure = onCall(async (request) => {
+  const {data, auth} = request;
+  const db = admin.firestore();
+
+  // 1. Verify caller is authenticated
+  if (!auth || !auth.uid) {
+    throw new HttpsError(
+      "unauthenticated",
+      "You must be logged in to view team members."
+    );
+  }
+
+  const userId = auth.uid;
+  const {teamId} = data;
+
+  // 2. Validate input
+  if (!teamId || typeof teamId !== "string") {
+    throw new HttpsError("invalid-argument", "Valid team ID is required");
+  }
+
+  logger.info("Fetching team members", {userId, teamId});
+
+  try {
+    // 3. Verify team exists
+    const teamDoc = await db.collection("teams").doc(teamId).get();
+    if (!teamDoc.exists) {
+      throw new HttpsError("not-found", "Team not found");
+    }
+
+    // 4. Get all active team members
+    const membersSnapshot = await db
+      .collection("teamMembers")
+      .where("teamId", "==", teamId)
+      .where("isActive", "==", true)
+      .get();
+
+    if (membersSnapshot.empty) {
+      logger.info("No members found for team", {teamId});
+      return {members: []};
+    }
+
+    // 5. Fetch user details for each member
+    const memberPromises = membersSnapshot.docs.map(async (memberDoc) => {
+      const memberData = memberDoc.data();
+      const userDoc = await db.collection("users").doc(memberData.userId).get();
+
+      if (!userDoc.exists) {
+        logger.warn("User not found for member", {
+          memberId: memberDoc.id,
+          userId: memberData.userId,
+        });
+        return null;
+      }
+
+      const userData = userDoc.data()!;
+
+      return {
+        userId: memberData.userId,
+        displayName: userData.displayName || "Unknown",
+        email: userData.email || null,
+        profilePhotoUrl: userData.profilePhotoUrl || null,
+        personalScore: memberData.personalScore || 0,
+        tasksCompleted: memberData.tasksCompleted?.length || 0,
+        submissionCount: memberData.submissionIds?.length || 0,
+        role: memberData.role || "member",
+        joinedAt: memberData.joinedAt?.toDate() || new Date(),
+        isActive: memberData.isActive,
+      };
+    });
+
+    const members = await Promise.all(memberPromises);
+
+    // Filter out null values (users not found)
+    const validMembers = members.filter(
+      (m): m is NonNullable<typeof m> => m !== null
+    );
+
+    // Sort by role (owner first) and then by score
+    validMembers.sort((a, b) => {
+      if (a.role === "owner" && b.role !== "owner") return -1;
+      if (a.role !== "owner" && b.role === "owner") return 1;
+      return b.personalScore - a.personalScore;
+    });
+
+    logger.info("Team members fetched successfully", {
+      teamId,
+      memberCount: validMembers.length,
+    });
+
+    return {members: validMembers};
+  } catch (error) {
+    // Re-throw HttpsError
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    // Log and wrap unexpected errors
+    logger.error("Failed to fetch team members", {
+      userId,
+      teamId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    throw new HttpsError(
+      "internal",
+      "Failed to fetch team members. Please try again."
+    );
+  }
+});

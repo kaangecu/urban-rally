@@ -19,9 +19,13 @@ import {
   limit,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore } from './firebase.service';
+import { getFirebaseFirestore, app } from './firebase.service';
 import type { TeamMember } from '../types/schema';
-import { getUserById } from './user.service';
+
+// Helper to get Functions instance
+const getFirebaseFunctions = () => {
+  return getFunctions(app, 'europe-west3');
+};
 
 /**
  * Add user to team
@@ -195,57 +199,30 @@ export async function getTeamMembers(teamId: string): Promise<
   }>
 > {
   try {
-    const db = getFirebaseFirestore();
+    const functions = getFirebaseFunctions();
+    const getTeamMembersSecure = httpsCallable(functions, 'getTeamMembersSecure');
 
-    // 1. Get all team member records
-    const membersRef = collection(db, 'teamMembers');
-    const q = query(
-      membersRef,
-      where('teamId', '==', teamId),
-      where('isActive', '==', true)
-    );
+    const result = await getTeamMembersSecure({ teamId });
+    const data = result.data as { members: Array<{
+      userId: string;
+      displayName: string;
+      email?: string;
+      profilePhotoUrl?: string;
+      personalScore: number;
+      tasksCompleted: number;
+      submissionCount: number;
+      role: 'owner' | 'member';
+      joinedAt: any;
+      isActive: boolean;
+    }> };
 
-    const memberSnapshots = await getDocs(q);
-
-    if (memberSnapshots.empty) {
-      return [];
-    }
-
-    // 2. Get user details for each member
-    const memberPromises = memberSnapshots.docs.map(async (memberDoc) => {
-      const memberData = memberDoc.data() as TeamMember;
-      const user = await getUserById(memberData.userId);
-
-      if (!user) {
-        console.warn('User not found for member:', memberData.userId);
-        return null;
-      }
-
-      return {
-        userId: user.id,
-        displayName: user.displayName,
-        email: user.email,
-        profilePhotoUrl: user.profilePhotoUrl,
-        personalScore: memberData.personalScore,
-        tasksCompleted: memberData.tasksCompleted.length,
-        submissionCount: memberData.submissionIds.length,
-        role: memberData.role,
-        joinedAt: memberData.joinedAt,
-        isActive: memberData.isActive,
-      };
-    });
-
-    const members = await Promise.all(memberPromises);
-
-    // Filter out null values and sort by score (highest first)
-    return members
-      .filter((m): m is NonNullable<typeof m> => m !== null)
-      .sort((a, b) => {
-        // Owners first, then by score
-        if (a.role === 'owner' && b.role !== 'owner') return -1;
-        if (a.role !== 'owner' && b.role === 'owner') return 1;
-        return b.personalScore - a.personalScore;
-      });
+    // Convert Firestore Timestamps to Date objects
+    return data.members.map(member => ({
+      ...member,
+      joinedAt: member.joinedAt?.seconds 
+        ? new Date(member.joinedAt.seconds * 1000)
+        : new Date(member.joinedAt),
+    }));
   } catch (error) {
     console.error('Error fetching team members:', error);
     throw new Error('Failed to fetch team members');

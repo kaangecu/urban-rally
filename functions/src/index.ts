@@ -45,10 +45,7 @@ setGlobalOptions({
  * @throws {already-exists} - User document already exists
  */
 export const createUserDocument = onCall(
-  {
-    cors: ['http://localhost:5173', 'https://urban-rally-539bd.web.app', 'https://urban-rally-539bd.firebaseapp.com'],
-    invoker: 'public',
-  },
+  {cors: true}, // Enable CORS for all origins
   async (request) => {
     const {data, auth} = request;
 
@@ -212,10 +209,7 @@ export const createUserDocument = onCall(
  * @throws {failed-precondition} - Team is inactive or deleted
  */
 export const joinTeamSecure = onCall(
-  {
-    cors: ['http://localhost:5173', 'https://urban-rally-539bd.web.app', 'https://urban-rally-539bd.firebaseapp.com'],
-    invoker: 'public',
-  },
+  {cors: true}, // Enable CORS for all origins
   async (request) => {
     const {data, auth} = request;
 
@@ -430,10 +424,7 @@ export const joinTeamSecure = onCall(
  * @throws {not-found} - Team not found
  */
 export const getTeamMembersSecure = onCall(
-  {
-    cors: ['http://localhost:5173', 'https://urban-rally-539bd.web.app', 'https://urban-rally-539bd.firebaseapp.com'],
-    invoker: 'public', // Allow unauthenticated HTTP requests (auth handled in function)
-  },
+  {cors: true}, // Enable CORS for all origins
   async (request) => {
     const {data, auth} = request;
     const db = admin.firestore();

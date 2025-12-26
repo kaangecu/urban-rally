@@ -16,8 +16,8 @@ import {
   increment,
 } from 'firebase/firestore';
 import { signInAnonymously, deleteUser as deleteAuthUser } from 'firebase/auth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
+import { httpsCallable } from 'firebase/functions';
+import { getFirebaseFirestore, getFirebaseAuth, getFirebaseFunctions } from './firebase.service';
 import type { User } from '../types/schema';
 import { useAuthStore } from '../store/authStore';
 
@@ -57,8 +57,8 @@ export async function createUser(
 ): Promise<User> {
   const auth = getFirebaseAuth();
   const db = getFirebaseFirestore();
-  // Specify europe-west3 region to match deployed function
-  const functions = getFunctions(undefined, 'europe-west3');
+  // Get Functions instance (automatically uses emulator in dev)
+  const functions = getFirebaseFunctions();
   let uid: string | undefined;
 
   try {

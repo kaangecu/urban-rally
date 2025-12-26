@@ -18,16 +18,9 @@ import {
   writeBatch,
   limit,
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore } from './firebase.service';
+import { httpsCallable } from 'firebase/functions';
+import { getFirebaseFirestore, getFirebaseFunctions } from './firebase.service';
 import type { TeamMember } from '../types/schema';
-
-// Helper to get Functions instance
-// NOTE: Using undefined instead of app for CORS compatibility
-// This matches the working pattern from user.service.ts
-const getFirebaseFunctions = () => {
-  return getFunctions(undefined, 'europe-west3');
-};
 
 /**
  * Add user to team
@@ -546,7 +539,7 @@ export async function joinTeam(params: {
   
   try {
     // Call Cloud Function for secure team join
-    const functions = getFunctions(undefined, 'europe-west3');
+    const functions = getFirebaseFunctions();
     const joinTeamFn = httpsCallable(functions, 'joinTeamSecure');
     
     console.log(`🔐 Calling joinTeamSecure Cloud Function...`, { teamId, eventId, role });

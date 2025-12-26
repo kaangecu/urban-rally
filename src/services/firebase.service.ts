@@ -20,6 +20,8 @@ import {
 import type { Firestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import type { FirebaseStorage } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import type { Functions } from 'firebase/functions';
 import { firebaseConfig } from '../config/app.config';
 
 // Firebase instances
@@ -27,6 +29,7 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
+let functions: Functions;
 
 /**
  * Initialize Firebase with offline persistence
@@ -47,6 +50,16 @@ export const initializeFirebase = async (): Promise<void> => {
     // Initialize Storage
     storage = getStorage(app);
     
+    // Initialize Functions
+    functions = getFunctions(app, 'europe-west3');
+    
+    // Connect to emulators in development
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
+      connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+      console.log('🔧 Connected to Firebase Emulators (Firestore: 8080, Functions: 5001)');
+    }
+    
     // Enable offline persistence (CRITICAL for offline-first)
     try {
       await enableIndexedDbPersistence(db);
@@ -57,12 +70,6 @@ export const initializeFirebase = async (): Promise<void> => {
       } else if (err.code === 'unimplemented') {
         console.warn('⚠️ Browser does not support persistence');
       }
-    }
-    
-    // Connect to emulator in development (optional)
-    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
-      connectFirestoreEmulator(db, 'localhost', 8080);
-      console.log('🔧 Connected to Firestore emulator');
     }
     
     console.log('✅ Firebase initialized successfully');
@@ -103,6 +110,17 @@ export const getFirebaseStorage = (): FirebaseStorage => {
 };
 
 /**
+ * Get Firebase Functions instance
+ * Automatically configured for emulator in development when VITE_USE_EMULATOR=true
+ */
+export const getFirebaseFunctions = (): Functions => {
+  if (!functions) {
+    throw new Error('Firebase not initialized. Call initializeFirebase() first.');
+  }
+  return functions;
+};
+
+/**
  * Sign in anonymously (used for team code authentication)
  */
 export const signInAnonymousUser = async (): Promise<string> => {
@@ -127,4 +145,4 @@ export const getCurrentUserId = (): string | null => {
   return auth.currentUser?.uid || null;
 };
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions };

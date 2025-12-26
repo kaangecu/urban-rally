@@ -11,14 +11,12 @@ interface EventHeaderProps {
   tenant: Tenant;
   team: Team;
   currentEventId: string;
-  onLogout: () => Promise<void>;
 }
 
 export function EventHeader({ 
   tenant, 
   team, 
   currentEventId,
-  onLogout 
 }: EventHeaderProps) {
   const navigate = useNavigate();
 
@@ -74,23 +72,14 @@ export function EventHeader({
             </div>
           </div>
           
-          {/* Logout Button */}
+          {/* Settings Button */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/settings')}
               className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium"
               title="Account Settings"
             >
-              ⚙️
-            </button>
-            <button
-              onClick={async () => {
-                await onLogout();
-                navigate('/login');
-              }}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors font-medium"
-            >
-              Logout
+              ⚙️ Settings
             </button>
           </div>
         </div>

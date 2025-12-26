@@ -33,7 +33,6 @@ export function Dashboard() {
   const tenant = useAuthStore(state => state.tenant);
   const setTeam = useAuthStore(state => state.setTeam);
   const setTenant = useAuthStore(state => state.setTenant);
-  const logout = useAuthStore(state => state.logout);
   
   const [viewMode, setViewMode] = useState<'list' | 'map' | 'team'>('list');
   const [isValidating, setIsValidating] = useState(true);
@@ -150,7 +149,6 @@ export function Dashboard() {
         tenant={tenant}
         team={team}
         currentEventId={eventId || ''}
-        onLogout={logout}
       />
 
       {/* Main Content */}

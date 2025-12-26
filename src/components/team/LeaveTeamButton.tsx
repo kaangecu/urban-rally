@@ -23,7 +23,7 @@ export function LeaveTeamButton({
   isOwner = false 
 }: LeaveTeamButtonProps) {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, setTeam } = useAuthStore();
   const [isLeaving, setIsLeaving] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -42,8 +42,10 @@ export function LeaveTeamButton({
 
       console.log('✅ Left team successfully');
 
-      // Logout and redirect to events page
-      await logout();
+      // Clear team from state (but keep user session!)
+      setTeam(null);
+      
+      // Redirect to events page to join another team
       navigate('/events');
 
     } catch (error: any) {
@@ -91,14 +93,14 @@ export function LeaveTeamButton({
             <span className="font-semibold text-gray-900">"{teamName}"</span>?
           </p>
 
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
-            <p className="font-semibold text-red-900 text-sm">⚠️ Warning:</p>
-            <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
-              <li>Your personal score will be lost</li>
-              <li>Your task completions will be removed</li>
-              <li>You cannot rejoin if the team is full</li>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-amber-900 text-sm">ℹ️ What happens:</p>
+            <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
+              <li>You'll be removed from this team</li>
+              <li>Your account and progress will be saved</li>
+              <li>You can join another team immediately</li>
               {isOwner && (
-                <li className="font-semibold">
+                <li className="font-semibold text-red-800">
                   As team owner, you must transfer ownership first
                 </li>
               )}

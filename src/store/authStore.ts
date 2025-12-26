@@ -65,6 +65,14 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       logout: async () => {
+        // ⚠️ WARNING: Logout destroys anonymous sessions permanently!
+        // Users cannot log back in. Use with extreme caution.
+        // Consider using "Leave Team" instead to preserve the account.
+        
+        console.warn('⚠️  LOGOUT CALLED: Anonymous session will be destroyed permanently!');
+        console.warn('⚠️  User will NOT be able to log back in.');
+        console.warn('⚠️  Consider using "Leave Team" instead.');
+        
         try {
           const auth = getFirebaseAuth();
           
@@ -85,6 +93,8 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             isLoading: false,
           });
+          
+          console.log('🔴 User session destroyed (cannot be recovered)');
         }
       },
     }),

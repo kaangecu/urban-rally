@@ -561,6 +561,7 @@ export async function getTeamsForEvent(
     
     console.log(`✅ Found ${sortedTeams.length} teams for event ${eventId}`);
     
+    console.log("Sorted Teams:", sortedTeams);
     return sortedTeams;
     
   } catch (error) {

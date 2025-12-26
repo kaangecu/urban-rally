@@ -11,7 +11,7 @@
  * - error: Authentication error occurred
  */
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -55,6 +55,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const { setUser, setTeam, setTenant, setLoading, logout } = useAuthStore();
+  
+  // Use ref to track current auth state without causing re-renders
+  const authStateRef = useRef<AuthState>('idle');
+  
+  // Update ref whenever state changes
+  useEffect(() => {
+    authStateRef.current = authState;
+  }, [authState]);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -74,8 +82,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // CRITICAL: Skip listener if user is being created
-      // This prevents race condition where listener fires before creation completes
-      if (authState === 'creating') {
+      // Use ref to get current state without causing effect re-run
+      if (authStateRef.current === 'creating') {
         console.log('⏭️  Auth listener skipped - user creation in progress');
         return;
       }
@@ -183,7 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🔴 Auth listener cleaned up');
       unsubscribe();
     };
-  }, [authState, setUser, setTeam, setTenant, setLoading, logout]);
+  }, [setUser, setTeam, setTenant, setLoading, logout]); // ← authState removed from dependencies!
 
   const value: AuthContextValue = {
     authState,

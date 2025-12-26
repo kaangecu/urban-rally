@@ -33,11 +33,11 @@ export function useFirebaseAuthListener() {
         const userDoc = await getUserById(firebaseUser.uid);
         
         if (!userDoc) {
-          // Check if this is a newly created anonymous user (creation timestamp within last 5 seconds)
+          // Check if this is a newly created anonymous user (within last 5 seconds)
           const userCreationTime = firebaseUser.metadata.creationTime;
           const createdAt = userCreationTime ? new Date(userCreationTime).getTime() : 0;
           const now = Date.now();
-          const isNewUser = (now - createdAt) < 5000; // Created within last 5 seconds
+          const isNewUser = (now - createdAt) < 5000;
           
           if (isNewUser) {
             // This is likely a user being created right now - don't logout

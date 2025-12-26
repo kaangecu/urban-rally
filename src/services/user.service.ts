@@ -160,10 +160,19 @@ export async function createUser(data: {
  */
 export async function getUserById(userId: string): Promise<User | null> {
   try {
+    console.log('fff');
+
     const db = getFirebaseFirestore();
+
+    console.log('gggfff');
+
     const userRef = doc(db, 'users', userId);
+
+    console.log('qwdqwd');
+
     const userDoc = await getDoc(userRef);
 
+    console.log('QQQQ', userDoc);
     if (!userDoc.exists()) {
       return null;
     }

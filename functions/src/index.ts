@@ -44,10 +44,12 @@ setGlobalOptions({
  * @throws {invalid-argument} - Invalid input data
  * @throws {already-exists} - User document already exists
  */
-export const createUserDocument = onCall(async (request) => {
-  const {data, auth} = request;
+export const createUserDocument = onCall(
+  {cors: true}, // Enable CORS for all origins
+  async (request) => {
+    const {data, auth} = request;
 
-  // 1. Verify caller is authenticated
+    // 1. Verify caller is authenticated
   if (!auth) {
     logger.warn("Unauthenticated user creation attempt");
     throw new HttpsError(
@@ -206,11 +208,13 @@ export const createUserDocument = onCall(async (request) => {
  * @throws {already-exists} - User already in a team for this event
  * @throws {failed-precondition} - Team is inactive or deleted
  */
-export const joinTeamSecure = onCall(async (request) => {
-  const {data, auth} = request;
+export const joinTeamSecure = onCall(
+  {cors: true}, // Enable CORS for all origins
+  async (request) => {
+    const {data, auth} = request;
 
-  // 1. Verify caller is authenticated
-  if (!auth) {
+    // 1. Verify caller is authenticated
+    if (!auth) {
     logger.warn("Unauthenticated team join attempt");
     throw new HttpsError(
       "unauthenticated",
@@ -419,9 +423,11 @@ export const joinTeamSecure = onCall(async (request) => {
  * @throws {invalid-argument} - Invalid team ID
  * @throws {not-found} - Team not found
  */
-export const getTeamMembersSecure = onCall(async (request) => {
-  const {data, auth} = request;
-  const db = admin.firestore();
+export const getTeamMembersSecure = onCall(
+  {cors: true}, // Enable CORS for all origins
+  async (request) => {
+    const {data, auth} = request;
+    const db = admin.firestore();
 
   // 1. Verify caller is authenticated
   if (!auth || !auth.uid) {

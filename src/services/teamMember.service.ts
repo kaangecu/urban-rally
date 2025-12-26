@@ -19,12 +19,14 @@ import {
   limit,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore, app } from './firebase.service';
+import { getFirebaseFirestore } from './firebase.service';
 import type { TeamMember } from '../types/schema';
 
 // Helper to get Functions instance
+// NOTE: Using undefined instead of app for CORS compatibility
+// This matches the working pattern from user.service.ts
 const getFirebaseFunctions = () => {
-  return getFunctions(app, 'europe-west3');
+  return getFunctions(undefined, 'europe-west3');
 };
 
 /**

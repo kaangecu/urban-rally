@@ -60,11 +60,11 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-          <p className="text-sm text-slate-400 font-mono uppercase tracking-widest">Mission Control</p>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+          <p className="text-xs md:text-sm text-slate-400 font-mono uppercase tracking-widest">Mission Control</p>
         </div>
 
         {/* Welcome Card */}

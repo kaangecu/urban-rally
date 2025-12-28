@@ -108,18 +108,18 @@ export function EventList() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Events</h1>
-            <p className="text-sm text-slate-400 font-mono uppercase tracking-widest">
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Events</h1>
+            <p className="text-xs md:text-sm text-slate-400 font-mono uppercase tracking-widest">
               Event Management
             </p>
           </div>
           <button
             onClick={() => navigate('/admin/events/new')}
-            className="bg-blue-600 hover:bg-blue-500 text-white py-2 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -144,9 +144,9 @@ export function EventList() {
 
         {/* Empty State */}
         {!loading && !error && events.length === 0 && (
-          <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-12 text-center">
+          <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-8 md:p-12 text-center">
             <svg
-              className="w-16 h-16 text-slate-600 mx-auto mb-4"
+              className="w-12 h-12 md:w-16 md:h-16 text-slate-600 mx-auto mb-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -158,13 +158,13 @@ export function EventList() {
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <h3 className="text-xl font-bold text-white mb-2">No Events Yet</h3>
-            <p className="text-slate-400 mb-6">
+            <h3 className="text-lg md:text-xl font-bold text-white mb-2">No Events Yet</h3>
+            <p className="text-sm md:text-base text-slate-400 mb-6">
               Get started by creating your first event.
             </p>
             <button
               onClick={() => navigate('/admin/events/new')}
-              className="bg-blue-600 hover:bg-blue-500 text-white py-2 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-2 min-h-[44px] touch-manipulation"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -180,7 +180,7 @@ export function EventList() {
             {events.map((event) => (
               <div
                 key={event.id}
-                className="bg-[#1e293b] border border-slate-700 rounded-xl p-6 hover:border-blue-500/50 transition-all cursor-pointer"
+                className="bg-[#1e293b] border border-slate-700 rounded-xl p-4 md:p-6 hover:border-blue-500/50 active:border-blue-500 transition-all cursor-pointer touch-manipulation"
                 onClick={() => navigate(`/admin/events/${event.id}`)}
               >
                 {/* Event Code Badge */}
@@ -220,7 +220,7 @@ export function EventList() {
                       e.stopPropagation();
                       navigate(`/admin/events/${event.id}/edit`);
                     }}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-2 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
                   >
                     Edit
                   </button>
@@ -229,7 +229,7 @@ export function EventList() {
                       e.stopPropagation();
                       navigate(`/admin/events/${event.id}/tasks`);
                     }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
                   >
                     Tasks
                   </button>

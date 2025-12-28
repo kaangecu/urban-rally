@@ -141,22 +141,22 @@ export function EventForm() {
 
   return (
     <AdminLayout>
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-4 md:p-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <button
             onClick={() => navigate('/admin/events')}
-            className="text-blue-400 hover:text-blue-300 text-sm font-medium mb-4 flex items-center gap-2"
+            className="text-blue-400 hover:text-blue-300 active:text-blue-500 text-sm font-medium mb-4 flex items-center gap-2 min-h-[44px] py-2 touch-manipulation"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
             Back to Events
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
             {isEditMode ? 'Edit Event' : 'Create Event'}
           </h1>
-          <p className="text-sm text-slate-400 font-mono uppercase tracking-widest">
+          <p className="text-xs md:text-sm text-slate-400 font-mono uppercase tracking-widest">
             Event Configuration
           </p>
         </div>
@@ -225,7 +225,7 @@ export function EventForm() {
                   <button
                     type="button"
                     onClick={generateEventCode}
-                    className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors"
+                    className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
                   >
                     Generate
                   </button>
@@ -328,11 +328,11 @@ export function EventForm() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors"
+              className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-blue-600/50 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
             >
               {saving ? 'Saving...' : isEditMode ? 'Update Event' : 'Create Event'}
             </button>
@@ -340,7 +340,7 @@ export function EventForm() {
               type="button"
               onClick={() => navigate('/admin/events')}
               disabled={saving}
-              className="flex-1 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors"
+              className="w-full sm:flex-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 disabled:bg-slate-800/50 text-white py-3 px-6 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
             >
               Cancel
             </button>

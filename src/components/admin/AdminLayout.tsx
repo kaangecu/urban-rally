@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { useAdminStore } from '../../store/adminStore';
@@ -14,6 +14,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { adminProfile } = useAdminAuth();
   const { clearAdminState } = useAdminStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -67,30 +68,93 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     },
   ];
 
+  const handleNavClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-[#0f172a] flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-[#1e293b] border-r border-slate-700 flex flex-col">
-        {/* Logo/Brand */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-700">
+    <div className="min-h-screen bg-[#0f172a] flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <header className="md:hidden h-16 bg-[#1e293b] border-b border-slate-700 flex items-center justify-between px-4 sticky top-0 z-50">
+        <h1 className="text-lg font-bold text-white font-mono">
+          URBAN<span className="text-blue-500">RALLY</span>
+        </h1>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 text-slate-400 hover:text-white transition-colors"
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Mobile Drawer / Desktop Sidebar */}
+      <aside
+        className={`
+          fixed md:sticky top-0 left-0 h-full z-40
+          w-64 bg-[#1e293b] border-r border-slate-700 flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0
+          md:h-screen
+        `}
+      >
+        {/* Logo/Brand - Desktop Only */}
+        <div className="hidden md:flex h-16 items-center px-6 border-b border-slate-700">
           <h1 className="text-xl font-bold text-white font-mono">
             URBAN<span className="text-blue-500">RALLY</span>
           </h1>
         </div>
 
+        {/* Mobile Header in Drawer */}
+        <div className="md:hidden h-16 flex items-center justify-between px-6 border-b border-slate-700">
+          <h1 className="text-lg font-bold text-white font-mono">
+            URBAN<span className="text-blue-500">RALLY</span>
+          </h1>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-1 text-slate-400 hover:text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
+                onClick={handleNavClick}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                  min-h-[44px] touch-manipulation
+                  ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white active:bg-slate-700'
+                  }
+                `}
               >
                 {item.icon}
                 <span className="font-medium">{item.label}</span>
@@ -118,7 +182,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 px-4 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white py-2 px-4 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -129,7 +193,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto md:h-screen">
         {children}
       </main>
     </div>

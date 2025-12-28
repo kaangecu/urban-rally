@@ -44,10 +44,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         (position) => {
           setUserLocation(position);
           
-          if (task.coordinates) {
+          if (task.location) {
             const distance = verifyGPSLocation(
               { lat: position.coords.latitude, lng: position.coords.longitude },
-              task.coordinates,
+              task.location,
               task.radius || 50
             );
             
@@ -82,11 +82,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       });
 
       // Create submission
-      // TODO: After migration, replace team.uid with actual user.id from auth store
       await createSubmission(
         task.id, 
         team.id, 
-        team.uid || team.id, // TEMPORARY: Use team.uid until migration is complete
+        user.id, // Use authenticated user's ID
         tenant.id, 
         team.eventId, 
         {

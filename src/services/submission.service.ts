@@ -55,10 +55,13 @@ export async function createSubmission(
     points: number;
   }
 ): Promise<string> {
+  console.log('🚀 Creating submission...', { taskId, teamId, userId, tenantId, eventId, dataType: data.type });
+  
   try {
     const db = getFirebaseFirestore();
     const submissionId = `sub-${teamId}-${taskId}-${Date.now()}`;
     const submissionRef = doc(db, 'submissions', submissionId);
+    console.log('📝 Generated submission ID:', submissionId);
 
     const submission: Omit<TaskSubmission, 'id'> & { id?: string } = {
       id: submissionId,
@@ -80,6 +83,7 @@ export async function createSubmission(
 
     // Use batch write for atomicity
     const batch = writeBatch(db);
+    console.log('📦 Creating batch write for submission and team update...');
 
     // 1. Create submission
     batch.set(submissionRef, {
@@ -91,17 +95,28 @@ export async function createSubmission(
 
     // 2. Update team (check if task already completed)
     const teamRef = doc(db, 'teams', teamId);
+    console.log('🔍 Fetching team document...', teamId);
     const teamDoc = await getDoc(teamRef);
     
     if (!teamDoc.exists()) {
+      console.error('❌ Team not found:', teamId);
       throw new Error('Team not found');
     }
 
     const team = teamDoc.data();
-    if (team.completedTaskIds?.includes(taskId)) {
-      throw new Error('Task already completed by this team');
+    console.log('✅ Team found. Current score:', team.score, 'Completed tasks:', team.completedTaskIds?.length || 0);
+    
+    // Defensive array handling - ensure completedTaskIds is an array
+    const completedTaskIds = Array.isArray(team.completedTaskIds) 
+      ? team.completedTaskIds 
+      : [];
+    
+    if (completedTaskIds.includes(taskId)) {
+      console.warn('⚠️ Task already completed:', taskId);
+      throw new Error('Task already completed');
     }
 
+    console.log('✏️ Adding task to team batch update...', { taskId, points: data.points });
     batch.update(teamRef, {
       score: increment(data.points),
       completedTaskIds: arrayUnion(taskId),
@@ -109,24 +124,29 @@ export async function createSubmission(
     });
 
     await batch.commit();
+    console.log('✅ Batch committed: submission and team updated');
 
     // 3. Update team member stats (separate from batch to avoid conflicts)
+    console.log('📊 Updating member stats...', { teamId, userId, points: data.points });
     await updateMemberStats(teamId, userId, {
       scoreIncrement: data.points,
       submissionId,
       taskId,
     });
+    console.log('✅ Member stats updated');
 
     // 4. Update user stats
+    console.log('📊 Updating user stats...', { userId, points: data.points });
     await updateUserStats(userId, {
       scoreIncrement: data.points,
       submissionsIncrement: 1,
     });
+    console.log('✅ User stats updated');
 
-    console.log('✅ Submission created:', { submissionId, userId, points: data.points });
+    console.log('✅ Submission flow completed successfully');
     return submissionId;
   } catch (error) {
-    console.error('Error creating submission:', error);
+    console.error('❌ Error creating submission:', error);
     throw error;
   }
 }

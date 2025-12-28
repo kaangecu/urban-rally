@@ -343,19 +343,22 @@ export function TaskList() {
       {/* Task Cards */}
       {!isLoading && !error && filteredAndSortedTasks.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredAndSortedTasks.map((task, index) => (
-            <motion.div
-              key={task.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <TaskCard
-                task={task}
-                isCompleted={team.completedTaskIds.includes(task.id)}
-              />
-            </motion.div>
-          ))}
+          {filteredAndSortedTasks.map((task, index) => {
+            const completedTaskIds = Array.isArray(team.completedTaskIds) ? team.completedTaskIds : [];
+            return (
+              <motion.div
+                key={task.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <TaskCard
+                  task={task}
+                  isCompleted={completedTaskIds.includes(task.id)}
+                />
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -119,9 +119,11 @@ export function getTasksByType(tasks: Task[], type: Task['type']): Task[] {
  */
 export function getIncompleteTasks(
   tasks: Task[],
-  completedTaskIds: string[]
+  completedTaskIds: string[] | undefined
 ): Task[] {
-  return tasks.filter(task => !completedTaskIds.includes(task.id));
+  // Safely handle undefined or non-array completedTaskIds
+  const completed = Array.isArray(completedTaskIds) ? completedTaskIds : [];
+  return tasks.filter(task => !completed.includes(task.id));
 }
 
 /**
@@ -129,9 +131,11 @@ export function getIncompleteTasks(
  */
 export function getCompletedTasks(
   tasks: Task[],
-  completedTaskIds: string[]
+  completedTaskIds: string[] | undefined
 ): Task[] {
-  return tasks.filter(task => completedTaskIds.includes(task.id));
+  // Safely handle undefined or non-array completedTaskIds
+  const completed = Array.isArray(completedTaskIds) ? completedTaskIds : [];
+  return tasks.filter(task => completed.includes(task.id));
 }
 
 /**
@@ -167,7 +171,7 @@ export function sortTasks(
 /**
  * Calculate task statistics
  */
-export function getTaskStats(tasks: Task[], completedTaskIds: string[]) {
+export function getTaskStats(tasks: Task[], completedTaskIds: string[] | undefined) {
   const available = getAvailableTasks(tasks);
   const incomplete = getIncompleteTasks(available, completedTaskIds);
   const completed = getCompletedTasks(tasks, completedTaskIds);

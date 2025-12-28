@@ -211,7 +211,7 @@ export function BrowseTeams() {
                   <div>
                     <div className="text-xs text-gray-500 uppercase">Tasks</div>
                     <div className="text-lg font-semibold text-gray-900">
-                      {team.completedTaskIds.length}
+                      {Array.isArray(team.completedTaskIds) ? team.completedTaskIds.length : 0}
                     </div>
                   </div>
                 </div>

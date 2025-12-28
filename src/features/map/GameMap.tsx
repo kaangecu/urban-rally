@@ -259,13 +259,16 @@ export function GameMap() {
         <MapController />
         <UserLocationMarker />
         
-        {tasksWithLocation.map((task) => (
-          <TaskMarker
-            key={task.id}
-            task={task}
-            isCompleted={team?.completedTaskIds.includes(task.id) || false}
-          />
-        ))}
+        {tasksWithLocation.map((task) => {
+          const completedTaskIds = Array.isArray(team?.completedTaskIds) ? team.completedTaskIds : [];
+          return (
+            <TaskMarker
+              key={task.id}
+              task={task}
+              isCompleted={completedTaskIds.includes(task.id)}
+            />
+          );
+        })}
       </MapContainer>
 
       {/* Map controls overlay */}

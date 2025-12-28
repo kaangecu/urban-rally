@@ -67,7 +67,7 @@ export function EventHeader({
                 Tasks
               </div>
               <div className="text-lg font-semibold">
-                {team.completedTaskIds.length} completed
+                {Array.isArray(team.completedTaskIds) ? team.completedTaskIds.length : 0} completed
               </div>
             </div>
           </div>

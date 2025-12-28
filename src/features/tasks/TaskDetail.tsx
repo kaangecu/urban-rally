@@ -8,15 +8,20 @@ export function TaskDetail() {
   const { team } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Safely handle completedTaskIds - ensure it's an array
+  const completedTaskIds = Array.isArray(team?.completedTaskIds) ? team.completedTaskIds : [];
+
   console.log('📋 TaskDetail rendered', { 
     taskId: selectedTask?.id, 
     isSubmitting,
-    isCompleted: team?.completedTaskIds.includes(selectedTask?.id || '') || false
+    isCompleted: completedTaskIds.includes(selectedTask?.id || '') || false,
+    teamHasCompletedTaskIds: !!team?.completedTaskIds,
+    completedTaskIdsType: typeof team?.completedTaskIds
   });
 
   if (!selectedTask) return null;
 
-  const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
+  const isCompleted = completedTaskIds.includes(selectedTask.id) || false;
 
   return (
     <>

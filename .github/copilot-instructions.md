@@ -246,7 +246,40 @@ interface MultiTenantEntity {
 }
 ```
 
-Key types: `User`, `Tenant`, `Event`, `Team`, `TeamMember`, `Task`, `Submission`
+### Key Types
+
+**User (Unified Schema - Jan 2025)**
+All users (players AND admins) use the unified `User` interface:
+```typescript
+interface User extends MultiTenantEntity {
+  id: string;
+  email: string;                    // REQUIRED (was optional)
+  displayName: string;
+  photoURL?: string;                // Renamed from profilePhotoUrl
+  accountType: 'anonymous' | 'linked';  // REQUIRED
+  role: 'player' | 'moderator' | 'organizer' | 'admin' | 'superadmin'; // NEW
+  
+  // Admin fields (optional)
+  managedTenantIds?: string[];
+  isActive?: boolean;
+  
+  // Player fields (all users - admins can play!)
+  totalScore: number;
+  totalSubmissions: number;
+  eventsParticipated: number;
+  consentGiven: { ... };
+}
+```
+
+**IMPORTANT:**
+- ✅ Single `User` type for ALL users (admins can play events!)
+- ✅ Firebase Custom Claims = authoritative role (security rules check this)
+- ✅ Firestore `role` field = query/display optimization
+- ❌ `UserProfile` interface REMOVED (merged into User)
+- ❌ `linkedAccountId` field REMOVED (deprecated)
+- See: `docs/UNIFIED_USER_REFACTORING_COMPLETE.md`
+
+**Other Key Types:** `Tenant`, `Event`, `Team`, `TeamMember`, `Task`, `Submission`
 
 ## Environment Variables
 Required in `.env`:

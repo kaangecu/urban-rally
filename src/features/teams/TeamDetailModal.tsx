@@ -1,6 +1,8 @@
 /**
  * TeamDetailModal Component
  * Bottom sheet modal showing team details and join button
+ * 
+ * Note: User is guaranteed to be authenticated by global profile check in App.tsx
  */
 
 import { useState, useEffect } from 'react';
@@ -9,8 +11,7 @@ import { getTeamWithMembers } from '../../services/team.service';
 import { joinTeam } from '../../services/teamMember.service';
 import { getFirebaseAuth } from '../../services/firebase.service';
 import { useAuthStore } from '../../store/authStore';
-import { IdentityUplinkModal } from '../../components/auth/IdentityUplinkModal';
-import type { Team, User } from '../../types/schema';
+import type { Team } from '../../types/schema';
 
 interface TeamDetailModalProps {
   team: Team;
@@ -29,7 +30,6 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const teamDisplayName = team.teamDisplayName || team.teamName || `Team ${team.accessCode}`;
   const teamEmoji = team.teamName?.match(/[\u{1F300}-\u{1F9FF}]/u)?.[0] || '👥';
@@ -59,9 +59,10 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
   }, [team.id]);
 
   const handleJoinTeam = async () => {
+    // User is guaranteed to be authenticated by global profile check
     if (!user) {
-      // Not authenticated - show auth modal instead of redirecting
-      setShowAuthModal(true);
+      console.error('❌ User not authenticated - this should never happen due to global profile guard');
+      alert('Session error. Please refresh the page.');
       return;
     }
     
@@ -78,6 +79,8 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
     try {
       setIsJoining(true);
 
+      console.log('🎯 Joining team:', { teamId: team.id, userId: user.uid });
+
       // Join the team
       await joinTeam({
         userId: user.uid,
@@ -90,48 +93,14 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
       // Update auth store
       setAuthTeam(team);
       
-      // Navigate to dashboard
-      navigate(`/tenant/${tenantId}/event/${eventId}/dashboard`);
-    } catch (error: any) {
-      console.error('Error joining team:', error);
-      alert(error.message || 'Failed to join team. Please try again.');
-      setIsJoining(false);
-    }
-  };
-
-  const handleAuthSuccess = async (authenticatedUser: User) => {
-    // User has been authenticated, now join the team
-    if (!tenantId || !eventId) {
-      alert('Missing event information');
-      return;
-    }
-
-    try {
-      setIsJoining(true);
-      
-      // Join the team with newly created user
-      await joinTeam({
-        userId: authenticatedUser.id,
-        teamId: team.id,
-        eventId: eventId!,
-        tenantId: tenantId!,
-        role: 'member',
-      });
-
-      // Update auth store
-      setAuthTeam(team);
-      
-      // Close modals
-      setShowAuthModal(false);
-      onClose();
+      console.log('✅ Successfully joined team');
       
       // Navigate to dashboard
       navigate(`/tenant/${tenantId}/event/${eventId}/dashboard`);
     } catch (error: any) {
-      console.error('Error joining team:', error);
+      console.error('❌ Error joining team:', error);
       alert(error.message || 'Failed to join team. Please try again.');
       setIsJoining(false);
-      setShowAuthModal(false);
     }
   };
 
@@ -246,16 +215,6 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
             </button>
           )}
         </div>
-        
-        {/* Identity Uplink Modal (Auth) */}
-        <IdentityUplinkModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-          teamName={teamDisplayName}
-          tenantId={tenantId!}
-          teamId={team.id}
-        />
       </div>
     );
   }
@@ -359,16 +318,6 @@ export function TeamDetailModal({ team, onClose, useCyberpunk, isJoined }: TeamD
         )}
       </div>
     </div>
-      
-    {/* Identity Uplink Modal (Auth) */}
-    <IdentityUplinkModal
-      isOpen={showAuthModal}
-      onClose={() => setShowAuthModal(false)}
-      onSuccess={handleAuthSuccess}
-      teamName={teamDisplayName}
-      tenantId={tenantId!}
-      teamId={team.id}
-    />
     </>
   );
 }

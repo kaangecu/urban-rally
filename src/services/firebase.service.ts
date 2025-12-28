@@ -9,7 +9,8 @@ import {
   getAuth, 
   signInAnonymously,
   setPersistence,
-  browserLocalPersistence 
+  browserLocalPersistence,
+  connectAuthEmulator
 } from 'firebase/auth';
 import type { Auth } from 'firebase/auth';
 import { 
@@ -18,7 +19,7 @@ import {
   connectFirestoreEmulator 
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import type { FirebaseStorage } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import type { Functions } from 'firebase/functions';
@@ -40,8 +41,17 @@ export const initializeFirebase = async (): Promise<void> => {
     // Initialize Firebase App
     app = initializeApp(firebaseConfig);
     
-    // Initialize Auth with local persistence
+    // Initialize Auth (but DON'T configure persistence yet)
     auth = getAuth(app);
+    
+    // IMPORTANT: Connect to emulators BEFORE any auth operations
+    // This ensures the emulator connection is established before auth tries to restore session
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      console.log('🔧 Connected to Auth Emulator (9099)');
+    }
+    
+    // NOW set persistence after emulator is connected
     await setPersistence(auth, browserLocalPersistence);
     
     // Initialize Firestore
@@ -57,7 +67,8 @@ export const initializeFirebase = async (): Promise<void> => {
     if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
       connectFirestoreEmulator(db, '127.0.0.1', 8080);
       connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-      console.log('🔧 Connected to Firebase Emulators (Firestore: 8080, Functions: 5001)');
+      connectStorageEmulator(storage, '127.0.0.1', 9199);
+      console.log('🔧 Connected to Firestore (8080), Functions (5001), and Storage (9199) Emulators');
     }
     
     // Enable offline persistence (CRITICAL for offline-first)

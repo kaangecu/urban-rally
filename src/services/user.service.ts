@@ -19,23 +19,20 @@ import { signInAnonymously, deleteUser as deleteAuthUser } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { getFirebaseFirestore, getFirebaseAuth, getFirebaseFunctions } from './firebase.service';
 import type { User } from '../types/schema';
-import { useAuthStore } from '../store/authStore';
 
 /**
  * Create a new user
  * 
- * This function now uses a Cloud Function to create the user document,
+ * This function uses a Cloud Function to create the user document,
  * which bypasses client-side security rules and fixes the permission error.
  * 
  * Flow:
- * 1. Set auth state to 'creating' (disables auth listener)
- * 2. Sign in anonymously to get Firebase Auth UID
- * 3. Call Cloud Function to create user document (uses Admin SDK)
- * 4. Set user in store
- * 5. Set auth state to 'authenticated'
+ * 1. Sign in anonymously to get Firebase Auth UID
+ * 2. Call Cloud Function to create user document (uses Admin SDK)
+ * 3. Return user data (component handles store update)
  * 
  * @param data User creation data
- * @param setAuthState Function to update auth state (from AuthContext)
+ * @returns Promise<User> - The created user data
  */
 export async function createUser(
   data: {
@@ -52,12 +49,10 @@ export async function createUser(
       privacyAcceptedAt: Date;
       ipAddress?: string;
     };
-  },
-  setAuthState?: (state: 'idle' | 'creating' | 'restoring' | 'authenticated' | 'error') => void
+  }
 ): Promise<User> {
   const auth = getFirebaseAuth();
   const db = getFirebaseFirestore();
-  // Get Functions instance (automatically uses emulator in dev)
   const functions = getFirebaseFunctions();
   let uid: string | undefined;
 
@@ -70,34 +65,34 @@ export async function createUser(
       tenantId: data.tenantId,
     });
 
-    // STEP 1: Set auth state to 'creating' to disable auth listener
-    // This prevents race condition where listener fires before creation completes
-    if (setAuthState) {
-      setAuthState('creating');
-      console.log('🔒 Auth listener disabled (state: creating)');
-    }
-
-    // STEP 2: Create Firebase Anonymous Auth user
+    // STEP 1: Create Firebase Anonymous Auth user
     console.log('🔐 Creating anonymous auth user...');
     const userCredential = await signInAnonymously(auth);
     uid = userCredential.user.uid;
     console.log('✅ Auth user created, UID:', uid);
 
-    // STEP 3: Call Cloud Function to create user document
+    // STEP 2: Call Cloud Function to create user document
     console.log('☁️ Calling Cloud Function to create user document...');
     const createUserDocument = httpsCallable(functions, 'createUserDocument');
+    
+    // Convert Date objects to ISO strings for JSON serialization
+    const consentData = {
+      ...data.consentGiven,
+      termsAcceptedAt: data.consentGiven.termsAcceptedAt.toISOString(),
+      privacyAcceptedAt: data.consentGiven.privacyAcceptedAt.toISOString(),
+    };
     
     const result = await createUserDocument({
       displayName: data.displayName,
       email: data.email || undefined,
       tenantId: data.tenantId,
       accountType: data.accountType || 'anonymous',
-      consentGiven: data.consentGiven,
+      consentGiven: consentData,
     });
 
     console.log('✅ Cloud Function response:', result.data);
 
-    // STEP 4: Use the user data returned by Cloud Function
+    // STEP 3: Extract user data from Cloud Function response
     const responseData = result.data as { success: boolean; userId: string; user: any };
     
     if (!responseData.success || !responseData.user) {
@@ -106,30 +101,16 @@ export async function createUser(
 
     const userData = responseData.user as User;
     
-    // STEP 5: Set user in store
-    useAuthStore.getState().setUser(userData);
-    
-    // STEP 6: Set auth state to 'authenticated'
-    if (setAuthState) {
-      setAuthState('authenticated');
-      console.log('🔓 Auth listener enabled (state: authenticated)');
-    }
-    
     console.log('✅ User created successfully:', {
       uid,
       displayName: userData.displayName,
       hasEmail: !!userData.email,
     });
 
+    // STEP 4: Return user data (component handles store update)
     return userData;
   } catch (error) {
     console.error('❌ Error creating user:', error);
-    
-    // Reset auth state on error
-    if (setAuthState) {
-      setAuthState('error');
-      console.log('⚠️  Auth state set to error');
-    }
     
     // Enhanced error logging
     if (error instanceof Error) {

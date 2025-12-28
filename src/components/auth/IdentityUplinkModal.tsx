@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createUser } from '../../services/user.service';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAuthStore } from '../../store/authStore';
 import type { User } from '../../types/schema';
 
 interface IdentityUplinkModalProps {
@@ -11,6 +12,7 @@ interface IdentityUplinkModalProps {
   eventName?: string;
   tenantId: string;
   teamId?: string;
+  required?: boolean; // If true, modal cannot be dismissed by clicking backdrop or ESC
 }
 
 export function IdentityUplinkModal({
@@ -21,9 +23,13 @@ export function IdentityUplinkModal({
   // eventName, // Reserved for future use
   tenantId,
   teamId,
+  required = false, // Default to dismissible
 }: IdentityUplinkModalProps) {
   // Get auth context for state management
   const { setAuthState } = useAuth();
+  
+  // Get store updater for explicit state management
+  const { setUser } = useAuthStore();
   
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -67,17 +73,17 @@ export function IdentityUplinkModal({
     }
   }, [isOpen]);
 
-  // Handle ESC key
+  // Handle ESC key (only if modal is dismissible)
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isLoading) {
+      if (e.key === 'Escape' && isOpen && !isLoading && !required) {
         onClose();
       }
     };
 
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, isLoading, onClose]);
+  }, [isOpen, isLoading, onClose, required]);
 
   // Validation
   const validateField = (field: string, value: string | boolean): string | undefined => {
@@ -156,8 +162,10 @@ export function IdentityUplinkModal({
     setError(null);
     
     try {
-      // Create user with Firebase
-      // Pass setAuthState to control auth listener during creation
+      // Set auth state to 'creating' to disable auth listener during creation
+      setAuthState('creating');
+      
+      // Create user with Firebase (service is now a pure function)
       const user = await createUser({
         displayName: `${firstName.trim()} ${lastName.trim()}`,
         email: email.trim() || undefined,
@@ -171,14 +179,15 @@ export function IdentityUplinkModal({
           termsAcceptedAt: new Date(),
           privacyAcceptedAt: new Date(),
         },
-      }, setAuthState); // ← Pass setAuthState to manage auth lifecycle
+      });
       
       console.log('✅ User created successfully:', user.id);
       
-      // ⚡ OPTIMIZATION: Don't set user here - let useFirebaseAuthListener handle it
-      // This eliminates a duplicate state update since Firebase auth listener 
-      // will fire automatically after createUser() calls signInAnonymously()
-      // Previous code: setUser(user); ← REMOVED
+      // Explicitly update store with returned user data
+      setUser(user);
+      
+      // Set auth state to 'authenticated'
+      setAuthState('authenticated');
       
       // Track analytics (optional)
       if (typeof window !== 'undefined' && (window as any).analytics) {
@@ -190,20 +199,21 @@ export function IdentityUplinkModal({
       }
       
       // Call success callback (this will handle team join)
-      // Note: useFirebaseAuthListener will set the user in store
       console.log('🎯 Calling onSuccess callback to join team...');
       onSuccess(user);
       
     } catch (err) {
       console.error('Error creating user:', err);
       setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
+      setAuthState('error'); // Set auth state to error
       setIsLoading(false); // Keep modal open on error
     }
     // Note: Don't set isLoading to false here - let parent handle modal close
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && !isLoading) {
+    // Only allow dismissing if not required and not loading
+    if (e.target === e.currentTarget && !isLoading && !required) {
       onClose();
     }
   };
@@ -491,6 +501,15 @@ export function IdentityUplinkModal({
             </button>
 
           </form>
+
+          {/* Required Message - shown when modal is non-dismissible */}
+          {required && (
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-[10px] text-center text-gray-500 font-mono uppercase tracking-widest">
+                🎯 Create your profile to get started
+              </p>
+            </div>
+          )}
 
         </div>
       </div>

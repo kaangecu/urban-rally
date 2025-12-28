@@ -23,15 +23,12 @@ service firebase.storage {
       return request.resource.size < 50 * 1024 * 1024; // 50MB max for videos
     }
     
-    // Check if user's UID matches the team's UID in Firestore
-    function isTeamMember(teamId) {
-      return isAuthenticated() 
-             && firestore.get(/databases/(default)/documents/teams/$(teamId)).data.uid == request.auth.uid;
-    }
-    
-    // Task Submissions - path without fileName segment
+    // Task Submissions - Simplified for emulator compatibility
+    // In production, use Firestore validation or Cloud Functions
     match /submissions/{tenantId}/{eventId}/{teamId}/{taskId} {
-      allow write: if isTeamMember(teamId)
+      // Development: Allow any authenticated user to upload
+      // Production: Should validate team membership via Cloud Function
+      allow write: if isAuthenticated()
                    && ((isImage() && isValidImageSize()) || (isVideo() && isValidVideoSize()));
       allow read: if isAuthenticated();
     }

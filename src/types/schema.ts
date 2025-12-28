@@ -73,32 +73,57 @@ export interface Event extends MultiTenantEntity {
 }
 
 /**
- * User
- * Individual user/player entity with persistent identity
+ * User - Unified interface for all users in the system
  * 
- * Multi-Event Support:
+ * Represents both players and administrators. All users can participate in
+ * events (play the game), while users with admin roles have additional
+ * permissions to manage tenants and events.
+ * 
+ * ROLE HIERARCHY:
+ * - player: Can join teams and submit tasks
+ * - moderator: Can moderate submissions
+ * - organizer: Can create/manage events for assigned tenants
+ * - admin: Can manage users and tenants
+ * - superadmin: Full system access
+ * 
+ * AUTHENTICATION:
+ * - Role is stored in Firebase Custom Claims (authoritative)
+ * - Role is mirrored in Firestore for queries (synced by setUserRole function)
+ * - Custom Claims checked by security rules and route guards
+ * 
+ * ADMIN GAMEPLAY:
+ * - Admins can join teams and play like regular players
+ * - Player stats (totalScore, eventsParticipated) accumulate normally
+ * - managedTenantIds and isActive fields only relevant for admin permissions
+ * 
+ * MULTI-EVENT SUPPORT:
  * - User can participate in multiple events across different tenants
  * - Multi-event participation is tracked via TeamMember records (not User.tenantId)
  * - User.tenantId represents "home tenant" (first tenant joined)
  * 
- * @version 2.0 - Added accountType, recovery codes, and multi-event support
+ * @version 3.0 - Unified User and UserProfile into single type
+ * @see functions/src/index.ts setUserRole - Sets role via Custom Claims
+ * @see firestore.rules - Security rules enforce role-based access
  */
 export interface User extends MultiTenantEntity {
   id: string; // Firebase Auth UID
   
-  // Profile
-  displayName: string; // Required: User's name
-  email?: string; // Optional: For notifications
-  profilePhotoUrl?: string; // Optional: Avatar
+  // Profile (required)
+  displayName: string; // User's display name
+  email: string; // Email address (required for all users)
+  photoURL?: string; // Avatar URL (standardized from profilePhotoUrl)
   
-  // Account Management (NEW in v2.0)
-  accountType?: 'anonymous' | 'linked'; // Account type (default: 'anonymous')
-  linkedAccountId?: string; // UID of linked email/password account (if accountType='linked')
+  // Account Type & Role
+  accountType: 'anonymous' | 'linked'; // How they authenticated
+  role: 'player' | 'moderator' | 'organizer' | 'admin' | 'superadmin'; // Permission level
   
-  // Recovery Mechanism (NEW in v2.0)
+  // Admin-Specific Fields (optional, only set for admin roles)
+  managedTenantIds?: string[]; // Tenants they can manage (undefined for players)
+  isActive?: boolean; // Admin account status (undefined for players)
+  
+  // Recovery Mechanism
   recoveryCode?: string; // 6-digit alphanumeric code for account recovery
   recoveryCodeExpiresAt?: Date; // Expiration timestamp (30 days from generation)
-  recoveryCodeGeneratedAt?: Date; // When the code was created
   
   // GDPR Consent Tracking (Required for German compliance)
   consentGiven: {
@@ -111,7 +136,7 @@ export interface User extends MultiTenantEntity {
     ipAddress?: string; // IP address when consent given (GDPR requirement)
   };
   
-  // Statistics (aggregated across all teams/events)
+  // Player Statistics (all users have these - admins can play!)
   totalScore: number; // Total points earned across all teams
   totalSubmissions: number; // Total tasks submitted
   eventsParticipated: number; // Number of events joined
@@ -360,24 +385,6 @@ export interface CheckoutSession {
     itemId: string;
     itemType: string;
   };
-}
-
-/**
- * User Profile (Admin/Organizer)
- * For event creators and moderators
- */
-export interface UserProfile extends MultiTenantEntity {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  
-  // Permissions
-  role: 'admin' | 'organizer' | 'moderator';
-  managedTenantIds: string[]; // Tenants they can manage
-  
-  // Status
-  isActive: boolean;
 }
 
 /**

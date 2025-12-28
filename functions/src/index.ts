@@ -1045,3 +1045,185 @@ export const updateTaskSecure = onCall(
     }
   }
 );
+
+// ============================================================================
+// ADMIN MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Set User Role
+ * 
+ * Assigns admin roles (superadmin, admin, organizer, moderator) to users via
+ * Firebase Custom Claims. This function is protected and should only be called
+ * by super admins or during initial setup.
+ * 
+ * Custom Claims are used for client-side role checks without database queries.
+ * They are automatically included in the user's ID token.
+ * 
+ * @param data.uid - Target user's Firebase Auth UID
+ * @param data.role - Role to assign: 'superadmin' | 'admin' | 'organizer' | 'moderator'
+ * @param data.tenantIds - Array of tenant IDs the user can manage (empty for superadmin)
+ * @param data.email - User's email address (for profile creation)
+ * @param data.displayName - Optional display name
+ * 
+ * @returns {success: boolean, message: string}
+ * 
+ * @throws {unauthenticated} - Caller must be authenticated
+ * @throws {permission-denied} - Only superadmins can assign roles
+ * @throws {invalid-argument} - Invalid role or missing required fields
+ * @throws {not-found} - Target user does not exist
+ */
+export const setUserRole = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    // Verify caller is authenticated
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Authentication required to assign roles"
+      );
+    }
+
+    // Check if caller is superadmin (or allow if no custom claims exist yet - bootstrap case)
+    const callerClaims = auth.token;
+    const isBootstrap = !callerClaims.role; // First superadmin creation
+    
+    if (!isBootstrap && callerClaims.role !== "superadmin") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only super admins can assign roles"
+      );
+    }
+
+    // Validate input
+    const {uid, role, tenantIds = [], email, displayName} = data;
+
+    if (!uid || typeof uid !== "string") {
+      throw new HttpsError("invalid-argument", "Valid uid is required");
+    }
+
+    const validRoles = ["superadmin", "admin", "organizer", "moderator"];
+    if (!role || !validRoles.includes(role)) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Role must be one of: ${validRoles.join(", ")}`
+      );
+    }
+
+    if (!email || typeof email !== "string") {
+      throw new HttpsError("invalid-argument", "Valid email is required");
+    }
+
+    if (!Array.isArray(tenantIds)) {
+      throw new HttpsError("invalid-argument", "tenantIds must be an array");
+    }
+
+    // Verify target user exists in Firebase Auth
+    try {
+      await admin.auth().getUser(uid);
+    } catch (error) {
+      throw new HttpsError(
+        "not-found",
+        `User with UID ${uid} does not exist in Firebase Auth`
+      );
+    }
+
+    try {
+      const db = admin.firestore();
+      const batch = db.batch();
+
+      // Set Custom Claims on Firebase Auth user
+      await admin.auth().setCustomUserClaims(uid, {
+        role: role,
+        tenantIds: tenantIds,
+      });
+
+      logger.info(`Custom claims set for user ${uid}: role=${role}, tenantIds=${tenantIds.join(",")}`);
+
+      // Create/update User document in Firestore (unified User type)
+      const userRef = db.collection("users").doc(uid);
+      
+      // Check if user already exists (might be a player being promoted to admin)
+      const existingUser = await userRef.get();
+      
+      const userData = existingUser.exists ? {
+        // MERGE: User already exists (was playing game), add admin fields
+        id: uid,
+        email: email,
+        displayName: displayName || existingUser.data()?.displayName || 'Admin User',
+        photoURL: existingUser.data()?.photoURL || null,
+        accountType: 'linked', // Admins must have linked accounts
+        role: role,
+        managedTenantIds: tenantIds,
+        isActive: true,
+        // Keep existing player fields intact
+        updatedAt: FieldValue.serverTimestamp(),
+      } : {
+        // CREATE: Admin never played, create new user with defaults
+        id: uid,
+        email: email,
+        displayName: displayName || 'Admin User',
+        photoURL: null,
+        accountType: 'linked', // Admins must have linked accounts
+        role: role,
+        managedTenantIds: tenantIds,
+        isActive: true,
+        // Initialize player fields with defaults
+        totalScore: 0,
+        totalSubmissions: 0,
+        eventsParticipated: 0,
+        consentGiven: {
+          terms: true,
+          privacy: true,
+          termsVersion: '1.0',
+          privacyVersion: '1.0',
+          termsAcceptedAt: FieldValue.serverTimestamp(),
+          privacyAcceptedAt: FieldValue.serverTimestamp(),
+          ipAddress: null,
+        },
+        recoveryCode: null,
+        recoveryCodeExpiresAt: null,
+        lastLoginAt: null,
+        // Multi-tenant fields
+        tenantId: tenantIds.length > 0 ? tenantIds[0] : "global",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      batch.set(userRef, userData, {merge: true});
+
+      // Log admin action to audit trail
+      const auditLogRef = db.collection("auditLogs").doc();
+      batch.set(auditLogRef, {
+        action: "setUserRole",
+        performedBy: auth.uid,
+        targetUser: uid,
+        targetRole: role,
+        targetTenants: tenantIds,
+        timestamp: FieldValue.serverTimestamp(),
+        tenantId: tenantIds.length > 0 ? tenantIds[0] : "global",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      logger.info(`User document created/updated for ${uid} with role ${role}`);
+
+      return {
+        success: true,
+        message: `Role ${role} assigned successfully to user ${email}`,
+      };
+    } catch (error: unknown) {
+      logger.error("Error setting user role:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new HttpsError(
+        "internal",
+        `Failed to set user role: ${errorMessage}`
+      );
+    }
+  }
+);

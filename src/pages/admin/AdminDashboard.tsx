@@ -1,48 +1,70 @@
-import { useAdminAuth } from '../../hooks/useAdminAuth';
-import { useAdminStore } from '../../store/adminStore';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../services/firebase.service';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { collection, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
+import { db } from '../../services/firebase.service';
+import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { AdminLayout } from '../../components/admin/AdminLayout';
 
 /**
  * Admin Dashboard
  * 
  * Main landing page for admin portal.
- * Shows welcome message and basic stats (placeholder for Phase 5).
+ * Shows welcome message and basic stats.
  */
 
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { adminProfile } = useAdminAuth();
-  const { clearAdminState } = useAdminStore();
+  const [stats, setStats] = useState({
+    events: 0,
+    tasks: 0,
+    submissions: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
+  useEffect(() => {
+    loadStats();
+  }, [adminProfile]);
+
+  const loadStats = async () => {
+    if (!adminProfile) return;
+
     try {
-      await signOut(auth);
-      clearAdminState();
-      navigate('/admin/login');
+      const db_ = db();
+      
+      // Count events
+      let eventsQuery;
+      if (adminProfile.role === 'superadmin') {
+        eventsQuery = collection(db_, 'events');
+      } else if (adminProfile.managedTenantIds && adminProfile.managedTenantIds.length > 0) {
+        eventsQuery = query(
+          collection(db_, 'events'),
+          where('tenantId', 'in', adminProfile.managedTenantIds)
+        );
+      } else {
+        setLoading(false);
+        return;
+      }
+
+      const eventsSnapshot = await getCountFromServer(eventsQuery);
+      setStats((prev) => ({ ...prev, events: eventsSnapshot.data().count }));
+
+      setLoading(false);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Failed to load stats:', error);
+      setLoading(false);
     }
   };
 
   if (!adminProfile) return null;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] p-6">
-      <div className="max-w-7xl mx-auto">
+    <AdminLayout>
+      <div className="p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-            <p className="text-sm text-slate-400 font-mono uppercase tracking-widest">Mission Control</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors"
-          >
-            Logout
-          </button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+          <p className="text-sm text-slate-400 font-mono uppercase tracking-widest">Mission Control</p>
         </div>
 
         {/* Welcome Card */}
@@ -112,15 +134,22 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* Quick Stats (Placeholder) */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Events</h3>
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
             </div>
-            <p className="text-3xl font-mono font-bold text-white mb-2">0</p>
-            <p className="text-xs text-slate-500">Coming in Phase 2</p>
+            <p className="text-3xl font-mono font-bold text-white mb-2">
+              {loading ? '...' : stats.events}
+            </p>
+            <button
+              onClick={() => navigate('/admin/events')}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              Manage Events →
+            </button>
           </div>
 
           <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-6">
@@ -128,7 +157,9 @@ export function AdminDashboard() {
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tasks</h3>
               <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
             </div>
-            <p className="text-3xl font-mono font-bold text-white mb-2">0</p>
+            <p className="text-3xl font-mono font-bold text-white mb-2">
+              {loading ? '...' : stats.tasks}
+            </p>
             <p className="text-xs text-slate-500">Coming in Phase 3</p>
           </div>
 
@@ -137,7 +168,9 @@ export function AdminDashboard() {
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Submissions</h3>
               <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></div>
             </div>
-            <p className="text-3xl font-mono font-bold text-white mb-2">0</p>
+            <p className="text-3xl font-mono font-bold text-white mb-2">
+              {loading ? '...' : stats.submissions}
+            </p>
             <p className="text-xs text-slate-500">Coming in Phase 4</p>
           </div>
         </div>
@@ -170,22 +203,22 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        {/* Phase 1 Complete Notice */}
+        {/* Phase 2 Complete Notice */}
         <div className="mt-6 bg-blue-500/10 border border-blue-500/50 rounded-xl p-4">
           <div className="flex items-start gap-3">
             <svg className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <h4 className="text-sm font-bold text-blue-400 mb-1">Phase 1 Complete ✅</h4>
+              <h4 className="text-sm font-bold text-blue-400 mb-1">Phase 2 Complete ✅</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Admin authentication and RBAC system is now active. 
-                Event Management (Phase 2), Task Management (Phase 3), and Submission Review (Phase 4) coming soon.
+                Event Management is now active. Create events, manage settings, and configure map bounds.
+                Task Management (Phase 3) and Submission Review (Phase 4) coming soon.
               </p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

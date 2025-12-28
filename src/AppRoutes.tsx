@@ -25,6 +25,8 @@ import type { User } from './types/schema';
 import { AdminRoute } from './components/admin/AdminRoute';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { EventList } from './pages/admin/EventList';
+import { EventForm } from './pages/admin/EventForm';
 
 /**
  * RoutesWithProfileGuard
@@ -114,6 +116,33 @@ function RoutesWithProfileGuard() {
               element={
                 <AdminRoute requiredRole="moderator">
                   <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <EventList />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/new" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <EventForm />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/:eventId/edit" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <EventForm />
                 </AdminRoute>
               } 
             />

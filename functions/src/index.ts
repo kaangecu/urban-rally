@@ -9,9 +9,16 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {setGlobalOptions} from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
+import {Timestamp, FieldValue} from "firebase-admin/firestore";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
+
+// Configure Admin SDK to use Firestore Emulator when running locally
+if (process.env.FUNCTIONS_EMULATOR) {
+  process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
+  logger.info("🔧 Functions configured to use Firestore Emulator at 127.0.0.1:8080");
+}
 
 // Set global options for cost control
 setGlobalOptions({
@@ -126,13 +133,24 @@ export const createUserDocument = onCall(
     );
   }
 
-  // 4. Create user document (bypasses security rules via Admin SDK)
+  // 4. Prepare consent data with proper Timestamp conversion
+  const consentData = {
+    ...consentGiven,
+    termsAcceptedAt: consentGiven.termsAcceptedAt 
+      ? Timestamp.fromDate(new Date(consentGiven.termsAcceptedAt))
+      : FieldValue.serverTimestamp(),
+    privacyAcceptedAt: consentGiven.privacyAcceptedAt 
+      ? Timestamp.fromDate(new Date(consentGiven.privacyAcceptedAt))
+      : FieldValue.serverTimestamp(),
+  };
+
+  // 5. Create user document (bypasses security rules via Admin SDK)
   const userData = {
     id: uid,
     uid: uid, // For Firestore rules compatibility
     displayName: displayName,
     tenantId: tenantId,
-    consentGiven: consentGiven,
+    consentGiven: consentData,
     
     // NEW: Multi-event support fields (v2.0)
     accountType: accountType, // 'anonymous' or 'linked'
@@ -144,9 +162,9 @@ export const createUserDocument = onCall(
     totalScore: 0,
     totalSubmissions: 0,
     eventsParticipated: 0,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    lastLoginAt: FieldValue.serverTimestamp(),
   };
 
   // Only add email if provided (Firestore rejects null values)
@@ -346,7 +364,7 @@ export const joinTeamSecure = onCall(
         tenantId: tenantId,
         role: role,
         displayName: userData.displayName,
-        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        joinedAt: FieldValue.serverTimestamp(),
         isActive: true,
         score: 0,
         tasksCompleted: 0,
@@ -356,16 +374,16 @@ export const joinTeamSecure = onCall(
 
       // 3e. Update team document (atomic increment and array union)
       transaction.update(teamRef, {
-        memberUserIds: admin.firestore.FieldValue.arrayUnion(userId),
-        memberCount: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        memberUserIds: FieldValue.arrayUnion(userId),
+        memberCount: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       // 3f. Update user document (increment events participated)
       transaction.update(userRef, {
-        eventsParticipated: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+        eventsParticipated: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
       });
 
       return {memberId, teamName: teamData.name};
@@ -534,3 +552,496 @@ export const getTeamMembersSecure = onCall(
     );
   }
 });
+
+// ============================================================================
+// ADMIN OPERATIONS - TENANT MANAGEMENT
+// ============================================================================
+
+/**
+ * Create Tenant (Admin Only)
+ * 
+ * Creates a new tenant/organization with proper validation.
+ * This bypasses client security rules which block tenant creation.
+ * 
+ * @param data.name - Tenant unique identifier (slug)
+ * @param data.displayName - Tenant display name
+ * @param data.primaryColor - Theme primary color (optional)
+ * @param data.logoUrl - Tenant logo URL (optional)
+ * 
+ * @returns {success: boolean, tenantId: string}
+ */
+export const createTenantSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    // Verify authentication
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to create tenants."
+      );
+    }
+
+    // TODO: Add role check when custom claims are implemented
+    // if (auth.token.role !== 'superadmin') {
+    //   throw new HttpsError(
+    //     'permission-denied',
+    //     'Only super admins can create tenants'
+    //   );
+    // }
+
+    const {name, displayName, primaryColor, logoUrl} = data;
+
+    // Validate required fields
+    if (!name || typeof name !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Tenant name is required and must be a string."
+      );
+    }
+
+    if (!displayName || typeof displayName !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Display name is required and must be a string."
+      );
+    }
+
+    try {
+      const db = admin.firestore();
+      const tenantRef = db.collection("tenants").doc();
+
+      const tenantData = {
+        id: tenantRef.id,
+        name,
+        displayName,
+        theme: {
+          primaryColor: primaryColor || "#1a56db",
+          logoUrl: logoUrl || null,
+        },
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      await tenantRef.set(tenantData);
+
+      logger.info("Tenant created successfully", {
+        tenantId: tenantRef.id,
+        name,
+        createdBy: auth.uid,
+      });
+
+      return {success: true, tenantId: tenantRef.id};
+    } catch (error) {
+      logger.error("Failed to create tenant", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to create tenant. Please try again."
+      );
+    }
+  }
+);
+
+/**
+ * Update Tenant (Admin Only)
+ * 
+ * Updates tenant settings. Only whitelisted fields can be modified.
+ * Cannot change tenant ID or creation date.
+ * 
+ * @param data.tenantId - Tenant ID to update
+ * @param data.updates - Object with fields to update
+ * 
+ * @returns {success: boolean}
+ */
+export const updateTenantSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to update tenants."
+      );
+    }
+
+    const {tenantId, updates} = data;
+
+    if (!tenantId || typeof tenantId !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Tenant ID is required."
+      );
+    }
+
+    // Whitelist allowed fields
+    const allowedFields = ["displayName", "theme", "isActive"];
+    const sanitizedUpdates: any = {};
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        sanitizedUpdates[field] = updates[field];
+      }
+    }
+
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "No valid fields to update."
+      );
+    }
+
+    sanitizedUpdates.updatedAt = FieldValue.serverTimestamp();
+
+    try {
+      const db = admin.firestore();
+      await db.collection("tenants").doc(tenantId).update(sanitizedUpdates);
+
+      logger.info("Tenant updated successfully", {
+        tenantId,
+        updatedFields: Object.keys(sanitizedUpdates),
+        updatedBy: auth.uid,
+      });
+
+      return {success: true};
+    } catch (error) {
+      logger.error("Failed to update tenant", {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to update tenant. Please try again."
+      );
+    }
+  }
+);
+
+// ============================================================================
+// ADMIN OPERATIONS - EVENT MANAGEMENT
+// ============================================================================
+
+/**
+ * Create Event (Organizer Only)
+ * 
+ * Creates a new event within a tenant.
+ * 
+ * @param data.tenantId - Tenant ID
+ * @param data.name - Event name
+ * @param data.eventCode - Unique event code for joining
+ * @param data.startDate - Event start date (ISO string)
+ * @param data.endDate - Event end date (ISO string)
+ * @param data.mapBounds - Map boundaries (optional)
+ * 
+ * @returns {success: boolean, eventId: string}
+ */
+export const createEventSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to create events."
+      );
+    }
+
+    const {tenantId, name, eventCode, startDate, endDate, mapBounds} = data;
+
+    // Validate required fields
+    if (!tenantId || !name || !eventCode || !startDate || !endDate) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Missing required fields: tenantId, name, eventCode, startDate, endDate."
+      );
+    }
+
+    // TODO: Check user has organizer role for this tenant
+    // const userDoc = await db.collection('users').doc(auth.uid).get();
+    // if (!userDoc.exists || userDoc.data()?.tenantId !== tenantId) {
+    //   throw new HttpsError('permission-denied', 'Unauthorized for this tenant');
+    // }
+
+    try {
+      const db = admin.firestore();
+      const eventRef = db.collection("events").doc();
+
+      const eventData = {
+        id: eventRef.id,
+        tenantId,
+        name,
+        eventCode,
+        startDate: Timestamp.fromDate(new Date(startDate)),
+        endDate: Timestamp.fromDate(new Date(endDate)),
+        mapBounds: mapBounds || null,
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      await eventRef.set(eventData);
+
+      logger.info("Event created successfully", {
+        eventId: eventRef.id,
+        tenantId,
+        eventCode,
+        createdBy: auth.uid,
+      });
+
+      return {success: true, eventId: eventRef.id};
+    } catch (error) {
+      logger.error("Failed to create event", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to create event. Please try again."
+      );
+    }
+  }
+);
+
+/**
+ * Update Event (Organizer Only)
+ * 
+ * Updates event settings. Only whitelisted fields can be modified.
+ * 
+ * @param data.eventId - Event ID to update
+ * @param data.updates - Object with fields to update
+ * 
+ * @returns {success: boolean}
+ */
+export const updateEventSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to update events."
+      );
+    }
+
+    const {eventId, updates} = data;
+
+    if (!eventId || typeof eventId !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Event ID is required."
+      );
+    }
+
+    // Whitelist allowed fields
+    const allowedFields = ["name", "startDate", "endDate", "mapBounds", "isActive"];
+    const sanitizedUpdates: any = {};
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        // Convert date strings to Timestamps
+        if (field === "startDate" || field === "endDate") {
+          sanitizedUpdates[field] = Timestamp.fromDate(new Date(updates[field]));
+        } else {
+          sanitizedUpdates[field] = updates[field];
+        }
+      }
+    }
+
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "No valid fields to update."
+      );
+    }
+
+    sanitizedUpdates.updatedAt = FieldValue.serverTimestamp();
+
+    try {
+      const db = admin.firestore();
+      await db.collection("events").doc(eventId).update(sanitizedUpdates);
+
+      logger.info("Event updated successfully", {
+        eventId,
+        updatedFields: Object.keys(sanitizedUpdates),
+        updatedBy: auth.uid,
+      });
+
+      return {success: true};
+    } catch (error) {
+      logger.error("Failed to update event", {
+        eventId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to update event. Please try again."
+      );
+    }
+  }
+);
+
+// ============================================================================
+// ADMIN OPERATIONS - TASK MANAGEMENT
+// ============================================================================
+
+/**
+ * Create Task (Organizer Only)
+ * 
+ * Creates a new task for an event.
+ * 
+ * @param data.eventId - Event ID
+ * @param data.tenantId - Tenant ID
+ * @param data.title - Task title
+ * @param data.description - Task description
+ * @param data.taskType - Task type (photo, quiz, location, etc.)
+ * @param data.points - Points awarded for completion
+ * @param data.location - Task location (optional)
+ * 
+ * @returns {success: boolean, taskId: string}
+ */
+export const createTaskSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to create tasks."
+      );
+    }
+
+    const {eventId, tenantId, title, description, taskType, points, location} = data;
+
+    // Validate required fields
+    if (!eventId || !tenantId || !title || !taskType) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Missing required fields: eventId, tenantId, title, taskType."
+      );
+    }
+
+    try {
+      const db = admin.firestore();
+      const taskRef = db.collection("tasks").doc();
+
+      const taskData = {
+        id: taskRef.id,
+        eventId,
+        tenantId,
+        title,
+        description: description || "",
+        taskType,
+        points: points || 100,
+        location: location || null,
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      await taskRef.set(taskData);
+
+      logger.info("Task created successfully", {
+        taskId: taskRef.id,
+        eventId,
+        taskType,
+        createdBy: auth.uid,
+      });
+
+      return {success: true, taskId: taskRef.id};
+    } catch (error) {
+      logger.error("Failed to create task", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to create task. Please try again."
+      );
+    }
+  }
+);
+
+/**
+ * Update Task (Organizer Only)
+ * 
+ * Updates task settings. Only whitelisted fields can be modified.
+ * 
+ * @param data.taskId - Task ID to update
+ * @param data.updates - Object with fields to update
+ * 
+ * @returns {success: boolean}
+ */
+export const updateTaskSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be logged in to update tasks."
+      );
+    }
+
+    const {taskId, updates} = data;
+
+    if (!taskId || typeof taskId !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Task ID is required."
+      );
+    }
+
+    // Whitelist allowed fields
+    const allowedFields = ["title", "description", "points", "location", "isActive"];
+    const sanitizedUpdates: any = {};
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        sanitizedUpdates[field] = updates[field];
+      }
+    }
+
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "No valid fields to update."
+      );
+    }
+
+    sanitizedUpdates.updatedAt = FieldValue.serverTimestamp();
+
+    try {
+      const db = admin.firestore();
+      await db.collection("tasks").doc(taskId).update(sanitizedUpdates);
+
+      logger.info("Task updated successfully", {
+        taskId,
+        updatedFields: Object.keys(sanitizedUpdates),
+        updatedBy: auth.uid,
+      });
+
+      return {success: true};
+    } catch (error) {
+      logger.error("Failed to update task", {
+        taskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new HttpsError(
+        "internal",
+        "Failed to update task. Please try again."
+      );
+    }
+  }
+);

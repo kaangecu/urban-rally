@@ -3,7 +3,7 @@
  * Handles multi-tenant, multi-event URL structure
  */
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { AuthProvider } from './contexts/AuthContext';
@@ -16,16 +16,66 @@ import { EventSelector } from './pages/EventSelector';
 import { TeamBrowser } from './features/teams/TeamBrowser';
 import { Dashboard } from './pages/Dashboard';
 import { AccountSettings } from './pages/AccountSettings';
+import { useProfileGuard } from './hooks/useProfileGuard';
+import { IdentityUplinkModal } from './components/auth/IdentityUplinkModal';
+import { appConfig } from './config/app.config';
+import type { User } from './types/schema';
 
-export function AppRoutes() {
+/**
+ * RoutesWithProfileGuard
+ * Wraps routes with profile guard logic (must be inside AuthProvider)
+ */
+function RoutesWithProfileGuard() {
   const { isAuthenticated } = useAuthStore();
+  const { needsProfile, isChecking } = useProfileGuard();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Show onboarding modal when profile check completes and user needs profile
+  useEffect(() => {
+    if (!isChecking && needsProfile) {
+      console.log('🎯 Showing onboarding modal');
+      setShowOnboarding(true);
+    }
+  }, [isChecking, needsProfile]);
+
+  // Show loading state while checking profile
+  if (isChecking) {
+    return <PageLoading message="Getting ready..." />;
+  }
+
+  const handleOnboardingSuccess = (user: User) => {
+    console.log('✅ Onboarding completed for user', user.id);
+    setShowOnboarding(false);
+  };
+
+  // Get tenant ID from URL params or use default
+  const getTenantId = (): string => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tenantIdFromUrl = urlParams.get('tenantId');
+    
+    if (tenantIdFromUrl) {
+      return tenantIdFromUrl;
+    }
+    
+    // Use default tenant from config
+    return appConfig.defaultTenantId || 'esn-berlin';
+  };
 
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoading />}>
-          <Routes>
+    <>
+      {/* Global onboarding modal - shown to new users on app launch */}
+      <IdentityUplinkModal
+        isOpen={showOnboarding}
+        onClose={() => {}} // Non-dismissible during initial onboarding
+        onSuccess={handleOnboardingSuccess}
+        tenantId={getTenantId()}
+        required={true} // Makes modal non-dismissible
+      />
+      
+      {/* Main routes */}
+      <BrowserRouter>
+        <Suspense fallback={<PageLoading />}>
+        <Routes>
             {/* Public Routes - New Hybrid Login Flow */}
             <Route 
               path="/" 
@@ -71,6 +121,15 @@ export function AppRoutes() {
       </Routes>
         </Suspense>
       </BrowserRouter>
+    </>
+  );
+}
+
+export function AppRoutes() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <RoutesWithProfileGuard />
       </AuthProvider>
     </ErrorBoundary>
   );

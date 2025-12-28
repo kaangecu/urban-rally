@@ -36,9 +36,9 @@ service cloud.firestore {
       // Public read for branding (logo, colors, name)
       allow read: if true;
       
-      // ⚠️ DEVELOPMENT: Allow writes for test data setup
-      // TODO: Change to 'if false' in production
-      allow write: if true;
+      // ✅ PRODUCTION: Only Cloud Functions can write
+      // Use createTenantSecure, updateTenantSecure
+      allow write: if false;
     }
     
     // ====================================
@@ -49,9 +49,9 @@ service cloud.firestore {
       // Public read for active events (map bounds, start/end dates)
       allow read: if true;
       
-      // ⚠️ DEVELOPMENT: Allow writes for test data setup
-      // TODO: Change to 'if false' in production
-      allow write: if true;
+      // ✅ PRODUCTION: Only Cloud Functions can write
+      // Use createEventSecure, updateEventSecure
+      allow write: if false;
     }
     
     // ====================================
@@ -92,9 +92,9 @@ service cloud.firestore {
                       ])
                     );
       
-      // ⚠️ DEVELOPMENT: Allow creates for test data setup
-      // TODO: Change to 'if false' in production
-      allow create: if true;
+      // ✅ PRODUCTION: Only Cloud Functions can create teams
+      // Use joinTeamSecure (already exists)
+      allow create: if false;
       allow delete: if false;
     }
     
@@ -104,13 +104,11 @@ service cloud.firestore {
     
     match /tasks/{taskId} {
       // Teams can read tasks for their event
-      // Query MUST include tenantId filter (or open in dev)
-      allow read: if isAuthenticated() 
-                  || true; // ⚠️ DEVELOPMENT: Open read access
+      allow read: if isAuthenticated();
       
-      // ⚠️ DEVELOPMENT: Allow writes for test data setup
-      // TODO: Change to 'if false' in production
-      allow write: if true;
+      // ✅ PRODUCTION: Only Cloud Functions can write
+      // Use createTaskSecure, updateTaskSecure
+      allow write: if false;
     }
     
     // ====================================

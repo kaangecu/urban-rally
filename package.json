@@ -31,6 +31,7 @@
     "migrate:event-codes": "tsx scripts/migrateEventCodes.ts",
     "migrate:multi-event": "tsx scripts/migration/migrateUsersToMultiEvent.ts",
     "seed:multi-event": "tsx scripts/seed/seedMultiEventTestData.ts",
+    "seed:emulator": "tsx scripts/seed-emulator.ts",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
     "deploy:rules:dev": "firebase deploy --only firestore:rules",
     "deploy:rules:prod": "cp firestore.rules.prod firestore.rules && firebase deploy --only firestore:rules",

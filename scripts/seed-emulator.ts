@@ -671,6 +671,76 @@ async function seedEmulator(): Promise<void> {
   console.log('=' .repeat(60));
 
   try {
+    // ========================================================================
+    // CREATE ADMIN USER IN FIREBASE AUTH
+    // ========================================================================
+    console.log('\n👤 Creating Admin User...');
+    
+    const adminEmail = 'admin@test.com';
+    const adminPassword = 'admin123';
+    const adminDisplayName = 'Test Admin';
+    
+    let adminUser;
+    try {
+      // Try to get existing user
+      adminUser = await admin.auth().getUserByEmail(adminEmail);
+      console.log(`   ✅ Admin user already exists: ${adminUser.uid}`);
+    } catch (error) {
+      // User doesn't exist, create it
+      adminUser = await admin.auth().createUser({
+        email: adminEmail,
+        password: adminPassword,
+        displayName: adminDisplayName,
+        emailVerified: true,
+      });
+      console.log(`   ✅ Created admin user: ${adminUser.uid}`);
+    }
+    
+    // Set custom claims for superadmin role
+    await admin.auth().setCustomUserClaims(adminUser.uid, {
+      role: 'superadmin',
+      tenantIds: [],
+    });
+    console.log(`   ✅ Set custom claims: role=superadmin`);
+    
+    // Create User document in Firestore (unified User type)
+    const userRef = db.collection('users').doc(adminUser.uid);
+    await userRef.set({
+      id: adminUser.uid,
+      email: adminEmail,
+      displayName: adminDisplayName,
+      photoURL: null,
+      accountType: 'linked', // Admin is linked account
+      role: 'superadmin',
+      managedTenantIds: [],
+      isActive: true,
+      // Initialize player fields with defaults (admin can play!)
+      totalScore: 0,
+      totalSubmissions: 0,
+      eventsParticipated: 0,
+      recoveryCode: null,
+      recoveryCodeExpiresAt: null,
+      lastLoginAt: null,
+      consentGiven: {
+        terms: true,
+        privacy: true,
+        termsVersion: '1.0',
+        privacyVersion: '1.0',
+        termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        privacyAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ipAddress: null,
+      },
+      tenantId: 'global',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`   ✅ Created User document (unified type)`);
+    console.log(`   📧 Login: ${adminEmail} / ${adminPassword}`);
+    
+    // ========================================================================
+    // SEED COLLECTIONS
+    // ========================================================================
+    
     // Seed Tenants
     await seedCollection(
       'tenants',
@@ -734,6 +804,7 @@ async function seedEmulator(): Promise<void> {
     console.log('\n' + '='.repeat(60));
     console.log('✅ SEED COMPLETED SUCCESSFULLY!\n');
     console.log('📊 Summary:');
+    console.log(`   • 1 admin user (superadmin)`);
     console.log(`   • ${TENANTS.length} tenants`);
     console.log(`   • ${EVENTS.length} events`);
     console.log(`   • ${USERS.length} users`);
@@ -744,6 +815,10 @@ async function seedEmulator(): Promise<void> {
     console.log('\n🎮 Ready for testing!');
     console.log('   • Emulator UI: http://127.0.0.1:4000');
     console.log('   • Your App: http://localhost:5173');
+    console.log('   • Admin Portal: http://localhost:5173/admin/login');
+    console.log('\n🔐 Admin Credentials:');
+    console.log('   • Email: admin@test.com');
+    console.log('   • Password: admin123');
     console.log('='.repeat(60));
 
   } catch (error) {
@@ -761,11 +836,14 @@ admin.initializeApp({
   projectId: PROJECT_ID,
 });
 
-// Connect to emulator
+// Connect to emulators
 process.env.FIRESTORE_EMULATOR_HOST = `${EMULATOR_HOST}:${EMULATOR_PORT}`;
+process.env.FIREBASE_AUTH_EMULATOR_HOST = `${EMULATOR_HOST}:9099`;
+
 const db = admin.firestore();
 
-console.log(`🔧 Connected to Firestore Emulator at ${EMULATOR_HOST}:${EMULATOR_PORT}\n`);
+console.log(`🔧 Connected to Firestore Emulator at ${EMULATOR_HOST}:${EMULATOR_PORT}`);
+console.log(`🔧 Connected to Auth Emulator at ${EMULATOR_HOST}:9099\n`);
 
 // Run seed
 seedEmulator()

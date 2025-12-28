@@ -21,6 +21,11 @@ import { IdentityUplinkModal } from './components/auth/IdentityUplinkModal';
 import { appConfig } from './config/app.config';
 import type { User } from './types/schema';
 
+// Admin imports
+import { AdminRoute } from './components/admin/AdminRoute';
+import { AdminLogin } from './pages/admin/AdminLogin';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+
 /**
  * RoutesWithProfileGuard
  * Wraps routes with profile guard logic (must be inside AuthProvider)
@@ -98,6 +103,19 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/tenant/:tenantId/event/:eventId/teams" 
               element={<TeamBrowser />} 
+            />
+
+            {/* Admin Routes - Public login */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+
+            {/* Admin Routes - Protected */}
+            <Route 
+              path="/admin" 
+              element={
+                <AdminRoute requiredRole="moderator">
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
             />
 
             {/* Protected Routes */}

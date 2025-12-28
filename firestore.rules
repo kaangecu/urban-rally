@@ -230,6 +230,62 @@ service cloud.firestore {
     }
     
     // ====================================
+    // ADMIN MANAGEMENT
+    // ====================================
+    
+    // Admin helper functions
+    function hasAdminRole() {
+      return isAuthenticated() && request.auth.token.role != null;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'superadmin';
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role in ['superadmin', 'admin'];
+    }
+    
+    function isOrganizer() {
+      return isAuthenticated() && request.auth.token.role in ['superadmin', 'admin', 'organizer'];
+    }
+    
+    function isModerator() {
+      return isAuthenticated() && request.auth.token.role in ['superadmin', 'admin', 'organizer', 'moderator'];
+    }
+    
+    function canManageTenant(tenantId) {
+      return isSuperAdmin() || (hasAdminRole() && tenantId in request.auth.token.tenantIds);
+    }
+    
+    // User Profiles (Admin accounts)
+    match /userProfiles/{uid} {
+      // Only super admins can create/update profiles (via Cloud Functions)
+      allow create, update: if false; // Must use Cloud Functions
+      
+      // Admins can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      
+      // Super admins can read all profiles
+      allow read: if isSuperAdmin();
+      
+      // No client-side deletes
+      allow delete: if false;
+    }
+    
+    // Audit Logs (Admin actions)
+    match /auditLogs/{logId} {
+      // Only Cloud Functions can write audit logs
+      allow create, update, delete: if false;
+      
+      // Super admins can read all logs
+      allow read: if isSuperAdmin();
+      
+      // Admins can read logs for their tenants
+      allow read: if isAdmin() && canManageTenant(resource.data.tenantId);
+    }
+    
+    // ====================================
     // DEFAULT DENY
     // ====================================
     

@@ -60,7 +60,13 @@ export function AdminDashboard() {
                 Welcome, {adminProfile.displayName || adminProfile.email}
               </h2>
               <div className="flex items-center gap-3 text-sm">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                  adminProfile.role === 'superadmin' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                  adminProfile.role === 'admin' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                  adminProfile.role === 'organizer' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                  adminProfile.role === 'moderator' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                  'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                }`}>
                   {adminProfile.role}
                 </span>
                 <span className="text-slate-400 font-mono">
@@ -73,6 +79,38 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Player Stats (shown if admin has played) */}
+        {adminProfile.eventsParticipated > 0 && (
+          <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+              </svg>
+              <h3 className="text-sm font-bold text-purple-300 uppercase tracking-widest">Your Player Stats</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold uppercase">
+                You're also a player!
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Score</p>
+                <p className="text-2xl font-mono font-bold text-white">{adminProfile.totalScore || 0}</p>
+                <p className="text-xs text-purple-400 mt-1">Points earned</p>
+              </div>
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Submissions</p>
+                <p className="text-2xl font-mono font-bold text-white">{adminProfile.totalSubmissions || 0}</p>
+                <p className="text-xs text-purple-400 mt-1">Tasks completed</p>
+              </div>
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Events Played</p>
+                <p className="text-2xl font-mono font-bold text-white">{adminProfile.eventsParticipated}</p>
+                <p className="text-xs text-purple-400 mt-1">Hunts joined</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats (Placeholder) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

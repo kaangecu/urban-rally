@@ -213,24 +213,35 @@ export function EventList() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
+                <div className="space-y-2 pt-4 border-t border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/events/${event.id}/edit`);
+                      }}
+                      className="flex-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/events/${event.id}/tasks`);
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
+                    >
+                      Tasks
+                    </button>
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/admin/events/${event.id}/edit`);
+                      navigate(`/admin/events/${event.id}/submissions`);
                     }}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
+                    className="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
                   >
-                    Edit
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/admin/events/${event.id}/tasks`);
-                    }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
-                  >
-                    Manage Tasks
+                    Review Submissions
                   </button>
                 </div>
               </div>

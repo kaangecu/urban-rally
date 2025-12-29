@@ -160,7 +160,7 @@ export function AdminDashboard() {
             <p className="text-3xl font-mono font-bold text-white mb-2">
               {loading ? '...' : stats.tasks}
             </p>
-            <p className="text-xs text-slate-500">Coming in Phase 3</p>
+            <p className="text-xs text-slate-400">Select an event to manage tasks</p>
           </div>
 
           <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-6">
@@ -171,7 +171,7 @@ export function AdminDashboard() {
             <p className="text-3xl font-mono font-bold text-white mb-2">
               {loading ? '...' : stats.submissions}
             </p>
-            <p className="text-xs text-slate-500">Coming in Phase 4</p>
+            <p className="text-xs text-slate-400">Select an event to review submissions</p>
           </div>
         </div>
 
@@ -203,17 +203,17 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        {/* Phase 2 Complete Notice */}
-        <div className="mt-6 bg-blue-500/10 border border-blue-500/50 rounded-xl p-4">
+        {/* Phase 4 Complete Notice */}
+        <div className="mt-6 bg-emerald-500/10 border border-emerald-500/50 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <svg className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <h4 className="text-sm font-bold text-blue-400 mb-1">Phase 2 Complete ✅</h4>
+              <h4 className="text-sm font-bold text-emerald-400 mb-1">Phases 2, 3 & 4 Complete ✅</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Event Management is now active. Create events, manage settings, and configure map bounds.
-                Task Management (Phase 3) and Submission Review (Phase 4) coming soon.
+                Event Management, Task Management, and Submission Review are now active!
+                Go to Events → select an event → manage Tasks or review Submissions.
               </p>
             </div>
           </div>

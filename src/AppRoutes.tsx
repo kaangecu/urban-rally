@@ -27,6 +27,8 @@ import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { EventList } from './pages/admin/EventList';
 import { EventForm } from './pages/admin/EventForm';
+import { TaskList } from './pages/admin/TaskList';
+import { TaskForm } from './pages/admin/TaskForm';
 
 /**
  * RoutesWithProfileGuard
@@ -143,6 +145,33 @@ function RoutesWithProfileGuard() {
               element={
                 <AdminRoute requiredRole="organizer">
                   <EventForm />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/:eventId/tasks" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <TaskList />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/:eventId/tasks/new" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <TaskForm />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/:eventId/tasks/:taskId/edit" 
+              element={
+                <AdminRoute requiredRole="organizer">
+                  <TaskForm />
                 </AdminRoute>
               } 
             />

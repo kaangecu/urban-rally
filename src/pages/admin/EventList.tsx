@@ -231,7 +231,7 @@ export function EventList() {
                     }}
                     className="flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors min-h-[44px] touch-manipulation"
                   >
-                    Tasks
+                    Manage Tasks
                   </button>
                 </div>
               </div>

@@ -32,6 +32,8 @@ export async function getTasksByEvent(
     
     const snapshot = await getDocs(q);
     
+    console.log(`📋 Loaded ${snapshot.size} tasks for event ${eventId} (tenant: ${tenantId})`);
+    
     const tasks: Task[] = snapshot.docs.map(doc => {
       const data = doc.data();
       return {

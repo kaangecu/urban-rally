@@ -542,6 +542,93 @@ const TASKS: SeedTask[] = [
     requiresVideo: false,
     requiresText: false,
   },
+  // Additional Berlin Tasks
+  {
+    id: 'task-8',
+    tenantId: 'esn-berlin',
+    eventId: 'berlin-winter-2025',
+    title: 'East Side Gallery',
+    description: 'Find and photograph your favorite mural at the East Side Gallery',
+    type: 'PHOTO',
+    points: 120,
+    difficulty: 'easy',
+    isActive: true,
+    order: 5,
+    coordinates: { lat: 52.5058, lng: 13.4397 },
+    radius: 100,
+    requiresPhoto: true,
+    requiresVideo: false,
+    requiresText: false,
+  },
+  {
+    id: 'task-9',
+    tenantId: 'esn-berlin',
+    eventId: 'berlin-winter-2025',
+    title: 'Berlin Culture Quiz',
+    description: 'Which famous composer was born in Bonn but lived in Berlin?',
+    type: 'QUIZ',
+    points: 75,
+    difficulty: 'medium',
+    isActive: true,
+    order: 6,
+    requiresPhoto: false,
+    requiresVideo: false,
+    requiresText: false,
+    quizCorrectAnswer: 'Beethoven',
+    quizOptions: ['Mozart', 'Beethoven', 'Bach', 'Wagner'],
+  },
+  {
+    id: 'task-10',
+    tenantId: 'esn-berlin',
+    eventId: 'berlin-winter-2025',
+    title: 'Checkpoint Charlie',
+    description: 'Visit the famous Cold War crossing point',
+    type: 'GPS_LOCATION',
+    points: 100,
+    difficulty: 'easy',
+    isActive: true,
+    order: 7,
+    coordinates: { lat: 52.5074, lng: 13.3903 },
+    radius: 30,
+    requiresPhoto: false,
+    requiresVideo: false,
+    requiresText: false,
+  },
+  // Additional Munich Tasks
+  {
+    id: 'task-11',
+    tenantId: 'esn-munich',
+    eventId: 'munich-christmas-2025',
+    title: 'English Garden Challenge',
+    description: 'Find the famous surfers at Eisbach wave',
+    type: 'PHOTO',
+    points: 180,
+    difficulty: 'hard',
+    isActive: true,
+    order: 4,
+    coordinates: { lat: 48.1439, lng: 11.5896 },
+    radius: 50,
+    requiresPhoto: true,
+    requiresVideo: false,
+    requiresText: false,
+  },
+  {
+    id: 'task-12',
+    tenantId: 'esn-munich',
+    eventId: 'munich-christmas-2025',
+    title: 'BMW Welt Visit',
+    description: 'Check in at the iconic BMW headquarters',
+    type: 'GPS_LOCATION',
+    points: 100,
+    difficulty: 'medium',
+    isActive: true,
+    order: 5,
+    coordinates: { lat: 48.1769, lng: 11.5567 },
+    radius: 40,
+    requiresPhoto: false,
+    requiresVideo: false,
+    requiresText: false,
+  },
 ];
 
 const SUBMISSIONS: SeedSubmission[] = [
@@ -672,70 +759,98 @@ async function seedEmulator(): Promise<void> {
 
   try {
     // ========================================================================
-    // CREATE ADMIN USER IN FIREBASE AUTH
+    // CREATE ADMIN USERS IN FIREBASE AUTH
     // ========================================================================
-    console.log('\n👤 Creating Admin User...');
+    console.log('\n👤 Creating Admin Users...');
     
-    const adminEmail = 'admin@test.com';
-    const adminPassword = 'admin123';
-    const adminDisplayName = 'Test Admin';
-    
-    let adminUser;
-    try {
-      // Try to get existing user
-      adminUser = await admin.auth().getUserByEmail(adminEmail);
-      console.log(`   ✅ Admin user already exists: ${adminUser.uid}`);
-    } catch (error) {
-      // User doesn't exist, create it
-      adminUser = await admin.auth().createUser({
-        email: adminEmail,
-        password: adminPassword,
-        displayName: adminDisplayName,
-        emailVerified: true,
-      });
-      console.log(`   ✅ Created admin user: ${adminUser.uid}`);
-    }
-    
-    // Set custom claims for superadmin role
-    await admin.auth().setCustomUserClaims(adminUser.uid, {
-      role: 'superadmin',
-      tenantIds: [],
-    });
-    console.log(`   ✅ Set custom claims: role=superadmin`);
-    
-    // Create User document in Firestore (unified User type)
-    const userRef = db.collection('users').doc(adminUser.uid);
-    await userRef.set({
-      id: adminUser.uid,
-      email: adminEmail,
-      displayName: adminDisplayName,
-      photoURL: null,
-      accountType: 'linked', // Admin is linked account
-      role: 'superadmin',
-      managedTenantIds: [],
-      isActive: true,
-      // Initialize player fields with defaults (admin can play!)
-      totalScore: 0,
-      totalSubmissions: 0,
-      eventsParticipated: 0,
-      recoveryCode: null,
-      recoveryCodeExpiresAt: null,
-      lastLoginAt: null,
-      consentGiven: {
-        terms: true,
-        privacy: true,
-        termsVersion: '1.0',
-        privacyVersion: '1.0',
-        termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-        privacyAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-        ipAddress: null,
+    const adminUsers = [
+      {
+        email: 'superadmin@test.com',
+        password: 'admin123',
+        displayName: 'Super Admin',
+        role: 'superadmin',
+        tenantIds: [],
       },
-      tenantId: 'global',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    console.log(`   ✅ Created User document (unified type)`);
-    console.log(`   📧 Login: ${adminEmail} / ${adminPassword}`);
+      {
+        email: 'admin@test.com',
+        password: 'admin123',
+        displayName: 'Test Admin',
+        role: 'admin',
+        tenantIds: ['esn-berlin', 'esn-munich'],
+      },
+      {
+        email: 'organizer@test.com',
+        password: 'admin123',
+        displayName: 'Test Organizer',
+        role: 'organizer',
+        tenantIds: ['esn-berlin'],
+      },
+      {
+        email: 'moderator@test.com',
+        password: 'admin123',
+        displayName: 'Test Moderator',
+        role: 'moderator',
+        tenantIds: ['esn-berlin'],
+      },
+    ];
+    
+    for (const adminConfig of adminUsers) {
+      let adminUser;
+      try {
+        // Try to get existing user
+        adminUser = await admin.auth().getUserByEmail(adminConfig.email);
+        console.log(`   ✅ User already exists: ${adminConfig.email} (${adminUser.uid})`);
+      } catch (error) {
+        // User doesn't exist, create it
+        adminUser = await admin.auth().createUser({
+          email: adminConfig.email,
+          password: adminConfig.password,
+          displayName: adminConfig.displayName,
+          emailVerified: true,
+        });
+        console.log(`   ✅ Created user: ${adminConfig.email} (${adminUser.uid})`);
+      }
+      
+      // Set custom claims for role
+      await admin.auth().setCustomUserClaims(adminUser.uid, {
+        role: adminConfig.role,
+        tenantIds: adminConfig.tenantIds,
+      });
+      console.log(`   ✅ Set custom claims: role=${adminConfig.role}, tenantIds=${adminConfig.tenantIds.join(',')}`);
+      
+      // Create User document in Firestore (unified User type)
+      const userRef = db.collection('users').doc(adminUser.uid);
+      await userRef.set({
+        id: adminUser.uid,
+        email: adminConfig.email,
+        displayName: adminConfig.displayName,
+        photoURL: null,
+        accountType: 'linked', // Admin is linked account
+        role: adminConfig.role,
+        managedTenantIds: adminConfig.tenantIds,
+        isActive: true,
+        // Initialize player fields with defaults (admin can play!)
+        totalScore: 0,
+        totalSubmissions: 0,
+        eventsParticipated: 0,
+        recoveryCode: null,
+        recoveryCodeExpiresAt: null,
+        lastLoginAt: null,
+        consentGiven: {
+          terms: true,
+          privacy: true,
+          termsVersion: '1.0',
+          privacyVersion: '1.0',
+          termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+          privacyAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+          ipAddress: null,
+        },
+        tenantId: adminConfig.tenantIds[0] || 'global',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`   ✅ Created User document for ${adminConfig.email}`);
+    }
     
     // ========================================================================
     // SEED COLLECTIONS
@@ -804,7 +919,7 @@ async function seedEmulator(): Promise<void> {
     console.log('\n' + '='.repeat(60));
     console.log('✅ SEED COMPLETED SUCCESSFULLY!\n');
     console.log('📊 Summary:');
-    console.log(`   • 1 admin user (superadmin)`);
+    console.log(`   • 4 admin users (superadmin, admin, organizer, moderator)`);
     console.log(`   • ${TENANTS.length} tenants`);
     console.log(`   • ${EVENTS.length} events`);
     console.log(`   • ${USERS.length} users`);
@@ -816,9 +931,11 @@ async function seedEmulator(): Promise<void> {
     console.log('   • Emulator UI: http://127.0.0.1:4000');
     console.log('   • Your App: http://localhost:5173');
     console.log('   • Admin Portal: http://localhost:5173/admin/login');
-    console.log('\n🔐 Admin Credentials:');
-    console.log('   • Email: admin@test.com');
-    console.log('   • Password: admin123');
+    console.log('\n🔐 Admin Credentials (all use password: admin123):');
+    console.log('   • superadmin@test.com - Super Admin (all tenants)');
+    console.log('   • admin@test.com - Admin (ESN Berlin + Munich)');
+    console.log('   • organizer@test.com - Organizer (ESN Berlin)');
+    console.log('   • moderator@test.com - Moderator (ESN Berlin)');
     console.log('='.repeat(60));
 
   } catch (error) {

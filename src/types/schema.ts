@@ -263,11 +263,12 @@ export interface Task extends MultiTenantEntity {
     lng: number;
   };
   radius?: number; // Acceptance radius in meters
+  requiresGPS?: boolean; // Photo/Video tasks can require GPS
   
-  // Requirements
-  requiresPhoto: boolean;
-  requiresVideo: boolean;
-  requiresText: boolean;
+  // Requirements (optional, defaults to false)
+  requiresPhoto?: boolean;
+  requiresVideo?: boolean;
+  requiresText?: boolean;
   
   // Quiz Questions (for QUIZ type tasks)
   quizType?: 'text' | 'multiple-choice' | 'number';

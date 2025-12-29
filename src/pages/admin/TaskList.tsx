@@ -34,9 +34,7 @@ export function TaskList() {
         // Load tasks for this event
         const tasksQuery = query(
           collection(db, 'tasks'),
-          where('eventId', '==', eventId),
-          orderBy('order', 'asc'),
-          orderBy('createdAt', 'desc')
+          where('eventId', '==', eventId)
         );
 
         const snapshot = await getDocs(tasksQuery);
@@ -46,6 +44,18 @@ export function TaskList() {
           createdAt: doc.data().createdAt?.toDate(),
           updatedAt: doc.data().updatedAt?.toDate(),
         })) as Task[];
+
+        // Sort in memory: by order (if exists), then by createdAt
+        tasksData.sort((a, b) => {
+          // Tasks with order field come first, sorted by order
+          if (a.order !== undefined && b.order !== undefined) {
+            return a.order - b.order;
+          }
+          if (a.order !== undefined) return -1;
+          if (b.order !== undefined) return 1;
+          // Tasks without order field sorted by createdAt (newest first)
+          return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+        });
 
         setTasks(tasksData);
       } catch (err: any) {

@@ -14,6 +14,61 @@ import {Timestamp, FieldValue} from "firebase-admin/firestore";
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Task Type (matches client schema.ts)
+ */
+type TaskType = 
+  | 'GPS'
+  | 'GPS_LOCATION'
+  | 'PHOTO'
+  | 'VIDEO'
+  | 'QUIZ'
+  | 'QR_CODE'
+  | 'SPONSORED'
+  | 'CHECKPOINT'
+  | 'WILDCARD';
+
+/**
+ * Task Data (server-side representation)
+ * Matches schema.ts Task interface but uses Firestore types
+ */
+interface TaskData {
+  id: string;
+  eventId: string;
+  tenantId: string;
+  title: string;
+  description: string;
+  taskType: TaskType;
+  points: number;
+  isActive: boolean;
+  difficulty: 'easy' | 'medium' | 'hard';
+  
+  // GPS fields (optional)
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  radius?: number;
+  requiresPhoto?: boolean;
+  
+  // Photo/Video fields (optional)
+  requiresGPS?: boolean;
+  
+  // Quiz fields (optional)
+  quizType?: 'text' | 'multiple-choice' | 'number';
+  quizCorrectAnswer?: string | number;
+  quizOptions?: string[];
+  quizHint?: string;
+  
+  // Timestamps
+  createdAt: FirebaseFirestore.FieldValue;
+  updatedAt: FirebaseFirestore.FieldValue;
+}
+
 // Configure Admin SDK to use Firestore Emulator when running locally
 if (process.env.FUNCTIONS_EMULATOR) {
   process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
@@ -935,7 +990,7 @@ export const createTaskSecure = onCall(
       const taskRef = db.collection("tasks").doc();
 
       // Base task data
-      const taskData: any = {
+      const taskData: Partial<TaskData> = {
         id: taskRef.id,
         eventId,
         tenantId,
@@ -1046,7 +1101,7 @@ export const updateTaskSecure = onCall(
     }
 
     // Whitelist allowed fields (expanded for all task types)
-    const allowedFields = [
+    const allowedFields: (keyof TaskData)[] = [
       "title",
       "description",
       "points",
@@ -1064,7 +1119,7 @@ export const updateTaskSecure = onCall(
       "quizOptions",
       "quizHint",
     ];
-    const sanitizedUpdates: any = {};
+    const sanitizedUpdates: Partial<TaskData> & { updatedAt?: FirebaseFirestore.FieldValue } = {};
 
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {

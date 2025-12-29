@@ -975,10 +975,26 @@ export const createTaskSecure = onCall(
       );
     }
 
+    // Log received data for debugging
+    logger.info("createTaskSecure called with data:", {
+      dataKeys: Object.keys(data),
+      eventId: data.eventId,
+      tenantId: data.tenantId,
+      title: data.title,
+      taskType: data.taskType,
+    });
+
     const {eventId, tenantId, title, taskType} = data;
 
     // Validate required fields
     if (!eventId || !tenantId || !title || !taskType) {
+      logger.error("Missing required fields", {
+        hasEventId: !!eventId,
+        hasTenantId: !!tenantId,
+        hasTitle: !!title,
+        hasTaskType: !!taskType,
+        receivedData: data,
+      });
       throw new HttpsError(
         "invalid-argument",
         "Missing required fields: eventId, tenantId, title, taskType."

@@ -183,10 +183,24 @@ export function TaskForm() {
     setError(null);
 
     try {
+      // Ensure we have adminProfile and tenantId
+      if (!adminProfile) {
+        throw new Error('Admin profile not loaded. Please refresh and try again.');
+      }
+
+      const tenantId = adminProfile.managedTenantIds?.[0];
+      if (!tenantId) {
+        throw new Error('No tenant assigned to your admin account.');
+      }
+
+      if (!eventId) {
+        throw new Error('Event ID is missing.');
+      }
+
       // Build task data based on type
       const baseData: any = {
         eventId,
-        tenantId: adminProfile?.managedTenantIds?.[0] || '',
+        tenantId,
         title: title.trim(),
         description: description.trim(),
         taskType: taskType, // Cloud Function expects 'taskType' not 'type'
@@ -194,6 +208,8 @@ export function TaskForm() {
         isActive,
         difficulty,
       };
+
+      console.log('📤 Sending task data:', baseData);
 
       // Add type-specific fields
       if (taskType === 'GPS' || taskType === 'GPS_LOCATION') {
@@ -245,6 +261,39 @@ export function TaskForm() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Check if admin profile is loaded
+  if (!adminProfile) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">Admin profile not loaded</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Check if admin has tenants
+  if (!adminProfile.managedTenantIds || adminProfile.managedTenantIds.length === 0) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">No tenants assigned to your admin account</p>
+            <p className="text-slate-400 text-sm">Contact a superadmin to assign tenants</p>
+          </div>
         </div>
       </AdminLayout>
     );

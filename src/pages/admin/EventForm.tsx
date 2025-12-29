@@ -86,11 +86,9 @@ export function EventForm() {
     setSaving(true);
 
     try {
-      const functions_ = functions();
-
       if (isEditMode) {
         // Update event
-        const updateEventSecure = httpsCallable(functions_, 'updateEventSecure');
+        const updateEventSecure = httpsCallable(functions, 'updateEventSecure');
         await updateEventSecure({
           eventId,
           updates: {
@@ -106,7 +104,7 @@ export function EventForm() {
         });
       } else {
         // Create event
-        const createEventSecure = httpsCallable(functions_, 'createEventSecure');
+        const createEventSecure = httpsCallable(functions, 'createEventSecure');
         await createEventSecure({
           ...formData,
         });

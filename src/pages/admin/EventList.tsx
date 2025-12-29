@@ -24,18 +24,17 @@ export function EventList() {
       setLoading(true);
       setError(null);
 
-      const db_ = db();
       let q;
 
       // Super admins see all events, others see only their tenant's events
       if (adminProfile.role === 'superadmin') {
         q = query(
-          collection(db_, 'events'),
+          collection(db, 'events'),
           orderBy('createdAt', 'desc')
         );
       } else if (adminProfile.managedTenantIds && adminProfile.managedTenantIds.length > 0) {
         q = query(
-          collection(db_, 'events'),
+          collection(db, 'events'),
           where('tenantId', 'in', adminProfile.managedTenantIds),
           orderBy('createdAt', 'desc')
         );

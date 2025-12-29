@@ -1227,3 +1227,155 @@ export const setUserRole = onCall(
     }
   }
 );
+
+// ============================================================================
+// SUBMISSION REVIEW FUNCTIONS
+// ============================================================================
+
+/**
+ * Review Submission Secure
+ * 
+ * Allows moderators and above to approve or reject task submissions.
+ * Updates submission status, adds review notes, and updates team scores.
+ * 
+ * @param data.submissionId - ID of the submission to review
+ * @param data.status - Review decision: 'approved' | 'rejected'
+ * @param data.reviewNotes - Optional notes from the reviewer
+ * 
+ * @returns {success: boolean, message: string}
+ * 
+ * @throws {unauthenticated} - Caller must be authenticated
+ * @throws {permission-denied} - Only moderators+ can review submissions
+ * @throws {invalid-argument} - Invalid status or missing submissionId
+ * @throws {not-found} - Submission does not exist
+ */
+export const reviewSubmissionSecure = onCall(
+  {cors: true},
+  async (request) => {
+    const {data, auth} = request;
+
+    // Verify authentication
+    if (!auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Authentication required to review submissions"
+      );
+    }
+
+    // Check role (moderator or higher)
+    const userRole = auth.token.role;
+    const allowedRoles = ["moderator", "organizer", "admin", "superadmin"];
+    
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only moderators and above can review submissions"
+      );
+    }
+
+    // Validate input
+    const {submissionId, status, reviewNotes} = data;
+
+    if (!submissionId || typeof submissionId !== "string") {
+      throw new HttpsError("invalid-argument", "Valid submissionId is required");
+    }
+
+    if (!status || !["approved", "rejected"].includes(status)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Status must be 'approved' or 'rejected'"
+      );
+    }
+
+    try {
+      const submissionRef = admin.firestore().collection("submissions").doc(submissionId);
+      const submissionDoc = await submissionRef.get();
+
+      if (!submissionDoc.exists) {
+        throw new HttpsError("not-found", "Submission not found");
+      }
+
+      const submission = submissionDoc.data();
+      if (!submission) {
+        throw new HttpsError("internal", "Failed to read submission data");
+      }
+
+      // Check if already reviewed
+      if (submission.status !== "pending") {
+        throw new HttpsError(
+          "failed-precondition",
+          `Submission already ${submission.status}`
+        );
+      }
+
+      // Update submission
+      await submissionRef.update({
+        status,
+        reviewedBy: auth.uid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        reviewNotes: reviewNotes || null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      // If approved, update team score and completedTaskIds
+      if (status === "approved") {
+        const teamRef = admin.firestore().collection("teams").doc(submission.teamId);
+        const teamDoc = await teamRef.get();
+
+        if (teamDoc.exists) {
+          const team = teamDoc.data();
+          const currentScore = team?.score || 0;
+          const completedTasks = Array.isArray(team?.completedTaskIds) 
+            ? team.completedTaskIds 
+            : [];
+
+          // Only add to completedTaskIds if not already there
+          const updates: any = {
+            score: currentScore + submission.pointsAwarded,
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+
+          if (!completedTasks.includes(submission.taskId)) {
+            updates.completedTaskIds = FieldValue.arrayUnion(submission.taskId);
+          }
+
+          await teamRef.update(updates);
+        }
+      }
+
+      // Log the review action
+      await admin.firestore().collection("auditLogs").add({
+        action: "reviewSubmission",
+        performedBy: auth.uid,
+        submissionId,
+        teamId: submission.teamId,
+        taskId: submission.taskId,
+        decision: status,
+        timestamp: FieldValue.serverTimestamp(),
+        tenantId: submission.tenantId,
+        eventId: submission.eventId,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      logger.info(`Submission ${submissionId} ${status} by ${auth.uid}`);
+
+      return {
+        success: true,
+        message: `Submission ${status} successfully`,
+      };
+    } catch (error: unknown) {
+      logger.error("Error reviewing submission:", error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new HttpsError(
+        "internal",
+        `Failed to review submission: ${errorMessage}`
+      );
+    }
+  }
+);

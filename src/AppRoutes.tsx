@@ -29,6 +29,7 @@ import { EventList } from './pages/admin/EventList';
 import { EventForm } from './pages/admin/EventForm';
 import { TaskList } from './pages/admin/TaskList';
 import { TaskForm } from './pages/admin/TaskForm';
+import { SubmissionQueue } from './pages/admin/SubmissionQueue';
 
 /**
  * RoutesWithProfileGuard
@@ -172,6 +173,15 @@ function RoutesWithProfileGuard() {
               element={
                 <AdminRoute requiredRole="organizer">
                   <TaskForm />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/events/:eventId/submissions" 
+              element={
+                <AdminRoute requiredRole="moderator">
+                  <SubmissionQueue />
                 </AdminRoute>
               } 
             />

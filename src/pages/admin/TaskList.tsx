@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../services/firebase.service';
+import { useAuthStore } from '../../store/authStore';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import type { Task } from '../../types/schema';
 
 export function TaskList() {
   const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
+  const { user } = useAuthStore();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,38 +18,26 @@ export function TaskList() {
   useEffect(() => {
     if (!eventId) return;
 
-    setLoading(true);
-    setError(null);
-
-    // Load event details (one-time fetch is OK for metadata)
-    const loadEventName = async () => {
+    const loadTasks = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // Load event details
         const eventDoc = await getDocs(
           query(collection(db, 'events'), where('__name__', '==', eventId))
         );
         if (!eventDoc.empty) {
           setEventName(eventDoc.docs[0].data().name);
         }
-      } catch (err) {
-        console.error('Error loading event name:', err);
-      }
-    };
-    loadEventName();
 
-    // Real-time listener for tasks (bypasses stale cache from Cloud Function writes)
-    const tasksQuery = query(
-      collection(db, 'tasks'),
-      where('eventId', '==', eventId)
-    );
+        // Load tasks for this event
+        const tasksQuery = query(
+          collection(db, 'tasks'),
+          where('eventId', '==', eventId)
+        );
 
-    console.log("📋 Setting up real-time listener for eventId:", eventId);
-
-    const unsubscribe = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        console.log("📋 Real-time update received:", snapshot.docs.length, "tasks");
-        console.log("📋 Task IDs:", snapshot.docs.map(d => d.id));
-
+        const snapshot = await getDocs(tasksQuery);
         const tasksData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -55,9 +45,7 @@ export function TaskList() {
           updatedAt: doc.data().updatedAt?.toDate(),
         })) as Task[];
 
-        console.log("📋 Mapped tasks:", tasksData.length, tasksData);
-
-        // Sort in memory: by order (if exists), then by createdAt desc
+        // Sort in memory: by order (if exists), then by createdAt
         tasksData.sort((a, b) => {
           // Tasks with order field come first, sorted by order
           if (a.order !== undefined && b.order !== undefined) {
@@ -70,21 +58,16 @@ export function TaskList() {
         });
 
         setTasks(tasksData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error in tasks listener:', err);
+      } catch (err: any) {
+        console.error('Error loading tasks:', err);
         setError(err.message || 'Failed to load tasks');
+      } finally {
         setLoading(false);
       }
-    );
-
-    // Cleanup listener on unmount
-    return () => {
-      console.log("📋 Cleaning up tasks listener");
-      unsubscribe();
     };
-  }, [eventId]); // Remove location.key - real-time listener handles updates
+
+    loadTasks();
+  }, [eventId]);
 
   const getTaskTypeIcon = (type: string) => {
     switch (type) {

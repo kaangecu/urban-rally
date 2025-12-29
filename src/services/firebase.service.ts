@@ -15,9 +15,7 @@ import {
 import type { Auth } from 'firebase/auth';
 import { 
   getFirestore, 
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  initializeFirestore,
+  enableIndexedDbPersistence,
   connectFirestoreEmulator 
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
@@ -57,24 +55,7 @@ export const initializeFirebase = async (): Promise<void> => {
     await setPersistence(auth, browserLocalPersistence);
     
     // Initialize Firestore
-    // CRITICAL: For emulators, we must connect BEFORE any queries run
-    const useEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true';
-    
-    if (useEmulator) {
-      // For emulators: Use getFirestore() then connect to emulator immediately
-      // This prevents the SDK from trying to reach production backend
-      db = getFirestore(app);
-      connectFirestoreEmulator(db, '127.0.0.1', 8080);
-      console.log('🔧 Connected to Firestore Emulator (8080)');
-    } else {
-      // For production: Use persistent cache for offline-first PWA
-      db = initializeFirestore(app, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
-        })
-      });
-      console.log('✅ Firestore initialized with persistent cache');
-    }
+    db = getFirestore(app);
     
     // Initialize Storage
     storage = getStorage(app);
@@ -82,11 +63,24 @@ export const initializeFirebase = async (): Promise<void> => {
     // Initialize Functions
     functions = getFunctions(app, 'europe-west3');
     
-    // Connect remaining emulators in development
-    if (useEmulator) {
+    // Connect to emulators in development
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
       connectFunctionsEmulator(functions, '127.0.0.1', 5001);
       connectStorageEmulator(storage, '127.0.0.1', 9199);
-      console.log('🔧 Connected to Functions (5001) and Storage (9199) Emulators');
+      console.log('🔧 Connected to Firestore (8080), Functions (5001), and Storage (9199) Emulators');
+    }
+    
+    // Enable offline persistence (CRITICAL for offline-first)
+    try {
+      await enableIndexedDbPersistence(db);
+      console.log('✅ Firestore offline persistence enabled');
+    } catch (err: any) {
+      if (err.code === 'failed-precondition') {
+        console.warn('⚠️ Multiple tabs open, persistence enabled in first tab only');
+      } else if (err.code === 'unimplemented') {
+        console.warn('⚠️ Browser does not support persistence');
+      }
     }
     
     console.log('✅ Firebase initialized successfully');

@@ -18,7 +18,10 @@ export function EventList() {
   }, [adminProfile]);
 
   const loadEvents = async () => {
-    if (!adminProfile) return;
+    if (!adminProfile) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

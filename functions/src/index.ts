@@ -42,7 +42,7 @@ interface TaskData {
   tenantId: string;
   title: string;
   description: string;
-  taskType: TaskType;
+  type: TaskType; // Match schema.ts field name
   points: number;
   isActive: boolean;
   difficulty: 'easy' | 'medium' | 'hard';
@@ -1012,7 +1012,7 @@ export const createTaskSecure = onCall(
         tenantId,
         title,
         description: data.description || "",
-        taskType,
+        type: taskType, // Save as 'type' to match schema
         points: data.points || 100,
         isActive: data.isActive !== undefined ? data.isActive : true,
         difficulty: data.difficulty || "medium",

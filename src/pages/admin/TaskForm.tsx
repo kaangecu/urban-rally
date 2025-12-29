@@ -247,7 +247,7 @@ export function TaskForm() {
         await createTaskSecure(baseData);
       }
 
-      navigate(`/admin/events/${eventId}/tasks`);
+      navigate(`/admin/events/${eventId}/tasks`, { state: { refresh: true } });
     } catch (err: any) {
       console.error('Error saving task:', err);
       setError(err.message || 'Failed to save task');

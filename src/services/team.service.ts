@@ -4,7 +4,7 @@ import {
   where, 
   getDocs, 
   doc, 
-  getDoc, 
+  getDoc,
   updateDoc,
   serverTimestamp,
   increment,

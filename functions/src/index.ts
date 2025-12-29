@@ -920,7 +920,7 @@ export const createTaskSecure = onCall(
       );
     }
 
-    const {eventId, tenantId, title, description, taskType, points, location} = data;
+    const {eventId, tenantId, title, taskType} = data;
 
     // Validate required fields
     if (!eventId || !tenantId || !title || !taskType) {
@@ -934,19 +934,62 @@ export const createTaskSecure = onCall(
       const db = admin.firestore();
       const taskRef = db.collection("tasks").doc();
 
-      const taskData = {
+      // Base task data
+      const taskData: any = {
         id: taskRef.id,
         eventId,
         tenantId,
         title,
-        description: description || "",
+        description: data.description || "",
         taskType,
-        points: points || 100,
-        location: location || null,
-        isActive: true,
+        points: data.points || 100,
+        isActive: data.isActive !== undefined ? data.isActive : true,
+        difficulty: data.difficulty || "medium",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // Add type-specific fields
+      if (taskType === "GPS" || taskType === "GPS_LOCATION") {
+        if (data.coordinates) {
+          taskData.coordinates = data.coordinates;
+        }
+        if (data.radius !== undefined) {
+          taskData.radius = data.radius;
+        }
+        if (data.requiresPhoto !== undefined) {
+          taskData.requiresPhoto = data.requiresPhoto;
+        }
+      } else if (taskType === "PHOTO") {
+        if (data.requiresGPS !== undefined) {
+          taskData.requiresGPS = data.requiresGPS;
+        }
+        if (data.coordinates) {
+          taskData.coordinates = data.coordinates;
+        }
+        if (data.radius !== undefined) {
+          taskData.radius = data.radius;
+        }
+      } else if (taskType === "VIDEO") {
+        if (data.requiresGPS !== undefined) {
+          taskData.requiresGPS = data.requiresGPS;
+        }
+        if (data.coordinates) {
+          taskData.coordinates = data.coordinates;
+        }
+        if (data.radius !== undefined) {
+          taskData.radius = data.radius;
+        }
+      } else if (taskType === "QUIZ") {
+        taskData.quizType = data.quizType || "text";
+        taskData.quizCorrectAnswer = data.quizCorrectAnswer;
+        if (data.quizOptions) {
+          taskData.quizOptions = data.quizOptions;
+        }
+        if (data.quizHint) {
+          taskData.quizHint = data.quizHint;
+        }
+      }
 
       await taskRef.set(taskData);
 
@@ -1002,8 +1045,25 @@ export const updateTaskSecure = onCall(
       );
     }
 
-    // Whitelist allowed fields
-    const allowedFields = ["title", "description", "points", "location", "isActive"];
+    // Whitelist allowed fields (expanded for all task types)
+    const allowedFields = [
+      "title",
+      "description",
+      "points",
+      "isActive",
+      "difficulty",
+      // GPS fields
+      "coordinates",
+      "radius",
+      "requiresPhoto",
+      // Photo/Video fields
+      "requiresGPS",
+      // Quiz fields
+      "quizType",
+      "quizCorrectAnswer",
+      "quizOptions",
+      "quizHint",
+    ];
     const sanitizedUpdates: any = {};
 
     for (const field of allowedFields) {

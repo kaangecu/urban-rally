@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../services/firebase.service';
-import { useAuthStore } from '../../store/authStore';
+import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { TaskTypeSelector } from '../../components/admin/TaskTypeSelector';
 import { GPSPicker } from '../../components/admin/GPSPicker';
@@ -13,7 +13,7 @@ import type { Task, TaskType } from '../../types/schema';
 export function TaskForm() {
   const navigate = useNavigate();
   const { eventId, taskId } = useParams<{ eventId: string; taskId: string }>();
-  const { user, tenant } = useAuthStore();
+  const { adminProfile } = useAdminAuth();
   const isEditMode = !!taskId;
 
   const [loading, setLoading] = useState(isEditMode);
@@ -186,10 +186,10 @@ export function TaskForm() {
       // Build task data based on type
       const baseData: any = {
         eventId,
-        tenantId: tenant?.id,
+        tenantId: adminProfile?.managedTenantIds?.[0] || '',
         title: title.trim(),
         description: description.trim(),
-        type: taskType,
+        taskType: taskType, // Cloud Function expects 'taskType' not 'type'
         points,
         isActive,
         difficulty,

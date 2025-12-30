@@ -1,33 +1,61 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types/schema';
+import type { User, Tenant, TenantRoleAssignment, Role } from '../types/schema';
+import { hasMinimumRole, calculateHighestRole } from '../types/schema';
 
 /**
- * Admin Store
+ * Admin Store - Phase 2 Implementation
  * 
- * Manages admin-specific state including:
- * - Admin user profile with role and permissions
- * - Admin mode toggle (dual-mode navigation)
- * - Selected tenant for multi-tenant admins
+ * Manages admin-specific state for multi-tenant role management system
+ * 
+ * Features:
+ * - Hybrid Expanded User schema (tenantRoles instead of managedTenantIds)
+ * - Active tenant context switching
+ * - Available tenants list with roles
+ * - Permission checking helpers
+ * - Persistent state across sessions
+ * 
+ * Architecture:
+ * - Single User document with tenantRoles map
+ * - Role-based access control per tenant
+ * - Superadmin can access all tenants
+ * - Auto-reload on tenant switch to prevent state leakage
+ * 
+ * @version 2.0 - Updated for Hybrid schema
+ * @date December 30, 2025
  */
 
+/**
+ * Tenant context with role information
+ * Used in Context Switcher dropdown
+ */
+export interface TenantContext extends Tenant {
+  userRole: 'admin' | 'organizer' | 'moderator';
+  expiresAt: Date | null;
+}
+
 interface AdminState {
-  // Admin User (unified User type with admin role)
+  // Admin User Profile
   adminProfile: User | null;
   isAdminMode: boolean; // Toggle between player/admin views
   
-  // Multi-tenant Management
-  selectedTenantId: string | null; // Current tenant context
+  // Multi-Tenant Context
+  activeTenantId: string | null; // Currently selected tenant
+  availableTenants: TenantContext[]; // Tenants user can manage
   
   // Actions
   setAdminProfile: (profile: User | null) => void;
   setAdminMode: (isAdmin: boolean) => void;
-  setSelectedTenant: (tenantId: string | null) => void;
+  setActiveTenant: (tenantId: string) => void;
+  switchTenant: (tenantId: string) => void; // Switches and reloads
+  setAvailableTenants: (tenants: TenantContext[]) => void;
   clearAdminState: () => void;
   
-  // Getters
-  hasRole: (role: 'superadmin' | 'admin' | 'organizer' | 'moderator') => boolean;
+  // Permission Helpers
+  hasRole: (role: Role) => boolean;
+  hasRoleInTenant: (tenantId: string, role: Role) => boolean;
   canManageTenant: (tenantId: string) => boolean;
+  getActiveRole: () => Role | null;
 }
 
 export const useAdminStore = create<AdminState>()(
@@ -36,14 +64,29 @@ export const useAdminStore = create<AdminState>()(
       // Initial State
       adminProfile: null,
       isAdminMode: false,
-      selectedTenantId: null,
+      activeTenantId: null,
+      availableTenants: [],
       
       // Actions
       setAdminProfile: (profile) => {
+        if (!profile) {
+          set({ 
+            adminProfile: null,
+            activeTenantId: null,
+            availableTenants: [],
+          });
+          return;
+        }
+        
+        // Auto-select first tenant if admin has any active roles
+        const tenantRoles = profile.tenantRoles || {};
+        const activeTenantIds = Object.keys(tenantRoles).filter(
+          tid => tenantRoles[tid].isActive
+        );
+        
         set({ 
           adminProfile: profile,
-          // Auto-select first tenant if admin has any
-          selectedTenantId: profile?.managedTenantIds?.[0] || null,
+          activeTenantId: activeTenantIds[0] || null,
         });
       },
       
@@ -51,43 +94,79 @@ export const useAdminStore = create<AdminState>()(
         set({ isAdminMode: isAdmin });
       },
       
-      setSelectedTenant: (tenantId) => {
+      setActiveTenant: (tenantId) => {
         const { adminProfile } = get();
+        
         // Validate admin can manage this tenant
         if (tenantId && adminProfile) {
-          const canManage = 
-            adminProfile.role === 'superadmin' || 
-            adminProfile.managedTenantIds.includes(tenantId);
+          const canManage = get().canManageTenant(tenantId);
           
           if (canManage) {
-            set({ selectedTenantId: tenantId });
+            set({ activeTenantId: tenantId });
           } else {
             console.error(`Admin cannot manage tenant ${tenantId}`);
           }
         } else {
-          set({ selectedTenantId: tenantId });
+          set({ activeTenantId: tenantId });
         }
+      },
+      
+      switchTenant: (tenantId) => {
+        const { canManageTenant } = get();
+        
+        if (!canManageTenant(tenantId)) {
+          console.error(`Cannot switch to tenant ${tenantId} - access denied`);
+          return;
+        }
+        
+        // Update state
+        set({ activeTenantId: tenantId });
+        
+        // Reload page to prevent state leakage between tenants
+        // This ensures clean slate for the new tenant context
+        window.location.reload();
+      },
+      
+      setAvailableTenants: (tenants) => {
+        set({ availableTenants: tenants });
       },
       
       clearAdminState: () => {
         set({
           adminProfile: null,
           isAdminMode: false,
-          selectedTenantId: null,
+          activeTenantId: null,
+          availableTenants: [],
         });
       },
       
-      // Getters
+      // Permission Helpers
       hasRole: (role) => {
         const { adminProfile } = get();
         if (!adminProfile) return false;
         
-        // Role hierarchy check
-        const roles = ['moderator', 'organizer', 'admin', 'superadmin'];
-        const userRoleIndex = roles.indexOf(adminProfile.role);
-        const requiredRoleIndex = roles.indexOf(role);
+        // Check global role (highestRole across all tenants)
+        const highestRole = adminProfile.highestRole || calculateHighestRole(adminProfile.tenantRoles, adminProfile.isSuperadmin);
+        return hasMinimumRole(highestRole, role);
+      },
+      
+      hasRoleInTenant: (tenantId, role) => {
+        const { adminProfile } = get();
+        if (!adminProfile) return false;
         
-        return userRoleIndex >= requiredRoleIndex;
+        // Superadmin has all roles in all tenants
+        if (adminProfile.isSuperadmin) return true;
+        
+        // Check specific tenant role
+        const tenantRole = adminProfile.tenantRoles?.[tenantId];
+        if (!tenantRole || !tenantRole.isActive) return false;
+        
+        // Check expiration
+        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+          return false;
+        }
+        
+        return hasMinimumRole(tenantRole.role, role);
       },
       
       canManageTenant: (tenantId) => {
@@ -95,19 +174,47 @@ export const useAdminStore = create<AdminState>()(
         if (!adminProfile) return false;
         
         // Superadmin can manage all tenants
-        if (adminProfile.role === 'superadmin') return true;
+        if (adminProfile.isSuperadmin) return true;
         
-        // Check if tenant is in managed list
-        return adminProfile.managedTenantIds.includes(tenantId);
+        // Check if user has active role in this tenant
+        const tenantRole = adminProfile.tenantRoles?.[tenantId];
+        if (!tenantRole || !tenantRole.isActive) return false;
+        
+        // Check expiration
+        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+          return false;
+        }
+        
+        return true;
+      },
+      
+      getActiveRole: () => {
+        const { adminProfile, activeTenantId } = get();
+        if (!adminProfile || !activeTenantId) return null;
+        
+        // Superadmin always has admin role
+        if (adminProfile.isSuperadmin) return 'admin';
+        
+        // Get role from active tenant
+        const tenantRole = adminProfile.tenantRoles?.[activeTenantId];
+        if (!tenantRole || !tenantRole.isActive) return null;
+        
+        // Check expiration
+        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+          return null;
+        }
+        
+        return tenantRole.role;
       },
     }),
     {
       name: 'admin-storage',
       partialize: (state) => ({
-        // Only persist admin profile and selected tenant
+        // Only persist admin profile and active tenant
         adminProfile: state.adminProfile,
-        selectedTenantId: state.selectedTenantId,
+        activeTenantId: state.activeTenantId,
         // Don't persist isAdminMode - always start in player mode
+        // Don't persist availableTenants - refetch on load
       }),
     }
   )

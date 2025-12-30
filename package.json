@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
+    "date-fns": "^4.1.0",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.25",
     "leaflet": "^1.9.4",

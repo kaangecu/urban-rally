@@ -80,7 +80,7 @@ export function SubmissionCard({ submission, onClick }: SubmissionCardProps) {
             {submission.task?.title || 'Unknown Task'}
           </h3>
           <p className="text-xs text-slate-400 line-clamp-1">
-            {submission.team?.name || 'Unknown Team'}
+            {submission.team?.teamName || submission.team?.accessCode || 'Unknown Team'}
           </p>
         </div>
         {getStatusBadge()}

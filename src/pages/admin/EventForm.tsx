@@ -41,8 +41,7 @@ export function EventForm() {
 
     try {
       setLoading(true);
-      const db_ = db();
-      const eventDoc = await getDoc(doc(db_, 'events', eventId));
+      const eventDoc = await getDoc(doc(db, 'events', eventId));
 
       if (!eventDoc.exists()) {
         setError('Event not found');
@@ -52,18 +51,18 @@ export function EventForm() {
       const eventData = eventDoc.data() as Event;
 
       // Convert Firestore timestamps to date inputs
-      const startDate = eventData.startDate.toDate
-        ? eventData.startDate.toDate().toISOString().split('T')[0]
+      const startDate = (eventData.startDate as any)?.toDate
+        ? (eventData.startDate as any).toDate().toISOString().split('T')[0]
         : new Date(eventData.startDate).toISOString().split('T')[0];
 
-      const endDate = eventData.endDate.toDate
-        ? eventData.endDate.toDate().toISOString().split('T')[0]
+      const endDate = (eventData.endDate as any)?.toDate
+        ? (eventData.endDate as any).toDate().toISOString().split('T')[0]
         : new Date(eventData.endDate).toISOString().split('T')[0];
 
       setFormData({
         name: eventData.name,
         description: eventData.description || '',
-        eventCode: eventData.eventCode,
+        eventCode: eventData.eventCode || '',
         tenantId: eventData.tenantId,
         startDate,
         endDate,

@@ -85,7 +85,7 @@ export function SubmissionDetailModal({
                 {submission.task?.title || 'Submission Review'}
               </h2>
               <p className="text-sm text-slate-400">
-                Team: <span className="text-white font-medium">{submission.team?.name || 'Unknown'}</span>
+                Team: <span className="text-white font-medium">{submission.team?.teamName || submission.team?.accessCode || 'Unknown'}</span>
               </p>
               <p className="text-xs text-slate-500 mt-1">
                 Submitted {formatDate(submission.submittedAt)}

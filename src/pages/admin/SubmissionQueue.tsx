@@ -18,7 +18,6 @@ interface EnrichedSubmission extends TaskSubmission {
 export function SubmissionQueue() {
   const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
-  const { user } = useAuthStore();
   const [submissions, setSubmissions] = useState<EnrichedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

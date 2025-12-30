@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React from 'react';
 import type { TaskType } from '../../types/schema';
 
 interface TaskTypeSelectorProps {
@@ -11,7 +11,7 @@ interface TaskTypeOption {
   value: TaskType;
   label: string;
   description: string;
-  icon: JSX.Element;
+  icon: React.ReactElement;
   color: string;
 }
 

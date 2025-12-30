@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase.service';
 import { useAuthStore } from '../../store/authStore';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -9,7 +9,6 @@ import type { Task } from '../../types/schema';
 export function TaskList() {
   const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
-  const { user } = useAuthStore();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

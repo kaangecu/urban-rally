@@ -126,9 +126,12 @@ service cloud.firestore {
     // ====================================
     
     match /submissions/{submissionId} {
-      // Teams can read their own submissions
-      allow read: if isAuthenticated() 
+      // Teams can read their own individual submissions
+      allow get: if isAuthenticated() 
                   && isTeamMember(resource.data.teamId);
+      
+      // Admins can list submissions for events they manage
+      allow list: if isModerator();
       
       // ⚠️ DEVELOPMENT: Temporarily open for debugging
       // Users can submit photos/videos for tasks (must be team member)

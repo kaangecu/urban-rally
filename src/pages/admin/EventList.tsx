@@ -74,8 +74,8 @@ export function EventList() {
 
   const getStatusBadge = (event: Event) => {
     const now = new Date();
-    const start = event.startDate.toDate ? event.startDate.toDate() : new Date(event.startDate);
-    const end = event.endDate.toDate ? event.endDate.toDate() : new Date(event.endDate);
+    const start = (event.startDate as any)?.toDate ? (event.startDate as any).toDate() : new Date(event.startDate);
+    const end = (event.endDate as any)?.toDate ? (event.endDate as any).toDate() : new Date(event.endDate);
 
     if (!event.isActive) {
       return (

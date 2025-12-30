@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, getCountFromServer } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from '../../services/firebase.service';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -30,15 +30,13 @@ export function AdminDashboard() {
     if (!adminProfile) return;
 
     try {
-      const db_ = db();
-      
       // Count events
       let eventsQuery;
       if (adminProfile.role === 'superadmin') {
-        eventsQuery = collection(db_, 'events');
+        eventsQuery = collection(db, 'events');
       } else if (adminProfile.managedTenantIds && adminProfile.managedTenantIds.length > 0) {
         eventsQuery = query(
-          collection(db_, 'events'),
+          collection(db, 'events'),
           where('tenantId', 'in', adminProfile.managedTenantIds)
         );
       } else {
@@ -92,7 +90,7 @@ export function AdminDashboard() {
                   {adminProfile.role}
                 </span>
                 <span className="text-slate-400 font-mono">
-                  {adminProfile.managedTenantIds.length > 0 
+                  {adminProfile.managedTenantIds && adminProfile.managedTenantIds.length > 0
                     ? `Managing ${adminProfile.managedTenantIds.length} tenant(s)`
                     : 'All tenants access'
                   }

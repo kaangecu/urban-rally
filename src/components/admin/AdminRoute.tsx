@@ -46,6 +46,14 @@ export function AdminRoute({ children, requiredRole = 'moderator', requiredTenan
 
   // Check role requirement
   if (!hasRole(requiredRole)) {
+    console.log('[AdminRoute] Access denied:', {
+      requiredRole,
+      userRole: adminProfile.role,
+      highestRole: adminProfile.highestRole,
+      isSuperadmin: adminProfile.isSuperadmin,
+      tenantRoles: adminProfile.tenantRoles,
+    });
+    
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
         <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-8 max-w-md text-center">
@@ -56,11 +64,16 @@ export function AdminRoute({ children, requiredRole = 'moderator', requiredTenan
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
           <p className="text-sm text-slate-400 mb-6">
-            You need <span className="text-blue-400 font-mono">{requiredRole}</span> role to access this page.
+            You need <span className="text-blue-400 font-mono">{requiredRole}</span> role or higher to access this page.
           </p>
-          <p className="text-xs text-slate-500 font-mono">
-            Current role: <span className="text-slate-300">{adminProfile.role}</span>
+          <p className="text-xs text-slate-500 font-mono mb-2">
+            Your role: <span className="text-slate-300">{adminProfile.role}</span>
           </p>
+          {adminProfile.highestRole && (
+            <p className="text-xs text-slate-500 font-mono">
+              Highest role: <span className="text-slate-300">{adminProfile.highestRole}</span>
+            </p>
+          )}
           <button
             onClick={() => window.history.back()}
             className="mt-6 bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg text-sm font-bold uppercase tracking-wider transition-colors"

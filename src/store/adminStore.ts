@@ -142,10 +142,26 @@ export const useAdminStore = create<AdminState>()(
       
       // Permission Helpers
       hasRole: (role) => {
-        const { adminProfile } = get();
+        const { adminProfile, activeTenantId } = get();
         if (!adminProfile) return false;
         
-        // Check global role (highestRole across all tenants)
+        // Superadmin has all roles everywhere
+        if (adminProfile.isSuperadmin) return true;
+        
+        // If checking within active tenant context, use tenant-specific role
+        if (activeTenantId) {
+          const tenantRole = adminProfile.tenantRoles?.[activeTenantId];
+          if (tenantRole && tenantRole.isActive) {
+            // Check expiration
+            if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+              return false;
+            }
+            // Admin role inherits all lower roles (organizer, moderator)
+            return hasMinimumRole(tenantRole.role, role);
+          }
+        }
+        
+        // Fallback: Check global highest role across all tenants
         const highestRole = adminProfile.highestRole || calculateHighestRole(adminProfile.tenantRoles, adminProfile.isSuperadmin);
         return hasMinimumRole(highestRole, role);
       },
@@ -166,6 +182,7 @@ export const useAdminStore = create<AdminState>()(
           return false;
         }
         
+        // Admin role inherits all lower roles (organizer, moderator)
         return hasMinimumRole(tenantRole.role, role);
       },
       

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Copy, Check, Mail, Loader2, ExternalLink } from 'lucide-react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
+import { getFirebaseFunctions } from '../../../services/firebase.service';
 
 /**
  * InviteModal Component - Phase 2 Milestone 2.4
@@ -53,7 +54,7 @@ export function InviteModal({
   isOpen,
   onClose,
   tenantId,
-  tenantName = 'your organization',
+  tenantName,
 }: InviteModalProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'moderator' | 'organizer' | 'admin'>('moderator');
@@ -62,6 +63,9 @@ export function InviteModal({
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Note: tenantName is available but not currently used in the UI
+  // Could be used for customizing the invitation message in future
 
   // Validate email
   const isValidEmail = (email: string) => {
@@ -79,7 +83,8 @@ export function InviteModal({
     setError(null);
 
     try {
-      const functions = getFunctions();
+      // Use shared Functions instance (has correct region + emulator setup)
+      const functions = getFirebaseFunctions();
       const inviteUserToTenant = httpsCallable<
         {
           email: string;

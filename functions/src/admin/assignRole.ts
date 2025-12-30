@@ -22,7 +22,7 @@ interface AssignRoleRequest {
   targetUserId: string;
   tenantId: string;
   role: 'admin' | 'organizer' | 'moderator';
-  expiresIn?: '24h' | '48h' | '1week' | '1month' | 'never';
+  expiresAt?: string | null; // ISO date string or null
   reason?: string;
 }
 
@@ -42,7 +42,7 @@ export const assignRole = onCall<AssignRoleRequest>(
     }
 
     // 2. Validate input
-    const {targetUserId, tenantId, role, expiresIn, reason} = request.data;
+    const {targetUserId, tenantId, role, expiresAt, reason} = request.data;
     
     if (!targetUserId) {
       throw new HttpsError("invalid-argument", "targetUserId is required");
@@ -79,26 +79,47 @@ export const assignRole = onCall<AssignRoleRequest>(
 
       const userData = userDoc.data()!;
 
+      // Prevent role assignment to anonymous users
+      if (userData.accountType === 'anonymous') {
+        throw new HttpsError(
+          "failed-precondition",
+          "Cannot assign roles to anonymous users. User must link their account with email first."
+        );
+      }
+
       // 5. Get assigner details for audit
       const assignerRef = db.collection("users").doc(assignerId);
       const assignerDoc = await assignerRef.get();
       const assignerData = assignerDoc.exists ? assignerDoc.data()! : null;
 
       // 6. Calculate expiration
-      const expiresAt = calculateExpiration(expiresIn || "never");
+      let expirationDate: Date | null = null;
+      if (expiresAt) {
+        expirationDate = new Date(expiresAt);
+        // Validate the date
+        if (isNaN(expirationDate.getTime())) {
+          throw new HttpsError("invalid-argument", "Invalid expiresAt date format");
+        }
+      }
 
       // 7. Update tenantRoles[tenantId]
       const tenantRoles = userData.tenantRoles || {};
       const previousRole = tenantRoles[tenantId]?.role || null;
 
-      tenantRoles[tenantId] = {
+      const roleAssignment: any = {
         role: role,
         grantedBy: assignerId,
         grantedAt: Timestamp.now(),
-        expiresAt: expiresAt ? Timestamp.fromDate(expiresAt) : null,
+        expiresAt: expirationDate ? Timestamp.fromDate(expirationDate) : null,
         isActive: true,
-        notes: reason || undefined,
       };
+      
+      // Only add notes if reason is provided (avoid undefined values)
+      if (reason) {
+        roleAssignment.notes = reason;
+      }
+      
+      tenantRoles[tenantId] = roleAssignment;
 
       // 8. Recalculate highestRole
       const highestRole = calculateHighestRole(tenantRoles, userData.isSuperadmin || false);
@@ -148,7 +169,6 @@ export const assignRole = onCall<AssignRoleRequest>(
         tenantIds: activeTenantIds,
         tr: trMap,
         sa: userData.isSuperadmin || false,
-        iat: Date.now(),
       });
 
       // 12. Create audit log entry
@@ -163,7 +183,7 @@ export const assignRole = onCall<AssignRoleRequest>(
         tenantId: tenantId,
         timestamp: FieldValue.serverTimestamp(),
         reason: reason || null,
-        ipAddress: request.rawRequest?.ip,
+        ipAddress: request.rawRequest?.ip || "unknown",
         userAgent: request.rawRequest?.headers["user-agent"],
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -173,7 +193,7 @@ export const assignRole = onCall<AssignRoleRequest>(
       return {
         success: true,
         newRole: role,
-        expiresAt: expiresAt,
+        expiresAt: expirationDate,
         highestRole: highestRole,
       };
     } catch (error: any) {
@@ -187,28 +207,6 @@ export const assignRole = onCall<AssignRoleRequest>(
     }
   }
 );
-
-/**
- * Calculate expiration date based on duration string
- */
-function calculateExpiration(expiresIn: string): Date | null {
-  const now = new Date();
-  
-  switch (expiresIn) {
-    case "24h":
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    case "48h":
-      return new Date(now.getTime() + 48 * 60 * 60 * 1000);
-    case "1week":
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    case "1month":
-      return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    case "never":
-      return null;
-    default:
-      return null;
-  }
-}
 
 /**
  * Calculate highest role from tenantRoles map

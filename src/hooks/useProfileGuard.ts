@@ -52,6 +52,18 @@ export function useProfileGuard(): ProfileGuardState {
       }
 
       try {
+        // Check Firebase Custom Claims for admin roles
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const userRole = tokenResult.claims.role as string | undefined;
+        
+        // Admins don't need to join teams - bypass profile guard
+        if (userRole && ['moderator', 'organizer', 'admin', 'superadmin'].includes(userRole)) {
+          console.log('👑 ProfileGuard: Admin user detected - bypassing profile check');
+          setNeedsProfile(false);
+          setIsChecking(false);
+          return;
+        }
+
         // Firebase Auth exists - check Firestore profile
         console.log('🔍 ProfileGuard: Checking Firestore profile for', firebaseUser.uid);
         const userProfile = await getUserById(firebaseUser.uid);

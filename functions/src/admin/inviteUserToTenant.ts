@@ -167,7 +167,7 @@ export const inviteUserToTenant = onCall<InviteUserRequest>(
         tenantId: tenantId,
         timestamp: FieldValue.serverTimestamp(),
         reason: `Invitation sent (expires: ${inviteExpiresAt.toISOString()})`,
-        ipAddress: request.rawRequest?.ip,
+        ipAddress: request.rawRequest?.ip || "unknown",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

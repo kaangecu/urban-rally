@@ -108,6 +108,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Set user in store
         setUser(userDoc);
 
+        // Check if user is an admin - admins don't need team data
+        const isAdmin = userDoc.role && ['moderator', 'organizer', 'admin', 'superadmin'].includes(userDoc.role);
+        
+        if (isAdmin) {
+          console.log('👑 Admin user detected - skipping team data load');
+          
+          // Populate admin store for admin route access
+          const { setAdminProfile } = await import('../store/adminStore').then(m => m.useAdminStore.getState());
+          setAdminProfile(userDoc);
+          
+          setAuthState('authenticated');
+          setLoading(false);
+          return;
+        }
+
         // 2. Check if user has active team memberships
         const userTeams = await getUserTeams(user.uid);
         
@@ -163,7 +178,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const firstTeamData = userTeams[0];
           const [firstTeam, tenant] = await Promise.all([
             getTeamById(firstTeamData.teamId),
-            getTenantById(firstTeamData.eventId),
+            getTenantById(firstTeamData.tenantId),
           ]);
           
           if (firstTeam && tenant) {

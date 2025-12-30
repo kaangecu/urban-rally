@@ -160,7 +160,7 @@ export const revokeRole = onCall<RevokeRoleRequest>(
         tenantId: tenantId,
         timestamp: FieldValue.serverTimestamp(),
         reason: reason || null,
-        ipAddress: request.rawRequest?.ip,
+        ipAddress: request.rawRequest?.ip || "unknown",
         userAgent: request.rawRequest?.headers["user-agent"],
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

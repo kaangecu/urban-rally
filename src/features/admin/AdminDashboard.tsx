@@ -1,27 +1,26 @@
 import { useState } from 'react';
-import { useAdminContext } from '../../../hooks/useAdminContext';
-import { useAdminStore } from '../../../store/adminStore';
+import { useAdminContext } from '../../hooks/useAdminContext';
+import { useAdminStore } from '../../store/adminStore';
+import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
-  ContextSwitcher,
   StaffList,
-  InviteModal,
   RoleChangeModal,
   RemoveAccessModal,
   ExpirationModal,
   AuditLog,
-} from '../components';
+} from './components';
 import { Loader2, Shield, AlertTriangle } from 'lucide-react';
-import type { User } from '../../../types/schema';
+import type { User } from '../../types/schema';
 
 /**
- * AdminDashboard Page - Phase 3 Enhancement
+ * AdminDashboard Page - Phase 3 Enhancement + Approach A Refactor
  * 
- * Main dashboard for admin portal with advanced role management
+ * Main dashboard for admin portal with self-service role management
  * 
  * Features:
  * - Context switcher in header
  * - Staff list with real-time updates
- * - Invite modal integration
+ * - All Users tab for promoting players
  * - Role change modal
  * - Remove access confirmation
  * - Expiration management
@@ -40,10 +39,9 @@ import type { User } from '../../../types/schema';
 
 type ModalState =
   | { type: 'none' }
-  | { type: 'invite' }
   | { type: 'changeRole'; user: User }
-  | { type: 'removeAccess'; user: User }
-  | { type: 'manageExpiration'; user: User };
+  | { type: 'remove'; user: User }
+  | { type: 'expiration'; user: User };
 
 export function AdminDashboard() {
   const { loading, error } = useAdminContext();
@@ -52,7 +50,7 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
 
   const activeRole = getActiveRole();
-  const activeTenant = availableTenants.find((t) => t.id === activeTenantId);
+  const activeTenant = availableTenants.find((t: { id: string }) => t.id === activeTenantId);
 
   // Loading state
   if (loading) {
@@ -96,35 +94,43 @@ export function AdminDashboard() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             No Admin Access
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            You don't have admin permissions for any organization.
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            You don't have admin permissions for any organization. Contact your organization administrator to request access.
           </p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-left">
+            <p className="font-medium text-blue-900 dark:text-blue-300 mb-2">For Testing:</p>
+            <p className="text-blue-800 dark:text-blue-400">
+              Login with one of these test admin accounts:
+            </p>
+            <ul className="mt-2 space-y-1 text-blue-700 dark:text-blue-500 font-mono text-xs">
+              <li>• superadmin@test.com / admin123</li>
+              <li>• admin@test.com / admin123</li>
+              <li>• organizer@test.com / admin123</li>
+              <li>• moderator@test.com / admin123</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Admin Dashboard
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {activeTenant?.name} • {activeRole}
-              </p>
-            </div>
-            <ContextSwitcher />
+    <AdminLayout>
+      <div className="min-h-full bg-gray-50 dark:bg-gray-900">
+        {/* Page Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Staff Management
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Manage roles and permissions for your team
+            </p>
           </div>
         </div>
-      </header>
 
-      {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        {/* Tabs */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-8" aria-label="Tabs">
             <button
@@ -155,21 +161,14 @@ export function AdminDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'staff' && (
           <StaffList
-            onInvite={() => setModalState({ type: 'invite' })}
-            onChangeRole={(userId) => {
-              const user = availableTenants
-                .flatMap((t) => Object.keys(t.adminCount || {}))
-                .find((id) => id === userId);
-              // TODO: Fetch full user object
-              console.log('Change role for:', userId);
+            onChangeRole={(user: User) => {
+              setModalState({ type: 'changeRole', user });
             }}
-            onRemove={(userId) => {
-              // TODO: Fetch full user object
-              console.log('Remove access for:', userId);
+            onRemove={(user: User) => {
+              setModalState({ type: 'remove', user });
             }}
-            onManageExpiration={(userId) => {
-              // TODO: Fetch full user object
-              console.log('Manage expiration for:', userId);
+            onManageExpiration={(user: User) => {
+              setModalState({ type: 'expiration', user });
             }}
           />
         )}
@@ -178,20 +177,11 @@ export function AdminDashboard() {
       </main>
 
       {/* Modals */}
-      {modalState.type === 'invite' && (
-        <InviteModal
-          isOpen={true}
-          onClose={() => setModalState({ type: 'none' })}
-          tenantId={activeTenantId}
-          tenantName={activeTenant?.name}
-        />
-      )}
-
       {modalState.type === 'changeRole' && (
         <RoleChangeModal
           user={modalState.user}
           currentRole={
-            modalState.user.tenantRoles?.[activeTenantId!]?.role || 'moderator'
+            modalState.user.tenantRoles?.[activeTenantId!]?.role
           }
           onClose={() => setModalState({ type: 'none' })}
           onSuccess={() => {
@@ -223,7 +213,7 @@ export function AdminDashboard() {
           }
           currentExpiration={
             modalState.user.tenantRoles?.[activeTenantId!]?.expiresAt
-              ? new Date(modalState.user.tenantRoles[activeTenantId!].expiresAt)
+              ? new Date(modalState.user.tenantRoles[activeTenantId!].expiresAt!)
               : null
           }
           onClose={() => setModalState({ type: 'none' })}
@@ -233,6 +223,7 @@ export function AdminDashboard() {
           }}
         />
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

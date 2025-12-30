@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../services/firebase.service';
 import type { Role, User } from '../../../types/schema';
 import { useAdminStore } from '../../../store/adminStore';
+import { useAuthStore } from '../../../store/authStore';
 
 /**
  * RemoveAccessModal Component
@@ -38,7 +39,8 @@ export function RemoveAccessModal({
   onClose,
   onSuccess,
 }: RemoveAccessModalProps) {
-  const { activeTenantId, user: currentUser, availableTenants } = useAdminStore();
+  const { activeTenantId, availableTenants } = useAdminStore();
+  const currentUser = useAuthStore((state) => state.user);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -3,6 +3,36 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../services/firebase.service';
 import type { Role, User } from '../../../types/schema';
 import { useAdminStore } from '../../../store/adminStore';
+import { useAuthStore } from '../../../store/authStore';
+
+/**
+ * Role duration options
+ */
+export type RoleDuration = '24h' | '48h' | '1week' | '1month' | 'never';
+
+/**
+ * Convert duration string to ISO date string
+ */
+function calculateExpirationDate(duration: RoleDuration): string | null {
+  if (duration === 'never') return null;
+  
+  const now = new Date();
+  switch (duration) {
+    case '24h':
+      now.setHours(now.getHours() + 24);
+      break;
+    case '48h':
+      now.setHours(now.getHours() + 48);
+      break;
+    case '1week':
+      now.setDate(now.getDate() + 7);
+      break;
+    case '1month':
+      now.setMonth(now.getMonth() + 1);
+      break;
+  }
+  return now.toISOString();
+}
 
 /**
  * RoleChangeModal Component
@@ -28,7 +58,7 @@ import { useAdminStore } from '../../../store/adminStore';
  */
 interface RoleChangeModalProps {
   user: User;
-  currentRole: Role;
+  currentRole?: Role; // Optional - undefined for player promotions
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -39,10 +69,11 @@ export function RoleChangeModal({
   onClose,
   onSuccess,
 }: RoleChangeModalProps) {
-  const { activeTenantId, user: currentUser } = useAdminStore();
-  const [newRole, setNewRole] = useState<Role>(currentRole);
+  const { activeTenantId } = useAdminStore();
+  const currentUser = useAuthStore((state) => state.user);
+  const [newRole, setNewRole] = useState<Role>(currentRole || 'moderator');
   const [reason, setReason] = useState('');
-  const [expiresAt, setExpiresAt] = useState<string>(''); // ISO date string
+  const [duration, setDuration] = useState<RoleDuration>('1week');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,8 +93,8 @@ export function RoleChangeModal({
       return;
     }
 
-    // Validation: Must select different role
-    if (newRole === currentRole) {
+    // Validation: Must select different role (skip for player promotions)
+    if (currentRole && newRole === currentRole) {
       setError('Please select a different role or cancel.');
       return;
     }
@@ -74,12 +105,15 @@ export function RoleChangeModal({
     try {
       const assignRole = httpsCallable(functions, 'assignRole');
       
+      const expiresAt = calculateExpirationDate(duration);
+      const trimmedReason = reason.trim();
+      
       const result = await assignRole({
         targetUserId: user.id,
         tenantId: activeTenantId,
         role: newRole,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-        reason: reason.trim() || undefined,
+        expiresAt: expiresAt,
+        reason: trimmedReason || undefined,
       });
 
       console.log('Role assignment result:', result.data);
@@ -99,25 +133,25 @@ export function RoleChangeModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+        className="bg-[#1e293b] border border-slate-700 rounded-xl shadow-xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-slate-700 bg-[#0f172a]">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Change Role</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Update role for <span className="font-medium">{user.displayName}</span>
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Change Role</h2>
+              <p className="mt-1 text-sm text-slate-200">
+                Update role for <span className="font-medium font-mono">{user.displayName}</span>
               </p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500 transition-colors"
+              className="text-slate-400 hover:text-slate-300 transition-colors"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,43 +164,45 @@ export function RoleChangeModal({
         {/* Body */}
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           {/* Current Role */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Current Role
-            </label>
-            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-              <span className={`font-medium ${getRoleColor(currentRole)}`}>
-                {currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
-              </span>
+          {currentRole && (
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Current Role
+              </label>
+              <div className="px-3 py-2 bg-[#0f172a] border border-slate-700 rounded-lg text-sm">
+                <span className={`font-bold uppercase ${getRoleColor(currentRole)}`}>
+                  {currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* New Role */}
           <div>
-            <label htmlFor="newRole" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="newRole" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
               New Role <span className="text-red-500">*</span>
             </label>
             <select
               id="newRole"
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as Role)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full px-3 py-2 bg-[#0f172a] border border-slate-700 rounded-lg text-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               {availableRoles.map((role) => (
-                <option key={role} value={role}>
+                <option key={role} value={role} className="bg-[#0f172a]">
                   {role.charAt(0).toUpperCase() + role.slice(1)}
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-slate-500">
               {getRoleDescription(newRole)}
             </p>
           </div>
 
           {/* Reason (optional) */}
           <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="reason" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
               Reason (optional)
             </label>
             <textarea
@@ -175,36 +211,40 @@ export function RoleChangeModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Why is this role change needed?"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
+              className="w-full px-3 py-2 bg-[#0f172a] border border-slate-700 rounded-lg text-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder-slate-600"
               maxLength={500}
             />
-            <p className="mt-1 text-xs text-gray-500 text-right">
+            <p className="mt-1 text-xs text-slate-500 text-right font-mono">
               {reason.length}/500
             </p>
           </div>
 
-          {/* Expiration Date (optional) */}
+          {/* Duration Selector */}
           <div>
-            <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700 mb-1">
-              Expires On (optional)
+            <label htmlFor="duration" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Access Duration
             </label>
-            <input
-              type="date"
-              id="expiresAt"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Leave empty for permanent role. Expired roles will be automatically deactivated.
+            <select
+              id="duration"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value as RoleDuration)}
+              className="w-full px-3 py-2 bg-[#0f172a] border border-slate-700 rounded-lg text-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="24h" className="bg-[#0f172a]">24 hours</option>
+              <option value="48h" className="bg-[#0f172a]">48 hours</option>
+              <option value="1week" className="bg-[#0f172a]">1 week</option>
+              <option value="1month" className="bg-[#0f172a]">1 month</option>
+              <option value="never" className="bg-[#0f172a]">Never (permanent access)</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              Access will automatically expire after this period
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
@@ -214,22 +254,22 @@ export function RoleChangeModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              className="flex-1 px-4 py-2 bg-[#0f172a] border border-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-700/50 disabled:opacity-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || newRole === currentRole}
-              className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={loading || (currentRole && newRole === currentRole)}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Updating...
+                  {currentRole ? 'Updating...' : 'Assigning...'}
                 </span>
               ) : (
-                'Update Role'
+                currentRole ? 'Update Role' : 'Assign Role'
               )}
             </button>
           </div>
@@ -240,18 +280,18 @@ export function RoleChangeModal({
 }
 
 /**
- * Get role-specific color
+ * Get role-specific color (Tactical Ops theme)
  */
 function getRoleColor(role: Role): string {
   switch (role) {
     case 'admin':
-      return 'text-purple-600';
+      return 'text-purple-400';
     case 'organizer':
-      return 'text-blue-600';
+      return 'text-blue-400';
     case 'moderator':
-      return 'text-green-600';
+      return 'text-emerald-400';
     default:
-      return 'text-gray-600';
+      return 'text-slate-400';
   }
 }
 

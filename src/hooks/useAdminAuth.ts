@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../services/firebase.service';
 import { useAdminStore } from '../store/adminStore';
+import { useAuthStore } from '../store/authStore';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase.service';
 import type { User } from '../types/schema';
@@ -34,12 +35,14 @@ export function useAdminAuth(): UseAdminAuthReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { adminProfile, setAdminProfile, clearAdminState, hasRole, canManageTenant } = useAdminStore();
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         // User logged out
         clearAdminState();
+        setUser(null);
         setLoading(false);
         return;
       }
@@ -53,6 +56,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
         if (!claims.role) {
           // Regular player, not an admin
           clearAdminState();
+          setUser(null);
           setLoading(false);
           return;
         }
@@ -66,6 +70,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
           console.error('User not found for admin user:', user.uid);
           setError('Admin profile not found. Please contact support.');
           clearAdminState();
+          setUser(null);
           setLoading(false);
           return;
         }
@@ -87,25 +92,28 @@ export function useAdminAuth(): UseAdminAuthReturn {
         if (profile.isActive === false) {
           setError('Admin account is deactivated. Please contact support.');
           clearAdminState();
+          setUser(null);
           setLoading(false);
           return;
         }
 
-        // Set admin profile in store
+        // Set admin profile in both stores (adminStore + authStore)
         setAdminProfile(profile);
+        setUser(profile); // ← FIX: Also set in authStore so AdminRoute works
         setError(null);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching admin profile:', err);
         setError('Failed to load admin profile. Please try again.');
         clearAdminState();
+        setUser(null);
         setLoading(false);
       }
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [setAdminProfile, clearAdminState]);
+  }, [setAdminProfile, clearAdminState, setUser]);
 
   return {
     adminProfile,

@@ -22,9 +22,9 @@ import { appConfig } from './config/app.config';
 import type { User } from './types/schema';
 
 // Admin imports
-import { AdminRoute } from './components/admin/AdminRoute';
+import { AdminRoute } from './features/admin/AdminRoute';
 import { AdminLogin } from './pages/admin/AdminLogin';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminDashboard } from './features/admin/AdminDashboard';
 import { EventList } from './pages/admin/EventList';
 import { EventForm } from './pages/admin/EventForm';
 import { TaskList } from './pages/admin/TaskList';
@@ -117,7 +117,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin" 
               element={
-                <AdminRoute requiredRole="moderator">
+                <AdminRoute minRole="moderator">
                   <AdminDashboard />
                 </AdminRoute>
               } 
@@ -126,7 +126,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <EventList />
                 </AdminRoute>
               } 
@@ -135,7 +135,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/new" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <EventForm />
                 </AdminRoute>
               } 
@@ -144,7 +144,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/:eventId/edit" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <EventForm />
                 </AdminRoute>
               } 
@@ -153,7 +153,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/:eventId/tasks" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <TaskList />
                 </AdminRoute>
               } 
@@ -162,7 +162,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/:eventId/tasks/new" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <TaskForm />
                 </AdminRoute>
               } 
@@ -171,7 +171,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/:eventId/tasks/:taskId/edit" 
               element={
-                <AdminRoute requiredRole="organizer">
+                <AdminRoute minRole="organizer">
                   <TaskForm />
                 </AdminRoute>
               } 
@@ -180,7 +180,7 @@ function RoutesWithProfileGuard() {
             <Route 
               path="/admin/events/:eventId/submissions" 
               element={
-                <AdminRoute requiredRole="moderator">
+                <AdminRoute minRole="moderator">
                   <SubmissionQueue />
                 </AdminRoute>
               } 

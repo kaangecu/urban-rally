@@ -233,6 +233,7 @@ export async function getUserTeams(userId: string): Promise<
     teamName?: string;
     accessCode: string;
     eventId: string;
+    tenantId: string;
     personalScore: number;
     role: 'owner' | 'member';
     joinedAt: Date;

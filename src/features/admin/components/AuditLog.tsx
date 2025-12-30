@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   collection,
   query,
@@ -13,6 +13,7 @@ import { db } from '../../../services/firebase.service';
 import { useAdminStore } from '../../../store/adminStore';
 import type { RoleAssignment } from '../../../types/schema';
 import { format, isToday, isYesterday, isThisWeek } from 'date-fns';
+import { parseFirestoreDate } from '../../../utils/dateUtils';
 
 /**
  * AuditLog Component
@@ -64,7 +65,13 @@ export function AuditLog() {
         ...doc.data(),
       })) as RoleAssignment[];
 
-      setLogs((prev) => [...prev, ...newLogs]);
+      // Deduplicate by ID to prevent duplicate keys in React
+      setLogs((prev) => {
+        const existingIds = new Set(prev.map(log => log.id));
+        const uniqueNewLogs = newLogs.filter(log => !existingIds.has(log.id));
+        return [...prev, ...uniqueNewLogs];
+      });
+      
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
       setHasMore(snapshot.docs.length === 20);
     } catch (err) {
@@ -90,9 +97,9 @@ export function AuditLog() {
   if (initialLoad && loading) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Activity Log</h2>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Activity Log</h2>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
         </div>
       </div>
     );
@@ -101,15 +108,15 @@ export function AuditLog() {
   if (error) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Activity Log</h2>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <p className="text-red-800">{error}</p>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Activity Log</h2>
+        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-center">
+          <p className="text-sm text-red-400">{error}</p>
           <button
             onClick={() => {
               setError(null);
               loadMore();
             }}
-            className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
+            className="mt-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-wider"
           >
             Try Again
           </button>
@@ -121,10 +128,10 @@ export function AuditLog() {
   if (logs.length === 0 && !loading) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Activity Log</h2>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Activity Log</h2>
+        <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-slate-600"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -136,8 +143,8 @@ export function AuditLog() {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-4 text-sm font-medium text-gray-900">No activity yet</h3>
-          <p className="mt-2 text-sm text-gray-500">
+          <h3 className="mt-4 text-sm font-bold text-slate-200 uppercase tracking-wide">No activity yet</h3>
+          <p className="mt-2 text-xs text-slate-500">
             Role changes and invitations will appear here.
           </p>
         </div>
@@ -147,11 +154,11 @@ export function AuditLog() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900">Activity Log</h2>
+      <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Activity Log</h2>
 
       {Object.entries(groupedLogs).map(([dateLabel, logsForDate]) => (
         <div key={dateLabel} className="space-y-3">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
             {dateLabel}
           </h3>
           <div className="space-y-2">
@@ -167,11 +174,11 @@ export function AuditLog() {
           <button
             onClick={loadMore}
             disabled={loading}
-            className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 bg-[#1e293b] border border-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                 Loading...
               </span>
             ) : (
@@ -197,7 +204,7 @@ function AuditLogEntry({ log }: AuditLogEntryProps) {
   const actionConfig = getActionConfig(log.action);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+    <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors">
       <div className="flex gap-3">
         {/* Icon */}
         <div
@@ -210,18 +217,18 @@ function AuditLogEntry({ log }: AuditLogEntryProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-xs font-bold text-slate-200 uppercase tracking-wide">
                 {actionConfig.label}
               </p>
-              <p className="text-sm text-gray-600 mt-0.5">
-                <span className="font-medium">{log.actorName || 'System'}</span>
+              <p className="text-sm text-slate-400 mt-0.5">
+                <span className="font-medium text-slate-300">{log.assignerEmail || 'System'}</span>
                 {' → '}
-                <span className="font-medium">{log.targetUserName || log.targetUserId}</span>
-                {log.role && (
+                <span className="font-medium text-slate-300">{log.targetUserEmail || log.targetUserId}</span>
+                {log.roleAfter && (
                   <>
                     {' as '}
-                    <span className={`font-semibold ${getRoleBadgeColor(log.role)}`}>
-                      {log.role}
+                    <span className={`font-bold uppercase ${getRoleBadgeColor(log.roleAfter)}`}>
+                      {log.roleAfter}
                     </span>
                   </>
                 )}
@@ -229,22 +236,18 @@ function AuditLogEntry({ log }: AuditLogEntryProps) {
             </div>
 
             {/* Timestamp */}
-            <time className="text-xs text-gray-500 whitespace-nowrap">
-              {log.timestamp ? format(log.timestamp.toDate(), 'h:mm a') : '-'}
+            <time className="text-[10px] font-mono text-slate-500 whitespace-nowrap">
+              {(() => {
+                const timestamp = parseFirestoreDate(log.timestamp);
+                return timestamp ? format(timestamp, 'HH:mm') : '-';
+              })()}
             </time>
           </div>
 
           {/* Reason/Notes */}
           {log.reason && (
-            <p className="mt-2 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
-              <span className="font-medium">Reason:</span> {log.reason}
-            </p>
-          )}
-
-          {/* Expiration Info */}
-          {log.expiresAt && log.action === 'grant' && (
-            <p className="mt-2 text-xs text-gray-500">
-              Expires: {format(log.expiresAt.toDate(), 'MMM d, yyyy')}
+            <p className="mt-2 text-xs text-slate-400 bg-[#0f172a] border border-slate-700 rounded px-2 py-1">
+              <span className="font-bold text-slate-500 uppercase text-[10px]">Reason:</span> {log.reason}
             </p>
           )}
         </div>
@@ -265,18 +268,18 @@ function groupLogsByDate(logs: RoleAssignment[]): Record<string, RoleAssignment[
   };
 
   for (const log of logs) {
-    if (!log.timestamp) {
+    const timestamp = parseFirestoreDate(log.timestamp);
+    
+    if (!timestamp) {
       grouped['Older'].push(log);
       continue;
     }
 
-    const date = log.timestamp.toDate();
-
-    if (isToday(date)) {
+    if (isToday(timestamp)) {
       grouped['Today'].push(log);
-    } else if (isYesterday(date)) {
+    } else if (isYesterday(timestamp)) {
       grouped['Yesterday'].push(log);
-    } else if (isThisWeek(date)) {
+    } else if (isThisWeek(timestamp)) {
       grouped['Last 7 days'].push(log);
     } else {
       grouped['Older'].push(log);
@@ -297,9 +300,9 @@ function getActionConfig(action: RoleAssignment['action']) {
     case 'grant':
       return {
         label: 'Role Granted',
-        bgColor: 'bg-green-100',
+        bgColor: 'bg-emerald-500/10 border border-emerald-500/20',
         icon: (
-          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
         ),
@@ -307,9 +310,9 @@ function getActionConfig(action: RoleAssignment['action']) {
     case 'revoke':
       return {
         label: 'Role Revoked',
-        bgColor: 'bg-red-100',
+        bgColor: 'bg-red-500/10 border border-red-500/20',
         icon: (
-          <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ),
@@ -317,29 +320,39 @@ function getActionConfig(action: RoleAssignment['action']) {
     case 'modify':
       return {
         label: 'Role Modified',
-        bgColor: 'bg-blue-100',
+        bgColor: 'bg-blue-500/10 border border-blue-500/20',
         icon: (
-          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         ),
       };
-    case 'expire':
+    case 'invite_sent':
       return {
-        label: 'Role Expired',
-        bgColor: 'bg-amber-100',
+        label: 'Invitation Sent',
+        bgColor: 'bg-blue-500/10 border border-blue-500/20',
         icon: (
-          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        ),
+      };
+    case 'invite_accepted':
+      return {
+        label: 'Invitation Accepted',
+        bgColor: 'bg-emerald-500/10 border border-emerald-500/20',
+        icon: (
+          <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         ),
       };
     default:
       return {
         label: 'Action',
-        bgColor: 'bg-gray-100',
+        bgColor: 'bg-slate-700/50 border border-slate-600',
         icon: (
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         ),
@@ -353,12 +366,12 @@ function getActionConfig(action: RoleAssignment['action']) {
 function getRoleBadgeColor(role: string): string {
   switch (role) {
     case 'admin':
-      return 'text-purple-600';
+      return 'text-purple-400';
     case 'organizer':
-      return 'text-blue-600';
+      return 'text-blue-400';
     case 'moderator':
-      return 'text-green-600';
+      return 'text-emerald-400';
     default:
-      return 'text-gray-600';
+      return 'text-slate-400';
   }
 }

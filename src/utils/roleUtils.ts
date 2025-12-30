@@ -9,6 +9,7 @@
  */
 
 import { ROLE_HIERARCHY, type Role, type TenantRoleAssignment } from '../types/schema';
+import { parseFirestoreDate } from './dateUtils';
 
 /**
  * Check if user has minimum role level
@@ -56,7 +57,8 @@ export function calculateHighestRole(
   
   for (const tenantId in tenantRoles) {
     const assignment = tenantRoles[tenantId];
-    if (assignment.isActive && (!assignment.expiresAt || new Date(assignment.expiresAt) > new Date())) {
+    const expiresAt = parseFirestoreDate(assignment.expiresAt);
+    if (assignment.isActive && (!expiresAt || expiresAt > new Date())) {
       const roleLevel = ROLE_HIERARCHY[assignment.role].level;
       if (roleLevel > highestLevel) {
         highestLevel = roleLevel;
@@ -80,7 +82,8 @@ export function calculateHighestRole(
  * inheritsRole('moderator', 'admin') // false
  */
 export function inheritsRole(userRole: Role, targetRole: Role): boolean {
-  return ROLE_HIERARCHY[userRole].inherits.includes(targetRole as any);
+  const inherits = ROLE_HIERARCHY[userRole].inherits as readonly Role[];
+  return inherits.includes(targetRole);
 }
 
 /**
@@ -104,6 +107,7 @@ export function getAccessibleRoles(userRole: Role): Role[] {
  */
 export function isRoleAssignmentValid(assignment: TenantRoleAssignment): boolean {
   if (!assignment.isActive) return false;
-  if (assignment.expiresAt && new Date(assignment.expiresAt) < new Date()) return false;
+  const expiresAt = parseFirestoreDate(assignment.expiresAt);
+  if (expiresAt && expiresAt < new Date()) return false;
   return true;
 }

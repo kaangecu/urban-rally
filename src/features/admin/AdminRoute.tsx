@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { useAdminStore } from '../store/adminStore';
+import { useAuthStore } from '../../store/authStore';
+import { useAdminStore } from '../../store/adminStore';
+import type { Role } from '../../types/schema';
 
 /**
  * AdminRoute Guard - Phase 2 Implementation
@@ -32,13 +33,13 @@ import { useAdminStore } from '../store/adminStore';
 
 interface AdminRouteProps {
   children: React.ReactNode;
-  minRole?: 'moderator' | 'organizer' | 'admin' | 'superadmin';
+  minRole?: Role;
 }
 
 export function AdminRoute({ children, minRole = 'moderator' }: AdminRouteProps) {
-  const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const user = useAuthStore((state: { user: any }) => state.user);
+  const isAuthenticated = useAuthStore((state: { isAuthenticated: boolean }) => state.isAuthenticated);
+  const isLoading = useAuthStore((state: { isLoading: boolean }) => state.isLoading);
   const { hasRole } = useAdminStore();
 
   // Show loading state while auth is initializing
@@ -55,7 +56,7 @@ export function AdminRoute({ children, minRole = 'moderator' }: AdminRouteProps)
 
   // Redirect to login if not authenticated
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   // Check if user has required role

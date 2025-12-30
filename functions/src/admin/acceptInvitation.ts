@@ -190,7 +190,7 @@ export const acceptInvitation = onCall<AcceptInvitationRequest>(
         tenantId: invitation.tenantId,
         timestamp: FieldValue.serverTimestamp(),
         reason: "Invitation accepted",
-        ipAddress: request.rawRequest?.ip,
+        ipAddress: request.rawRequest?.ip || "unknown",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

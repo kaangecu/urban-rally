@@ -39,7 +39,6 @@ interface UseAdminContextReturn {
 export function useAdminContext(): UseAdminContextReturn {
   const user = useAuthStore((state) => state.user);
   const { 
-    adminProfile, 
     activeTenantId, 
     setAdminProfile, 
     setAvailableTenants, 
@@ -124,8 +123,8 @@ export function useAdminContext(): UseAdminContextReturn {
         const roleAssignment = tenantRoles[tenantId];
 
         return {
-          id: tenantDoc.id,
           ...tenantData,
+          id: tenantDoc.id,
           userRole: roleAssignment.role,
           expiresAt: roleAssignment.expiresAt,
         } as TenantContext;

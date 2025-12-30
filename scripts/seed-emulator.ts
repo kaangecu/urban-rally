@@ -778,9 +778,24 @@ async function seedEmulator(): Promise<void> {
 
   try {
     // ========================================================================
+    // SEED TENANTS FIRST (needed before creating admin users)
+    // ========================================================================
+    
+    // Seed Tenants
+    await seedCollection(
+      'tenants',
+      TENANTS,
+      (t) => t.id,
+      (t) => addTimestamps(convertDatesToTimestamps(t))
+    );
+    
+    // ========================================================================
     // CREATE ADMIN USERS IN FIREBASE AUTH
     // ========================================================================
     console.log('\n👤 Creating Admin Users...');
+    
+    const now = new Date();
+    const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     
     const adminUsers = [
       {
@@ -801,7 +816,7 @@ async function seedEmulator(): Promise<void> {
           'esn-berlin': {
             role: 'admin' as const,
             grantedBy: 'system',
-            grantedAt: new Date(),
+            grantedAt: now,
             expiresAt: null, // Never expires
             isActive: true,
             notes: 'Initial admin - seeded by script',
@@ -809,7 +824,7 @@ async function seedEmulator(): Promise<void> {
           'esn-munich': {
             role: 'admin' as const,
             grantedBy: 'system',
-            grantedAt: new Date(),
+            grantedAt: now,
             expiresAt: null,
             isActive: true,
             notes: 'Initial admin - seeded by script',
@@ -826,7 +841,7 @@ async function seedEmulator(): Promise<void> {
           'esn-berlin': {
             role: 'organizer' as const,
             grantedBy: 'system',
-            grantedAt: new Date(),
+            grantedAt: now,
             expiresAt: null,
             isActive: true,
             notes: 'Test organizer account',
@@ -843,7 +858,7 @@ async function seedEmulator(): Promise<void> {
           'esn-berlin': {
             role: 'moderator' as const,
             grantedBy: 'system',
-            grantedAt: new Date(),
+            grantedAt: now,
             expiresAt: null,
             isActive: true,
             notes: 'Test moderator account',
@@ -860,8 +875,8 @@ async function seedEmulator(): Promise<void> {
           'esn-berlin': {
             role: 'organizer' as const,
             grantedBy: 'system',
-            grantedAt: new Date(),
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+            grantedAt: now,
+            expiresAt: sevenDaysFromNow, // Expires in 7 days
             isActive: true,
             notes: 'Temporary organizer - expires in 7 days (for testing expiration)',
           },
@@ -920,7 +935,7 @@ async function seedEmulator(): Promise<void> {
         tenantRoles: convertDatesToTimestamps(adminConfig.tenantRoles),
         highestRole: adminConfig.role, // Highest role across all tenants
         isSuperadmin: adminConfig.isSuperadmin,
-        pendingInvitations: {}, // Empty map initially
+        // Removed pendingInvitations - using self-service promotion model
         
         // DEPRECATED but kept for backward compatibility
         managedTenantIds: tenantIds,
@@ -962,16 +977,8 @@ async function seedEmulator(): Promise<void> {
     }
     
     // ========================================================================
-    // SEED COLLECTIONS
+    // SEED REMAINING COLLECTIONS
     // ========================================================================
-    
-    // Seed Tenants
-    await seedCollection(
-      'tenants',
-      TENANTS,
-      (t) => t.id,
-      (t) => addTimestamps(convertDatesToTimestamps(t))
-    );
 
     // Seed Events
     await seedCollection(

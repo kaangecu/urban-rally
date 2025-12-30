@@ -3,7 +3,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../services/firebase.service';
 import type { Role, User } from '../../../types/schema';
 import { useAdminStore } from '../../../store/adminStore';
-import { format, addDays, addWeeks, addMonths } from 'date-fns';
+import { format, addDays, addMonths } from 'date-fns';
 
 /**
  * ExpirationModal Component

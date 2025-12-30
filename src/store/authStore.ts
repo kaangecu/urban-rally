@@ -36,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) =>
         set({
           user,
+          isAuthenticated: user !== null, // ← FIX: Set isAuthenticated based on user presence
           error: null,
         }),
 

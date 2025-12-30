@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Tenant, TenantRoleAssignment, Role } from '../types/schema';
 import { hasMinimumRole, calculateHighestRole } from '../utils/roleUtils';
+import { parseFirestoreDate } from '../utils/dateUtils';
 
 /**
  * Admin Store - Phase 2 Implementation
@@ -153,7 +154,8 @@ export const useAdminStore = create<AdminState>()(
           const tenantRole = adminProfile.tenantRoles?.[activeTenantId];
           if (tenantRole && tenantRole.isActive) {
             // Check expiration
-            if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+            const expiresAt = parseFirestoreDate(tenantRole.expiresAt);
+            if (expiresAt && expiresAt < new Date()) {
               return false;
             }
             // Admin role inherits all lower roles (organizer, moderator)
@@ -178,7 +180,8 @@ export const useAdminStore = create<AdminState>()(
         if (!tenantRole || !tenantRole.isActive) return false;
         
         // Check expiration
-        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+        const expiresAt = parseFirestoreDate(tenantRole.expiresAt);
+        if (expiresAt && expiresAt < new Date()) {
           return false;
         }
         
@@ -198,7 +201,8 @@ export const useAdminStore = create<AdminState>()(
         if (!tenantRole || !tenantRole.isActive) return false;
         
         // Check expiration
-        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+        const expiresAt = parseFirestoreDate(tenantRole.expiresAt);
+        if (expiresAt && expiresAt < new Date()) {
           return false;
         }
         
@@ -217,7 +221,8 @@ export const useAdminStore = create<AdminState>()(
         if (!tenantRole || !tenantRole.isActive) return null;
         
         // Check expiration
-        if (tenantRole.expiresAt && new Date(tenantRole.expiresAt) < new Date()) {
+        const expiresAt = parseFirestoreDate(tenantRole.expiresAt);
+        if (expiresAt && expiresAt < new Date()) {
           return null;
         }
         

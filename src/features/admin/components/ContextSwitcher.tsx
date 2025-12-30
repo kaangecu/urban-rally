@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAdminStore } from '../../../store/adminStore';
 import { ChevronDown, Check, Building2 } from 'lucide-react';
+import { parseFirestoreDate } from '../../../utils/dateUtils';
 
 /**
  * ContextSwitcher Component - Phase 2 Milestone 2.2
@@ -130,8 +131,9 @@ export function ContextSwitcher() {
           <div className="py-1">
             {availableTenants.map((tenant) => {
               const isActive = activeTenantId === tenant.id;
+              const expiresAt = parseFirestoreDate(tenant.expiresAt);
               const isExpiring =
-                tenant.expiresAt && new Date(tenant.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                expiresAt && expiresAt < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
               return (
                 <button
@@ -160,9 +162,9 @@ export function ContextSwitcher() {
                       <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                         {tenant.userRole}
                       </span>
-                      {isExpiring && tenant.expiresAt && (
+                      {isExpiring && expiresAt && (
                         <span className="text-xs text-amber-600 dark:text-amber-400">
-                          Expires {new Date(tenant.expiresAt).toLocaleDateString()}
+                          Expires {expiresAt.toLocaleDateString()}
                         </span>
                       )}
                     </div>

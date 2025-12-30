@@ -129,17 +129,12 @@ export interface User extends MultiTenantEntity {
   role: 'player' | 'moderator' | 'organizer' | 'admin' | 'superadmin'; // Permission level
   
   // Admin-Specific Fields (optional, only set for admin roles)
-  /** @deprecated Use tenantRoles instead - kept for backward compatibility */
-  managedTenantIds?: string[]; // OLD: Tenants they can manage - use tenantRoles instead
+  managedTenantIds?: string[]; // Tenants they can manage
   isActive?: boolean; // Admin account status (undefined for players)
   
-  // NEW: Hybrid Expanded User Schema - Multi-Tenant Role Management
+  // Multi-Tenant Role Management
   tenantRoles?: {
     [tenantId: string]: TenantRoleAssignment;
-  };
-  
-  pendingInvitations?: {
-    [token: string]: PendingInvitation;
   };
   
   highestRole?: 'superadmin' | 'admin' | 'organizer' | 'moderator' | 'player'; // Cached for quick checks
@@ -461,22 +456,6 @@ export interface TenantRoleAssignment {
   revokedBy?: string; // User ID who revoked (if revoked)
   revokedAt?: Date;
   revokeReason?: string;
-}
-
-/**
- * Pending Invitation
- * Stored in User.pendingInvitations[token] until accepted
- */
-export interface PendingInvitation {
-  tenantId: string;
-  tenantName: string;
-  role: 'admin' | 'organizer' | 'moderator';
-  invitedBy: string; // User ID of inviter
-  invitedByName: string; // Display name of inviter
-  invitedAt: Date;
-  expiresAt: Date; // Invitation expires after 7 days
-  roleExpiresAt: Date | null; // When the role itself expires (null = never)
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
 }
 
 /**

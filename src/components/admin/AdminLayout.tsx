@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { useAdminStore } from '../../store/adminStore';
+import { ContextSwitcher } from '../../features/admin/components/ContextSwitcher';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase.service';
 
@@ -14,8 +15,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { adminProfile } = useAdminAuth();
-  const { clearAdminState } = useAdminStore();
+  const { clearAdminState, getActiveRole, activeTenantId, availableTenants } = useAdminStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const activeRole = getActiveRole();
+  const activeTenant = availableTenants.find((t: { id: string }) => t.id === activeTenantId);
 
   const handleLogout = async () => {
     try {
@@ -144,6 +148,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
 
+        {/* Tenant Context Switcher */}
+        <div className="px-4 pt-2 pb-4">
+          <ContextSwitcher />
+        </div>
+
         {/* User Profile */}
         <div className="p-4 border-t border-slate-700">
           <div className="flex items-center gap-3 mb-3">
@@ -157,7 +166,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 {adminProfile?.displayName || 'Admin'}
               </p>
               <p className="text-xs text-slate-400 uppercase font-mono truncate">
-                {adminProfile?.role}
+                {activeRole || adminProfile?.role}
               </p>
             </div>
           </div>

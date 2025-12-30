@@ -40,6 +40,13 @@ interface SeedTenant {
   slug: string;
   primaryColor: string;
   isActive: boolean;
+  primaryAdminId?: string;
+  adminCount?: number;
+  features?: {
+    maxEvents?: number;
+    maxTeamsPerEvent?: number;
+    maxVolunteers?: number;
+  };
 }
 
 interface SeedEvent {
@@ -152,6 +159,12 @@ const TENANTS: SeedTenant[] = [
     slug: 'esn-berlin',
     primaryColor: '#1a56db',
     isActive: true,
+    adminCount: 0, // Will be set when creating admin users
+    features: {
+      maxEvents: 100,
+      maxTeamsPerEvent: 50,
+      maxVolunteers: 20,
+    },
   },
   {
     id: 'esn-munich',
@@ -159,6 +172,12 @@ const TENANTS: SeedTenant[] = [
     slug: 'esn-munich',
     primaryColor: '#dc2626',
     isActive: true,
+    adminCount: 0, // Will be set when creating admin users
+    features: {
+      maxEvents: 80,
+      maxTeamsPerEvent: 40,
+      maxVolunteers: 15,
+    },
   },
 ];
 
@@ -768,29 +787,85 @@ async function seedEmulator(): Promise<void> {
         email: 'superadmin@test.com',
         password: 'admin123',
         displayName: 'Super Admin',
-        role: 'superadmin',
-        tenantIds: [],
+        role: 'superadmin' as const,
+        isSuperadmin: true,
+        tenantRoles: {}, // Superadmin doesn't need tenant-specific roles
       },
       {
         email: 'admin@test.com',
         password: 'admin123',
         displayName: 'Test Admin',
-        role: 'admin',
-        tenantIds: ['esn-berlin', 'esn-munich'],
+        role: 'admin' as const,
+        isSuperadmin: false,
+        tenantRoles: {
+          'esn-berlin': {
+            role: 'admin' as const,
+            grantedBy: 'system',
+            grantedAt: new Date(),
+            expiresAt: null, // Never expires
+            isActive: true,
+            notes: 'Initial admin - seeded by script',
+          },
+          'esn-munich': {
+            role: 'admin' as const,
+            grantedBy: 'system',
+            grantedAt: new Date(),
+            expiresAt: null,
+            isActive: true,
+            notes: 'Initial admin - seeded by script',
+          },
+        },
       },
       {
         email: 'organizer@test.com',
         password: 'admin123',
         displayName: 'Test Organizer',
-        role: 'organizer',
-        tenantIds: ['esn-berlin'],
+        role: 'organizer' as const,
+        isSuperadmin: false,
+        tenantRoles: {
+          'esn-berlin': {
+            role: 'organizer' as const,
+            grantedBy: 'system',
+            grantedAt: new Date(),
+            expiresAt: null,
+            isActive: true,
+            notes: 'Test organizer account',
+          },
+        },
       },
       {
         email: 'moderator@test.com',
         password: 'admin123',
         displayName: 'Test Moderator',
-        role: 'moderator',
-        tenantIds: ['esn-berlin'],
+        role: 'moderator' as const,
+        isSuperadmin: false,
+        tenantRoles: {
+          'esn-berlin': {
+            role: 'moderator' as const,
+            grantedBy: 'system',
+            grantedAt: new Date(),
+            expiresAt: null,
+            isActive: true,
+            notes: 'Test moderator account',
+          },
+        },
+      },
+      {
+        email: 'temp-organizer@test.com',
+        password: 'admin123',
+        displayName: 'Temporary Organizer',
+        role: 'organizer' as const,
+        isSuperadmin: false,
+        tenantRoles: {
+          'esn-berlin': {
+            role: 'organizer' as const,
+            grantedBy: 'system',
+            grantedAt: new Date(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+            isActive: true,
+            notes: 'Temporary organizer - expires in 7 days (for testing expiration)',
+          },
+        },
       },
     ];
     
@@ -811,15 +886,28 @@ async function seedEmulator(): Promise<void> {
         console.log(`   ✅ Created user: ${adminConfig.email} (${adminUser.uid})`);
       }
       
-      // Set custom claims for role
-      await admin.auth().setCustomUserClaims(adminUser.uid, {
+      // Set custom claims for role (new schema)
+      const tenantIds = Object.keys(adminConfig.tenantRoles);
+      const customClaims: any = {
         role: adminConfig.role,
-        tenantIds: adminConfig.tenantIds,
-      });
-      console.log(`   ✅ Set custom claims: role=${adminConfig.role}, tenantIds=${adminConfig.tenantIds.join(',')}`);
+        tenantIds: tenantIds,
+        sa: adminConfig.isSuperadmin, // Superadmin flag
+      };
       
-      // Create User document in Firestore (unified User type)
+      // Add tenant-specific roles map (tr = tenant roles)
+      if (Object.keys(adminConfig.tenantRoles).length > 0) {
+        customClaims.tr = {};
+        for (const [tenantId, roleData] of Object.entries(adminConfig.tenantRoles)) {
+          customClaims.tr[tenantId] = roleData.role;
+        }
+      }
+      
+      await admin.auth().setCustomUserClaims(adminUser.uid, customClaims);
+      console.log(`   ✅ Set custom claims: role=${adminConfig.role}, sa=${adminConfig.isSuperadmin}, tenantIds=${tenantIds.join(',') || 'none'}`);
+      
+      // Create User document in Firestore (unified User type with new role schema)
       const userRef = db.collection('users').doc(adminUser.uid);
+      
       await userRef.set({
         id: adminUser.uid,
         email: adminConfig.email,
@@ -827,8 +915,17 @@ async function seedEmulator(): Promise<void> {
         photoURL: null,
         accountType: 'linked', // Admin is linked account
         role: adminConfig.role,
-        managedTenantIds: adminConfig.tenantIds,
+        
+        // NEW: Hybrid Expanded User Schema
+        tenantRoles: convertDatesToTimestamps(adminConfig.tenantRoles),
+        highestRole: adminConfig.role, // Highest role across all tenants
+        isSuperadmin: adminConfig.isSuperadmin,
+        pendingInvitations: {}, // Empty map initially
+        
+        // DEPRECATED but kept for backward compatibility
+        managedTenantIds: tenantIds,
         isActive: true,
+        
         // Initialize player fields with defaults (admin can play!)
         totalScore: 0,
         totalSubmissions: 0,
@@ -845,11 +942,23 @@ async function seedEmulator(): Promise<void> {
           privacyAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
           ipAddress: null,
         },
-        tenantId: adminConfig.tenantIds[0] || 'global',
+        tenantId: tenantIds[0] || 'global',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       console.log(`   ✅ Created User document for ${adminConfig.email}`);
+      
+      // Update tenant.adminCount for each tenant where user is admin
+      for (const [tenantId, roleData] of Object.entries(adminConfig.tenantRoles)) {
+        if (roleData.role === 'admin') {
+          const tenantRef = db.collection('tenants').doc(tenantId);
+          await tenantRef.update({
+            adminCount: admin.firestore.FieldValue.increment(1),
+            primaryAdminId: adminUser.uid, // Set first admin as primary
+          });
+          console.log(`   ✅ Incremented adminCount for tenant: ${tenantId}`);
+        }
+      }
     }
     
     // ========================================================================
@@ -919,8 +1028,8 @@ async function seedEmulator(): Promise<void> {
     console.log('\n' + '='.repeat(60));
     console.log('✅ SEED COMPLETED SUCCESSFULLY!\n');
     console.log('📊 Summary:');
-    console.log(`   • 4 admin users (superadmin, admin, organizer, moderator)`);
-    console.log(`   • ${TENANTS.length} tenants`);
+    console.log(`   • 5 admin users with new role management schema`);
+    console.log(`   • ${TENANTS.length} tenants (with adminCount tracking)`);
     console.log(`   • ${EVENTS.length} events`);
     console.log(`   • ${USERS.length} users`);
     console.log(`   • ${TEAMS.length} teams`);
@@ -932,10 +1041,17 @@ async function seedEmulator(): Promise<void> {
     console.log('   • Your App: http://localhost:5173');
     console.log('   • Admin Portal: http://localhost:5173/admin/login');
     console.log('\n🔐 Admin Credentials (all use password: admin123):');
-    console.log('   • superadmin@test.com - Super Admin (all tenants)');
-    console.log('   • admin@test.com - Admin (ESN Berlin + Munich)');
-    console.log('   • organizer@test.com - Organizer (ESN Berlin)');
-    console.log('   • moderator@test.com - Moderator (ESN Berlin)');
+    console.log('   • superadmin@test.com - Super Admin (all tenants, isSuperadmin=true)');
+    console.log('   • admin@test.com - Admin (ESN Berlin + Munich, tenantRoles with admin)');
+    console.log('   • organizer@test.com - Organizer (ESN Berlin only)');
+    console.log('   • moderator@test.com - Moderator (ESN Berlin only)');
+    console.log('   • temp-organizer@test.com - Temp Organizer (expires in 7 days)');
+    console.log('\n✨ New Role Management Schema:');
+    console.log('   • tenantRoles: Per-tenant role assignments with expiration');
+    console.log('   • highestRole: Cached highest role across all tenants');
+    console.log('   • isSuperadmin: Global superadmin flag');
+    console.log('   • Custom Claims: { role, tenantIds, tr: {tenantId: role}, sa }');
+    console.log('   • Tenant adminCount: Tracks number of admins per tenant');
     console.log('='.repeat(60));
 
   } catch (error) {

@@ -31,6 +31,7 @@ interface StaffCardProps {
   tenantId: string;
   onChangeRole?: (userId: string) => void;
   onRemove?: (userId: string) => void;
+  onManageExpiration?: (userId: string) => void;
 }
 
 export function StaffCard({
@@ -38,6 +39,7 @@ export function StaffCard({
   tenantId,
   onChangeRole,
   onRemove,
+  onManageExpiration,
 }: StaffCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -104,7 +106,7 @@ export function StaffCard({
             </div>
 
             {/* Action Menu */}
-            {(onChangeRole || onRemove) && (
+            {(onChangeRole || onRemove || onManageExpiration) && (
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -125,6 +127,17 @@ export function StaffCard({
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                       >
                         Change Role
+                      </button>
+                    )}
+                    {onManageExpiration && (
+                      <button
+                        onClick={() => {
+                          onManageExpiration(user.id);
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      >
+                        Manage Expiration
                       </button>
                     )}
                     {onRemove && (

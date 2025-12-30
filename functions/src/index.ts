@@ -1524,9 +1524,11 @@ export const reviewSubmissionSecure = onCall(
  * - revokeRole: Revoke a user's role (soft delete)
  * - inviteUserToTenant: Generate magic link invitation
  * - acceptInvitation: Accept invitation and auto-login
+ * - expireRoles: Scheduled function to expire roles daily at 2 AM
  */
 
 export {assignRole} from "./admin/assignRole";
 export {revokeRole} from "./admin/revokeRole";
 export {inviteUserToTenant} from "./admin/inviteUserToTenant";
 export {acceptInvitation} from "./admin/acceptInvitation";
+export {expireRoles} from "./scheduled/expireRoles";

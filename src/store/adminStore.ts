@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Tenant, TenantRoleAssignment, Role } from '../types/schema';
-import { hasMinimumRole, calculateHighestRole } from '../types/schema';
+import { hasMinimumRole, calculateHighestRole } from '../utils/roleUtils';
 
 /**
  * Admin Store - Phase 2 Implementation

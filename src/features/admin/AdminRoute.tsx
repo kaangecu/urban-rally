@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useAdminStore } from '../store/adminStore';
-import { hasMinimumRole } from '../types/schema';
 
 /**
  * AdminRoute Guard - Phase 2 Implementation

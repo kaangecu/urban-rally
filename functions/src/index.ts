@@ -1510,3 +1510,23 @@ export const reviewSubmissionSecure = onCall(
     }
   }
 );
+
+// ============================================================================
+// ADMIN ROLE MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Role Management System
+ * Hybrid Expanded User Schema - multi-tenant role assignments
+ * 
+ * Exported Functions:
+ * - assignRole: Assign/update a user's role in a tenant
+ * - revokeRole: Revoke a user's role (soft delete)
+ * - inviteUserToTenant: Generate magic link invitation
+ * - acceptInvitation: Accept invitation and auto-login
+ */
+
+export {assignRole} from "./admin/assignRole";
+export {revokeRole} from "./admin/revokeRole";
+export {inviteUserToTenant} from "./admin/inviteUserToTenant";
+export {acceptInvitation} from "./admin/acceptInvitation";

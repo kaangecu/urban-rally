@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Bash(firebase deploy *)",
+      "Bash(npx firebase deploy *)",
+      "Bash(npm run deploy*)",
+      "Bash(npm run migrate*)",
+      "Bash(npx tsx scripts/migrate-database.ts *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(* --no-verify*)"
+    ],
+    "ask": [
+      "Bash(npm install*)",
+      "Bash(npm i *)",
+      "Bash(npm ci*)",
+      "Bash(npm uninstall *)",
+      "Bash(npm update*)",
+      "Bash(git push*)",
+      "Edit(/.github/**)",
+      "Edit(/firestore.rules)",
+      "Edit(/storage.rules)",
+      "Edit(**/*.test.ts)",
+      "Edit(**/*.test.tsx)",
+      "Edit(**/*.spec.ts)",
+      "Edit(**/__tests__/**)",
+      "Edit(/tests/**)",
+      "Edit(/e2e/**)"
+    ]
+  }
+}

@@ -33,19 +33,19 @@ service firebase.storage {
     match /submissions/{tenantId}/{eventId}/{teamId}/{taskId} {
       allow write: if isTeamMember(teamId)
                    && ((isImage() && isValidImageSize()) || (isVideo() && isValidVideoSize()));
-      allow read: if isAuthenticated();
+      // Only the submitting team; organizers review through the Admin SDK
+      allow read: if isTeamMember(teamId);
     }
     
     // Team Photo Uploads (scoped by tenant and team)
     match /uploads/{tenantId}/{eventId}/{teamId}/{fileName} {
       // Teams can upload their own photos
-      allow write: if isAuthenticated()
-                   && request.auth.uid == teamId
+      allow write: if isTeamMember(teamId)
                    && isImage()
                    && isValidImageSize();
       
-      // Anyone can read (for leaderboard/gallery)
-      allow read: if true;
+      // Only the team itself; a public gallery needs explicit consent first
+      allow read: if isTeamMember(teamId);
     }
     
     // Tenant Logos (Admin only, public read)

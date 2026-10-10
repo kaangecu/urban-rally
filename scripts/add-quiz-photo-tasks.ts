@@ -1,53 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
-import { getAuth, signInAnonymously } from 'firebase/auth';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-// Load environment variables
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-// Environment check
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
-// Firebase configuration from environment variables
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.VITE_FIREBASE_APP_ID
-};
-
-// Validate configuration
-if (!firebaseConfig.apiKey) {
-  console.error('❌ Firebase configuration missing!');
-  console.error('   Please create a .env file with your Firebase credentials.');
-  console.error('   Copy .env.example to .env and fill in your values.');
-  process.exit(1);
-}
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-// Authenticate with Firebase
-async function authenticate() {
-  try {
-    console.log('🔐 Authenticating with Firebase...');
-    const userCredential = await signInAnonymously(auth);
-    console.log('✅ Authenticated successfully! UID:', userCredential.user.uid);
-    return true;
-  } catch (error) {
-    console.error('❌ Authentication failed:', error);
-    return false;
-  }
-}
+import { Timestamp } from 'firebase-admin/firestore';
+import { db } from './lib/admin';
 
 // Sample tasks to add
 const newTasks = [
@@ -304,21 +256,12 @@ const newTasks = [
 async function addTasksToFirestore() {
   console.log('🚀 Starting to add tasks to Firestore...\n');
   
-  // Authenticate first
-  const authenticated = await authenticate();
-  if (!authenticated) {
-    console.error('❌ Cannot proceed without authentication');
-    return;
-  }
-  
-  console.log('');
-
   let successCount = 0;
   let errorCount = 0;
 
   for (const task of newTasks) {
     try {
-      const docRef = await addDoc(collection(db, 'tasks'), task);
+      const docRef = await db.collection('tasks').add(task);
       console.log(`✅ Added: "${task.title}" (${task.type}) - ID: ${docRef.id}`);
       successCount++;
     } catch (error) {

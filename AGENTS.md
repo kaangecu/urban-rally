@@ -24,7 +24,7 @@ Known state (Oct 2026): build, lint and tests are red. Making them green is the 
 ## Rules
 
 - Before saying a task is done, run lint, type-check and tests, and show the output.
-- If a task seems impossible without changing or deleting a test, stop and say so. Never weaken a test to make it pass.
+- Change or delete tests only when I explicitly ask. If a task seems to require it, stop and say so
 - Make the smallest change that solves the task. No speculative features, abstractions or refactors (YAGNI).
 - No new or upgraded dependencies without asking first.
 - Edit files in place. Never create `.enhanced`, `.new` or `v2` copies.

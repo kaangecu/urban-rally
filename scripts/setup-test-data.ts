@@ -10,22 +10,7 @@
  * Usage: npm run setup-test-data
  */
 
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
-
-// Firebase configuration - matches your .env file
-const firebaseConfig = {
-  apiKey: 'AIzaSyDP4KYxYee3DR7dfTKg0NQsEj2SmPI6LQY',
-  authDomain: 'urban-rally-539bd.firebaseapp.com',
-  projectId: 'urban-rally-539bd',
-  storageBucket: 'urban-rally-539bd.firebasestorage.app',
-  messagingSenderId: '677929293692',
-  appId: '1:677929293692:web:68a2c5424174891cdbb6f9',
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { db } from './lib/admin';
 
 async function setupTestData() {
   console.log('🚀 Starting test data setup...\n');
@@ -35,7 +20,7 @@ async function setupTestData() {
     // TENANT 1: ESN Berlin (Existing Light Theme)
     // ========================================
     console.log('📦 Creating Tenant 1: ESN Berlin...');
-    await setDoc(doc(db, 'tenants', 'esn-berlin'), {
+    await db.collection('tenants').doc('esn-berlin').set({
       id: 'esn-berlin',
       name: 'ESN Berlin',
       primaryColor: '#1a56db',
@@ -54,7 +39,7 @@ async function setupTestData() {
     // TENANT 2: Urban Chase (Cyberpunk Theme)
     // ========================================
     console.log('📦 Creating Tenant 2: Urban Chase...');
-    await setDoc(doc(db, 'tenants', 'urban-chase'), {
+    await db.collection('tenants').doc('urban-chase').set({
       id: 'urban-chase',
       name: 'Urban Chase',
       primaryColor: '#ec4899',      // Neon Pink
@@ -74,7 +59,7 @@ async function setupTestData() {
     // EVENT 1: ESN Berlin - Welcome Week 2025
     // ========================================
     console.log('📅 Creating Event 1: Welcome Week 2025...');
-    await setDoc(doc(db, 'events', 'welcome-week-2025'), {
+    await db.collection('events').doc('welcome-week-2025').set({
       id: 'welcome-week-2025',
       tenantId: 'esn-berlin',
       name: 'Welcome Week 2025',
@@ -92,7 +77,7 @@ async function setupTestData() {
     // EVENT 2: Urban Chase - Night Chase 2025
     // ========================================
     console.log('📅 Creating Event 2: Night Chase 2025...');
-    await setDoc(doc(db, 'events', 'night-chase-2025'), {
+    await db.collection('events').doc('night-chase-2025').set({
       id: 'night-chase-2025',
       tenantId: 'urban-chase',
       name: 'Night Chase 2025',
@@ -110,7 +95,7 @@ async function setupTestData() {
     // TEAM 1: ESN Berlin Test Team
     // ========================================
     console.log('👥 Creating Team 1: The Explorers...');
-    await setDoc(doc(db, 'teams', 'team-test-01'), {
+    await db.collection('teams').doc('team-test-01').set({
       id: 'team-test-01',
       tenantId: 'esn-berlin',
       eventId: 'welcome-week-2025',
@@ -131,7 +116,7 @@ async function setupTestData() {
     // TEAM 2: Urban Chase Test Team
     // ========================================
     console.log('👥 Creating Team 2: Neon Runners...');
-    await setDoc(doc(db, 'teams', 'team-test-02'), {
+    await db.collection('teams').doc('team-test-02').set({
       id: 'team-test-02',
       tenantId: 'urban-chase',
       eventId: 'night-chase-2025',
@@ -615,13 +600,13 @@ async function setupTestData() {
     // Create all tasks for both events
     console.log('  ESN Berlin Tasks:');
     for (const task of tasks) {
-      await setDoc(doc(db, 'tasks', task.id), task);
+      await db.collection('tasks').doc(task.id).set(task);
       console.log(`  ✅ ${task.title}`);
     }
 
     console.log('\n  Urban Chase Tasks:');
     for (const task of cyberpunkTasks) {
-      await setDoc(doc(db, 'tasks', task.id), task);
+      await db.collection('tasks').doc(task.id).set(task);
       console.log(`  ✅ ${task.title}`);
     }
 
@@ -666,5 +651,5 @@ setupTestData()
   })
   .catch((error) => {
     console.error('❌ Script failed:', error);
-    throw error;
+    process.exit(1);
   });

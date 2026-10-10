@@ -1,40 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
-import { getAuth, signInAnonymously } from 'firebase/auth';
-import * as dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.VITE_FIREBASE_APP_ID,
-};
-
-// Validate configuration
-const requiredEnvVars = [
-  'VITE_FIREBASE_API_KEY',
-  'VITE_FIREBASE_AUTH_DOMAIN',
-  'VITE_FIREBASE_PROJECT_ID',
-  'VITE_FIREBASE_STORAGE_BUCKET',
-  'VITE_FIREBASE_MESSAGING_SENDER_ID',
-  'VITE_FIREBASE_APP_ID',
-];
-
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:', missingVars.join(', '));
-  console.error('Please ensure your .env file contains all required variables.');
-  process.exit(1);
-}
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+import { Timestamp } from 'firebase-admin/firestore';
+import { db } from './lib/admin';
 
 interface Team {
   tenantId: string;
@@ -70,12 +35,6 @@ async function addTeams() {
   console.log('🚀 Starting to add teams to Firestore...\n');
 
   try {
-    // Authenticate with Firebase
-    console.log('🔐 Authenticating with Firebase...');
-    const userCredential = await signInAnonymously(auth);
-    console.log('✅ Authenticated successfully! UID:', userCredential.user.uid);
-    console.log();
-
     const results = {
       success: 0,
       failed: 0,
@@ -91,7 +50,7 @@ async function addTeams() {
           updatedAt: now,
         };
 
-        const docRef = await addDoc(collection(db, 'teams'), teamData);
+        const docRef = await db.collection('teams').add(teamData);
         console.log(`✅ Added team with access code: ${team.accessCode} - ID: ${docRef.id}`);
         results.success++;
       } catch (error) {

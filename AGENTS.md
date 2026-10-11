@@ -9,8 +9,8 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - `npm run type-check`: TypeScript, no output files
 - `npm run test:run`: Vitest, single run
 - `npm run build`: type-check and production build
-
-Known state (Oct 2026): build, lint and tests are red. Making them green is the current job. Don't treat existing failures as caused by your change, but don't add new ones.
+- `npm run check`: all of the above in one go. CI runs the same command
+- `npm run test:rules`: Firestore and Storage rules tests against the emulators (needs Java)
 
 ## Layout
 
@@ -23,7 +23,7 @@ Known state (Oct 2026): build, lint and tests are red. Making them green is the 
 
 ## Rules
 
-- Before saying a task is done, run lint, type-check and tests, and show the output.
+- Before saying a task is done, run `npm run check` and show the output. If you touched `firestore.rules` or `storage.rules`, also run `npm run test:rules`.
 - Change or delete tests only when I explicitly ask. If a task seems to require it, stop and say so
 - Make the smallest change that solves the task. No speculative features, abstractions or refactors (YAGNI).
 - No new or upgraded dependencies without asking first.

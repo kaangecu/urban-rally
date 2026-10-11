@@ -29,6 +29,6 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - No new or upgraded dependencies without asking first.
 - Edit files in place. Never create `.enhanced`, `.new` or `v2` copies.
 - No new docs or status reports unless asked.
-- Ignore `docs/` and the root `*_SUMMARY.md`, `CHECKLIST.md` files: they are outdated and contradict the code.
+- Ignore `docs/archive/`: old notes that are outdated and contradict the code.
 - Never deploy, migrate, or touch the real Firebase project. Use the emulators.
 - Never read or print `.env` files or credentials.

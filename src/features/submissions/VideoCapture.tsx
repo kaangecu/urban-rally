@@ -26,20 +26,6 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [permissionRequested, setPermissionRequested] = useState(false);
 
-  useEffect(() => {
-    console.log('🎥 VideoCapture mounted, permissionRequested:', permissionRequested);
-    
-    // Only start camera automatically if user already requested permission
-    if (permissionRequested) {
-      console.log('🎥 Auto-starting camera');
-      startCamera();
-    }
-    return () => {
-      console.log('🎥 VideoCapture unmounting, cleaning up');
-      cleanup();
-    };
-  }, [permissionRequested]);
-
   const startCamera = async () => {
     try {
       console.log('🎥 startCamera called');
@@ -72,18 +58,19 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
 
       setIsLoading(false);
       console.log('🎥 Camera started successfully');
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ Error accessing camera/microphone:', err);
+      const name = err instanceof Error ? err.name : '';
       
       let errorMessage = 'Unable to access camera or microphone.';
       
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         errorMessage = 'Camera/microphone permission denied. Please enable access in your browser settings and reload the page.';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         errorMessage = 'No camera or microphone found on this device.';
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
         errorMessage = 'Camera or microphone is already in use by another application.';
-      } else if (err.name === 'OverconstrainedError') {
+      } else if (name === 'OverconstrainedError') {
         errorMessage = 'Camera does not support the requested settings. Trying with basic settings...';
         // Retry with basic constraints
         setTimeout(() => retryWithBasicConstraints(), 1000);
@@ -118,7 +105,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       }
 
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error with basic constraints:', err);
       setError('Unable to access camera/microphone. Please check your browser permissions.');
       setIsLoading(false);
@@ -306,6 +293,23 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   } else {
     console.log('📹 Should show live camera');
   }
+
+  useEffect(() => {
+    console.log('🎥 VideoCapture mounted, permissionRequested:', permissionRequested);
+    
+    // Only start camera automatically if user already requested permission
+    if (permissionRequested) {
+      console.log('🎥 Auto-starting camera');
+      // Starting the camera stream is a sync with an external system, which is what effects are for.
+      // startCamera sets loading state first; reworking this into the click handler is a separate change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      startCamera();
+    }
+    return () => {
+      console.log('🎥 VideoCapture unmounting, cleaning up');
+      cleanup();
+    };
+  }, [permissionRequested]);
 
   return (
     <div 

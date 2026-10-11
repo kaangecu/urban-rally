@@ -170,7 +170,7 @@ export async function updateTeamProfile(
     const teamRef = doc(db, 'teams', teamId);
     
     // Filter out undefined values - Firestore doesn't accept them
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: serverTimestamp(),
     };
     

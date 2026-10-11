@@ -5,7 +5,12 @@
  * Supports both light (corporate) and dark (cyberpunk) themes.
  */
 
+import type { Tenant } from '../types/schema';
+
 export type ThemeStyle = 'light' | 'cyberpunk';
+
+// themeStyle isn't in the Tenant schema yet; older tenant docs may carry it
+type ThemeTenant = (Partial<Tenant> & { themeStyle?: string }) | null | undefined;
 
 export interface ThemeConfig {
   style: ThemeStyle;
@@ -19,7 +24,7 @@ export interface ThemeConfig {
  * Determines if a tenant uses the cyberpunk theme
  * Based on tenant ID or explicit themeStyle field
  */
-export function isCyberpunkTheme(tenant: any): boolean {
+export function isCyberpunkTheme(tenant: ThemeTenant): boolean {
   // Check explicit themeStyle field first
   if (tenant?.themeStyle === 'cyberpunk') {
     return true;
@@ -37,7 +42,7 @@ export function isCyberpunkTheme(tenant: any): boolean {
 /**
  * Gets the theme configuration for a tenant
  */
-export function getThemeConfig(tenant: any): ThemeConfig {
+export function getThemeConfig(tenant: ThemeTenant): ThemeConfig {
   const isCyberpunk = isCyberpunkTheme(tenant);
   
   return {
@@ -52,7 +57,7 @@ export function getThemeConfig(tenant: any): ThemeConfig {
 /**
  * Applies theme CSS variables to the document root
  */
-export function applyTheme(tenant: any): void {
+export function applyTheme(tenant: ThemeTenant): void {
   const root = document.documentElement;
   const theme = getThemeConfig(tenant);
   

@@ -12,7 +12,11 @@
       "Bash(git push -f*)",
       "Bash(git push * --force*)",
       "Bash(git push * -f*)",
-      "Bash(* --no-verify*)"
+      "Bash(* --no-verify*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh repo delete*)",
+      "Bash(gh secret *)",
+      "Bash(gh ruleset *)"
     ],
     "ask": [
       "Bash(npm install*)",
@@ -29,7 +33,9 @@
       "Edit(**/*.spec.ts)",
       "Edit(**/__tests__/**)",
       "Edit(/tests/**)",
-      "Edit(/e2e/**)"
+      "Edit(/e2e/**)",
+      "Bash(gh pr create*)",
+      "Bash(gh api *)"
     ]
   },
   "hooks": {

@@ -17,16 +17,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   const [isLoading, setIsLoading] = useState(false);
   const [permissionRequested, setPermissionRequested] = useState(false);
 
-  useEffect(() => {
-    // Only start camera automatically if user already requested permission
-    if (permissionRequested) {
-      startCamera();
-    }
-    return () => {
-      stopCamera();
-    };
-  }, [facingMode, permissionRequested]);
-
   const startCamera = async () => {
     try {
       setIsLoading(true);
@@ -56,18 +46,19 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       }
 
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error accessing camera:', err);
+      const name = err instanceof Error ? err.name : '';
       
       let errorMessage = 'Unable to access camera.';
       
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         errorMessage = 'Camera permission denied. Please enable camera access in your browser settings and reload the page.';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         errorMessage = 'No camera found on this device.';
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
         errorMessage = 'Camera is already in use by another application.';
-      } else if (err.name === 'OverconstrainedError') {
+      } else if (name === 'OverconstrainedError') {
         errorMessage = 'Camera does not support the requested settings. Trying with basic settings...';
         // Retry with basic constraints
         setTimeout(() => retryWithBasicConstraints(), 1000);
@@ -98,7 +89,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       }
 
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error with basic constraints:', err);
       setError('Unable to access camera. Please check your browser permissions.');
       setIsLoading(false);
@@ -162,6 +153,19 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
     stopCamera();
     onCancel();
   };
+
+  useEffect(() => {
+    // Only start camera automatically if user already requested permission
+    if (permissionRequested) {
+      // Starting the camera stream is a sync with an external system, which is what effects are for.
+      // startCamera sets loading state first; reworking this into the click handler is a separate change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      startCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [facingMode, permissionRequested]);
 
   return (
     <div 

@@ -147,13 +147,14 @@ export function sortTasks(
     case 'points':
       return sorted.sort((a, b) => b.points - a.points);
     
-    case 'difficulty':
+    case 'difficulty': {
       const difficultyOrder: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
       return sorted.sort((a, b) => {
         const aDiff = difficultyOrder[a.difficulty || 'medium'];
         const bDiff = difficultyOrder[b.difficulty || 'medium'];
         return aDiff - bDiff;
       });
+    }
     
     case 'distance':
       // Requires user location - will implement in map integration

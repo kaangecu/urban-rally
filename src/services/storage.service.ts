@@ -67,7 +67,7 @@ export async function uploadImage(
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             resolve(downloadURL);
-          } catch (error) {
+          } catch {
             reject(new Error('Failed to get download URL'));
           }
         }
@@ -115,7 +115,7 @@ export async function uploadVideo(
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             resolve(downloadURL);
-          } catch (error) {
+          } catch {
             reject(new Error('Failed to get download URL'));
           }
         }

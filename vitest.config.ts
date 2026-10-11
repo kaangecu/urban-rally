@@ -22,7 +22,6 @@ export default defineConfig({
         'src/vite-env.d.ts',
         'src/main.tsx',
         'scripts/',
-        'src/test-firebase.ts',
         'src/scripts/',
         '**/*.manual-test.ts',
       ],

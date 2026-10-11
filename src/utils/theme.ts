@@ -138,3 +138,6 @@ export const themeClasses = {
       ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 shadow-[0_0_10px_-3px_rgba(6,182,212,0.5)]'
       : 'bg-blue-100 border border-blue-200 text-blue-800',
 };
+
+// Step 0 gate test: deliberate lint error, this PR must be blocked
+export const gateTest: any = 1;

@@ -39,7 +39,7 @@ Snapshot of main at 0b2cca7 (12 Oct 2026). Check the files before relying on a n
 | TeamCodeLogin | `src/features/auth/TeamCodeLogin.tsx` | Field validation messages | Subtitle built from the step title ("Join the adventure in team code") |
 | BottomNav | `src/components/navigation/BottomNav.tsx` | Icon-plus-label tab structure | 9px labels, cyberpunk-only styling, no `aria-current` |
 | LegalModal | `src/components/legal/LegalModal.tsx` | Escape and backdrop close | White text on a white panel in light mode |
-| GameMap | `src/features/map/GameMap.tsx` | Leaflet setup and popups | Fixed Berlin centre, color-only pins |
+| GameMap | `src/features/map/GameMap.tsx` | Leaflet setup and popups | Fixed Berlin centre, pins told apart only by colour and a 12px tick |
 | App header | `src/App.tsx` | Team name and score placement | "1 tasks completed", emoji Logout next to the score |
 
 No component is a clean exemplar yet. Follow the structure of the nearest one and fix what the "Don't copy" column lists when you touch it.

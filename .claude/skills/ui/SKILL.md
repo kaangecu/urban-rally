@@ -49,7 +49,7 @@ For anything bigger than one screen, propose a `SPEC.md` and wait for approval b
 
 - **Light theme:** solid white surfaces on `gray-100`, a single tenant `primaryColor` for the main action, and no glow or blur.
 - **Cyberpunk theme:** near-black ground, neon pink and cyan. Glow means "live": focus, the active tab, the selected item. Don't glow everything.
-- **Glass (`glass-*`, `backdrop-blur`):** only over live content, meaning the map, the camera viewfinder or a photo. Over a flat dark page the blur is invisible but still costs GPU time. Never put glass inside scrolling lists, and never stack glass on glass. Glass panels need a tint of 85% or more so text passes contrast over a white map tile.
+- **Glass (`glass-*`, `backdrop-blur`):** only over live content, meaning the map, the camera viewfinder or a photo. Over a flat dark page the blur is invisible but still costs GPU time. Never put glass inside scrolling lists, and never stack glass on glass. Use a dark tint of 86% or more over the map (text stays 11.6:1 on a white tile). Over the camera use the dark tint in both themes: a light tint needs 90% before red text passes over a black frame.
 - Anything that differs by theme gets a branch for both themes. Components that only style for cyberpunk (TaskDetail, BottomNav today) are known gaps. Don't copy that pattern.
 
 ## 4. Avoid the generic AI look

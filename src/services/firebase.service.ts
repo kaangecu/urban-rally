@@ -9,7 +9,8 @@ import {
   getAuth, 
   signInAnonymously,
   setPersistence,
-  browserLocalPersistence 
+  browserLocalPersistence,
+  connectAuthEmulator
 } from 'firebase/auth';
 import type { Auth } from 'firebase/auth';
 import { 
@@ -18,7 +19,7 @@ import {
   connectFirestoreEmulator 
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import type { FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from '../config/app.config';
 
@@ -39,14 +40,22 @@ export const initializeFirebase = async (): Promise<void> => {
     
     // Initialize Auth with local persistence
     auth = getAuth(app);
-    await setPersistence(auth, browserLocalPersistence);
     
     // Initialize Firestore
     db = getFirestore(app);
     
     // Initialize Storage
     storage = getStorage(app);
-    
+
+    // Connect to the local emulators in development (npm run emulators)
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, 'localhost', 8080);
+      connectStorageEmulator(storage, 'localhost', 9199);
+      console.log('🔧 Connected to Auth, Firestore and Storage emulators');
+    }
+    await setPersistence(auth, browserLocalPersistence);
+
     // Enable offline persistence (CRITICAL for offline-first)
     try {
       await enableIndexedDbPersistence(db);
@@ -58,12 +67,6 @@ export const initializeFirebase = async (): Promise<void> => {
       } else if (code === 'unimplemented') {
         console.warn('⚠️ Browser does not support persistence');
       }
-    }
-    
-    // Connect to emulator in development (optional)
-    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
-      connectFirestoreEmulator(db, 'localhost', 8080);
-      console.log('🔧 Connected to Firestore emulator');
     }
     
     console.log('✅ Firebase initialized successfully');

@@ -11,6 +11,7 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - `npm run build`: type-check and production build
 - `npm run check`: all of the above in one go. CI runs the same command
 - `npm run test:rules`: Firestore and Storage rules tests against the emulators (needs Java)
+- `npm run emulators`: local Auth, Firestore and Storage. Then `VITE_USE_EMULATOR=true npm run dev` points the app at them
 
 ## Layout
 
@@ -32,3 +33,23 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - Ignore `docs/archive/`: old notes that are outdated and contradict the code.
 - Never deploy, migrate, or touch the real Firebase project. Use the emulators.
 - Never read or print `.env` files or credentials.
+- The seed scripts (`setup-*`, `add-*`) write to the real Firebase project, so don't run them.
+
+## Workflow
+
+One task per session. I `/clear` between tasks, and after two failed corrections on the same issue.
+
+For each change:
+
+1. Explore: read only the files the task needs.
+2. Plan: use plan mode unless the change fits in one sentence. Anything bigger than a few files gets a one-page spec from `docs/specs/TEMPLATE.md` first.
+3. Tests first: write failing tests that describe the change and stop so I can read them. Don't change them afterwards without asking.
+4. Implement until `npm run check` passes.
+5. Explain the diff in a few sentences, including anything new to me.
+6. Open a small PR (under about 300 lines) with a clear title and description.
+
+- Bugs: my first attempt at any bug is mine. Explain what you see and where to look; fix it only when I ask.
+- Before a merge, run `/code-review`. Add `/security-review` for rules, auth or upload changes. Report findings; don't chase every one.
+- Parallel work goes in a separate worktree (`claude --worktree <name>`), at most two sessions at once.
+- Cloud sessions only take chores: CI, dependencies, docs, config. Features are paired on my laptop.
+- When the same mistake happens twice, add one line here.

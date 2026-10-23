@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Camera, Lock, MapPin, Navigation, PenLine, Star, Video, type LucideIcon } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { useMapStore } from '../../store/mapStore';
+import { useWatchPosition } from '../../hooks/useWatchPosition';
+import { Alert } from '../../components/ui/Alert';
 import { TaskSubmission } from '../submissions/TaskSubmission';
 import { formatPoints } from '../../utils/format';
 import { calculateDistance, formatDistance } from '../../utils/geo.utils';
@@ -29,14 +31,21 @@ export function TaskDetail() {
   const { team } = useAuthStore();
   const userLocation = useMapStore((state) => state.userLocation);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const tooFarId = useId();
+
+  const isCheckIn = selectedTask?.type === 'GPS' || selectedTask?.type === 'GPS_LOCATION';
+  const isCompleted = (selectedTask && team?.completedTaskIds.includes(selectedTask.id)) || false;
+  // Check-ins need the player on the spot, so follow them while the detail is open
+  const watched = useWatchPosition(!!selectedTask?.coordinates && isCheckIn && !isCompleted && !isSubmitting);
 
   if (!selectedTask) return null;
 
   const task = selectedTask;
-  const isCompleted = team?.completedTaskIds.includes(task.id) || false;
   const { label, Icon } = getTaskTypeInfo(task.type);
-  const isCheckIn = task.type === 'GPS' || task.type === 'GPS_LOCATION';
-  const distance = userLocation && task.coordinates ? calculateDistance(userLocation, task.coordinates) : null;
+  const here = watched ?? userLocation;
+  const distance = here && task.coordinates ? calculateDistance(here, task.coordinates) : null;
+  const radius = task.radius || 50;
+  const tooFar = isCheckIn && distance !== null && distance > radius;
   const close = () => setSelectedTask(null);
 
   return (
@@ -51,7 +60,13 @@ export function TaskDetail() {
               Close
             </Button>
           ) : (
-            <Button block size="lg" onClick={() => setIsSubmitting(true)}>
+            <Button
+              block
+              size="lg"
+              disabled={tooFar}
+              aria-describedby={tooFar ? tooFarId : undefined}
+              onClick={() => setIsSubmitting(true)}
+            >
               <Icon className="size-5" aria-hidden="true" />
               {getTaskAction(task.type)}
             </Button>
@@ -71,7 +86,17 @@ export function TaskDetail() {
             )}
           </div>
 
-          {distance !== null && (
+          {tooFar && distance !== null && (
+            <div id={tooFarId}>
+              <Alert
+                variant="warning"
+                title="Too far away"
+                text={`You're ${Math.round(distance)} m away. Get within ${radius} m.`}
+              />
+            </div>
+          )}
+
+          {distance !== null && !tooFar && (
             <p className="flex items-center gap-2 font-mono text-sm text-text-muted">
               <Navigation className="size-4" aria-hidden="true" />
               {formatDistance(distance)} away
@@ -83,7 +108,7 @@ export function TaskDetail() {
           <section>
             <h3 className="font-display text-label font-semibold uppercase text-text-muted">Requirements</h3>
             <ul>
-              {isCheckIn && <Requirement Icon={MapPin}>{`Be within ${task.radius || 50}m of the place`}</Requirement>}
+              {isCheckIn && <Requirement Icon={MapPin}>{`Be within ${radius} m of the place`}</Requirement>}
               {task.requiresPhoto && <Requirement Icon={Camera}>Take a photo</Requirement>}
               {task.requiresVideo && <Requirement Icon={Video}>Record a video</Requirement>}
               {task.requiresText && <Requirement Icon={PenLine}>Write an answer</Requirement>}

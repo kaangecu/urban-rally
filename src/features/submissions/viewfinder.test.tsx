@@ -46,4 +46,14 @@ describe('Viewfinder and preview', () => {
     expect(onCapture).toHaveBeenCalledOnce();
     expect(onCapture.mock.calls[0][0]).toBeInstanceOf(File);
   });
+
+  it('offers a design-system "Try again" button when the camera fails', async () => {
+    getUserMedia.mockRejectedValueOnce(Object.assign(new Error('none'), { name: 'NotFoundError' }));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<CameraCapture onCapture={() => {}} onCancel={() => {}} />);
+    const retry = await screen.findByRole('button', { name: 'Try again' });
+    expect(retry).toHaveAttribute('type', 'button');
+    expect(screen.getByText('No camera found on this device.')).toHaveClass('text-text-muted');
+  });
 });
+

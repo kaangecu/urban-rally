@@ -27,6 +27,11 @@ export function getTaskTypeInfo(type: TaskType): TaskTypeInfo {
 }
 
 /** The detail screen's one primary action, named after what the player does. */
+/** Types with a capture screen; the rest can be shown but not completed yet */
+export function canCaptureTask(type: TaskType): boolean {
+  return ['PHOTO', 'VIDEO', 'QUIZ', 'GPS', 'GPS_LOCATION'].includes(type);
+}
+
 export function getTaskAction(type: TaskType): string {
   switch (type) {
     case 'PHOTO':

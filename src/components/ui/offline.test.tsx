@@ -36,4 +36,14 @@ describe('Toast', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(onDismiss).toHaveBeenCalledOnce();
   });
+
+  it('keeps its live region mounted so a new message is announced', () => {
+    const { rerender } = render(<Toast message={null} />);
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    rerender(<Toast message="Photo sent" />);
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent('Photo sent');
+  });
 });

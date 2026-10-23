@@ -42,11 +42,8 @@ export const useTaskStore = create<TaskState>((set) => ({
       selectedTask,
     }),
 
-  setLoading: (isLoading) =>
-    set({
-      isLoading,
-      error: isLoading ? null : undefined,
-    }),
+  // Starting a load clears the last error; finishing one must not wipe an error set by the load
+  setLoading: (isLoading) => set(isLoading ? { isLoading, error: null } : { isLoading }),
 
   setError: (error) =>
     set({

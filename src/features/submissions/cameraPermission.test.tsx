@@ -1,9 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CameraCapture } from './CameraCapture';
 
-const getUserMedia = vi.fn(async () => ({ getTracks: () => [] }) as unknown as MediaStream);
+const emptyStream = async () => ({ getTracks: () => [] }) as unknown as MediaStream;
+const getUserMedia = vi.fn(emptyStream);
 
 function stubPermission(state: PermissionState) {
   vi.stubGlobal('navigator', {
@@ -15,7 +17,8 @@ function stubPermission(state: PermissionState) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  getUserMedia.mockClear();
+  getUserMedia.mockReset();
+  getUserMedia.mockImplementation(emptyStream);
 });
 
 describe('CameraCapture permission', () => {
@@ -43,5 +46,41 @@ describe('CameraCapture permission', () => {
     expect(fallback).toHaveAttribute('accept', 'image/*');
     expect(fallback).toHaveAttribute('capture');
     expect(getUserMedia).not.toHaveBeenCalled();
+  });
+
+  function trackedStream() {
+    const stop = vi.fn();
+    return { stop, stream: { getTracks: () => [{ stop }] } as unknown as MediaStream };
+  }
+
+  it('starts one stream from "Allow camera" and stops it on unmount', async () => {
+    stubPermission('prompt');
+    const streams: ReturnType<typeof trackedStream>[] = [];
+    getUserMedia.mockImplementation(async () => {
+      const s = trackedStream();
+      streams.push(s);
+      return s.stream;
+    });
+    const { unmount } = render(<CameraCapture onCapture={() => {}} onCancel={() => {}} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Allow camera' }));
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+
+    unmount();
+    expect(streams.every((s) => s.stop.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('stops a stream that arrives after the camera was closed', async () => {
+    stubPermission('granted');
+    const late = trackedStream();
+    let resolve: (stream: MediaStream) => void = () => {};
+    getUserMedia.mockImplementation(() => new Promise<MediaStream>((r) => { resolve = r; }));
+    const { unmount } = render(<CameraCapture onCapture={() => {}} onCancel={() => {}} />);
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalled());
+
+    unmount();
+    resolve(late.stream);
+    await vi.waitFor(() => expect(late.stop).toHaveBeenCalledOnce());
   });
 });

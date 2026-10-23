@@ -7,7 +7,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
-import type { Task } from '../types/schema';
+import type { GeoLocation, Task } from '../types/schema';
+import { calculateDistance } from '../utils/geo.utils';
 
 /**
  * Get all tasks for a specific event
@@ -139,7 +140,8 @@ export function getCompletedTasks(
  */
 export function sortTasks(
   tasks: Task[],
-  sortBy: 'points' | 'distance' | 'difficulty'
+  sortBy: 'points' | 'distance' | 'difficulty',
+  userLocation?: GeoLocation | null
 ): Task[] {
   const sorted = [...tasks];
   
@@ -156,9 +158,13 @@ export function sortTasks(
       });
     }
     
-    case 'distance':
-      // Requires user location - will implement in map integration
-      return sorted;
+    case 'distance': {
+      if (!userLocation) return sorted;
+      // Tasks without a location go last
+      const distance = (task: Task) =>
+        task.coordinates ? calculateDistance(userLocation, task.coordinates) : Infinity;
+      return sorted.sort((a, b) => distance(a) - distance(b));
+    }
     
     default:
       return sorted;

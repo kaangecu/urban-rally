@@ -7,7 +7,9 @@ import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
+import { formatPoints } from '../../utils/format';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { getTaskTypeInfo } from '../../utils/taskTypes';
 
 interface TaskSubmissionProps {
   task: Task;
@@ -19,6 +21,9 @@ type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
   const { team, tenant } = useAuthStore();
+  const { label: typeLabel, Icon: TypeIcon } = getTaskTypeInfo(task.type);
+  // Types without a capture screen yet get a named but disabled button
+  const canCapture = ['PHOTO', 'VIDEO', 'QUIZ', 'GPS', 'GPS_LOCATION'].includes(task.type);
   const [state, setState] = useState<SubmissionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -256,11 +261,11 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       // Show success message with points info (including fuzzy match indicator)
       if (validationResult.isFuzzyMatch) {
-        setError(`${validationResult.feedback} +${pointsAwarded} points (typo forgiven)`);
+        setError(`${validationResult.feedback} ${formatPoints(pointsAwarded, { signed: true })} (typo forgiven)`);
       } else if (currentAttempt === 1) {
-        setError(`✅ Correct! Perfect score: +${pointsAwarded} points`);
+        setError(`✅ Correct! Perfect score: ${formatPoints(pointsAwarded, { signed: true })}`);
       } else {
-        setError(`✅ Correct! +${pointsAwarded} points (${currentAttempt} attempts)`);
+        setError(`✅ Correct! ${formatPoints(pointsAwarded, { signed: true })} (${currentAttempt} attempts)`);
       }
       
       setTimeout(() => {
@@ -327,8 +332,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           maxAttempts={maxQuizAttempts}
           progressiveHints={[
             task.quizHint || '',  // First hint (from task)
-            '🔍 Think carefully about the answer...',  // Second attempt hint
-            '💭 Consider alternative spellings or common variations...', // Third attempt hint
+            'Think carefully about the answer...',  // Second attempt hint
+            'Consider alternative spellings or common variations...', // Third attempt hint
           ]}
         />
       );
@@ -395,7 +400,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Task Completed!</h3>
           <div className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 rounded-full shadow-[0_0_20px_-3px_rgba(34,197,94,0.6)]">
-            <p className="text-white font-bold text-lg">+{task.points} XP</p>
+            <p className="text-white font-bold text-lg">{formatPoints(task.points, { signed: true })}</p>
           </div>
         </div>
       )}
@@ -427,14 +432,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           <div className="text-center mb-6">
             <p className="text-gray-400 mb-3 text-sm sm:text-base">Ready to complete this task?</p>
             <div className="inline-block bg-gradient-to-r from-pink-500 to-purple-600 px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-[0_0_20px_-3px_rgba(236,72,153,0.6)]">
-              <p className="text-white font-bold text-xl sm:text-2xl">+{task.points} XP</p>
+              <p className="text-white font-bold text-xl sm:text-2xl">{formatPoints(task.points, { signed: true })}</p>
             </div>
           </div>
 
           {/* Primary Action Button */}
           <button
             onClick={startCapture}
-            disabled={task.type === 'GPS' && distanceFromTask !== null}
+            disabled={!canCapture || (task.type === 'GPS' && distanceFromTask !== null)}
             className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
                      disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             style={{ minHeight: '56px' }}
@@ -449,10 +454,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             
             {/* Button Content */}
             <span className="relative z-10 text-white uppercase tracking-wider text-base sm:text-lg">
-              {task.type === 'PHOTO' && '📸 Take Photo'}
-              {task.type === 'VIDEO' && '🎥 Record Video'}
-              {task.type === 'QUIZ' && '❓ Answer Quiz'}
-              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && '📍 Take Photo at Location'}
+              <TypeIcon className="inline w-5 h-5 mr-2 -mt-1" aria-hidden="true" />
+              {task.type === 'PHOTO' && 'Take Photo'}
+              {task.type === 'VIDEO' && 'Record Video'}
+              {task.type === 'QUIZ' && 'Answer Quiz'}
+              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && 'Take Photo at Location'}
+              {!canCapture && typeLabel}
             </span>
           </button>
 

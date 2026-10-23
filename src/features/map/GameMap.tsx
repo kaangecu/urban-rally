@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import { Icon, type LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMapStore } from '../../store/mapStore';
+import { useTrackUserLocation } from '../../hooks/useTrackUserLocation';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
-import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
 import type { Task } from '../../types/schema';
+import { formatPoints } from '../../utils/format';
 
 // Fix for default marker icons in React-Leaflet
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -37,37 +38,8 @@ function MapController() {
 
 // User location marker component
 function UserLocationMarker() {
-  const { userLocation, setUserLocation, setTrackingLocation } = useMapStore();
-  const watchIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    // Get initial location
-    getCurrentLocation()
-      .then((location) => {
-        setUserLocation(location);
-      })
-      .catch((error) => {
-        console.error('Error getting location:', error);
-      });
-
-    // Start watching location
-    watchIdRef.current = watchLocation(
-      (location) => {
-        setUserLocation(location);
-      },
-      (error) => {
-        console.error('Location tracking error:', error);
-        setTrackingLocation(false);
-      }
-    );
-
-    return () => {
-      // Cleanup: stop watching location
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
-  }, []);
+  const userLocation = useMapStore((state) => state.userLocation);
+  useTrackUserLocation();
 
   if (!userLocation) return null;
 
@@ -93,7 +65,7 @@ function UserLocationMarker() {
         <Popup>
           <div className="text-center">
             <p className="font-semibold">Your Location</p>
-            <p className="text-xs text-gray-600">
+            <p className="text-[13px] text-gray-600">
               {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
             </p>
           </div>
@@ -178,9 +150,9 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
             <h3 className="font-bold text-gray-900 mb-1">{task.title}</h3>
             <p className="text-sm text-gray-600 mb-2">{task.description}</p>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-blue-600">{task.points} pts</span>
+              <span className="text-lg font-bold text-blue-600">{formatPoints(task.points)}</span>
               {isCompleted && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
+                <span className="text-[13px] bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
                   ✓ Completed
                 </span>
               )}

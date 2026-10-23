@@ -51,13 +51,6 @@ export async function getTenantById(tenantId: string): Promise<Tenant | null> {
 export function applyTenantTheme(tenant: Tenant): void {
   const root = document.documentElement;
   
-  // Set CSS variables for dynamic theming
-  root.style.setProperty('--color-primary', tenant.primaryColor);
-  
-  if (tenant.secondaryColor) {
-    root.style.setProperty('--color-secondary', tenant.secondaryColor);
-  }
-  
   if (tenant.logoUrl) {
     // Store logo URL in a data attribute for components to use
     root.setAttribute('data-tenant-logo', tenant.logoUrl);

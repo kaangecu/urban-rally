@@ -9,15 +9,14 @@ import type { Tenant } from '../types/schema';
 
 export type ThemeStyle = 'light' | 'cyberpunk';
 
+/** Design system theme. Tenants pick Night or Daylight, not their own colours. */
+export type ThemeName = 'night' | 'daylight';
+
 // themeStyle isn't in the Tenant schema yet; older tenant docs may carry it
 type ThemeTenant = (Partial<Tenant> & { themeStyle?: string }) | null | undefined;
 
 export interface ThemeConfig {
   style: ThemeStyle;
-  colors: {
-    primary: string;
-    secondary: string;
-  };
 }
 
 /**
@@ -40,6 +39,16 @@ export function isCyberpunkTheme(tenant: ThemeTenant): boolean {
 }
 
 /**
+ * Night before a tenant is known and for cyberpunk tenants, Daylight for light tenants
+ */
+export function getThemeName(tenant: ThemeTenant): ThemeName {
+  if (!tenant) return 'night';
+  if (tenant.themeStyle === 'daylight' || tenant.themeStyle === 'light') return 'daylight';
+  if (tenant.themeStyle === 'night') return 'night';
+  return isCyberpunkTheme(tenant) ? 'night' : 'daylight';
+}
+
+/**
  * Gets the theme configuration for a tenant
  */
 export function getThemeConfig(tenant: ThemeTenant): ThemeConfig {
@@ -47,48 +56,20 @@ export function getThemeConfig(tenant: ThemeTenant): ThemeConfig {
   
   return {
     style: isCyberpunk ? 'cyberpunk' : 'light',
-    colors: {
-      primary: tenant?.primaryColor || '#1a56db',
-      secondary: tenant?.secondaryColor || '#7e3af2',
-    },
   };
 }
 
 /**
- * Applies theme CSS variables to the document root
+ * Applies the tenant's theme to the document root
  */
 export function applyTheme(tenant: ThemeTenant): void {
   const root = document.documentElement;
-  const theme = getThemeConfig(tenant);
-  
-  // Apply tenant colors
-  root.style.setProperty('--color-primary', theme.colors.primary);
-  root.style.setProperty('--color-secondary', theme.colors.secondary);
-  
-  // Apply theme-specific styles
-  if (theme.style === 'cyberpunk') {
-    // Cyberpunk dark theme
-    root.style.setProperty('--color-background', '5 5 5');         // Almost black
-    root.style.setProperty('--color-surface', '20 20 25');         // Dark gray
-    root.style.setProperty('--color-text-main', '255 255 255');    // White
-    root.style.setProperty('--color-text-muted', '161 161 170');   // Gray
-    root.style.setProperty('--color-border', '255 255 255');       // White (with opacity)
-    
-    // Add cyberpunk class for special effects
-    root.classList.add('theme-cyberpunk');
-    root.classList.remove('theme-light');
-  } else {
-    // Light theme (default)
-    root.style.setProperty('--color-background', '243 244 246');   // Gray-100
-    root.style.setProperty('--color-surface', '255 255 255');      // White
-    root.style.setProperty('--color-text-main', '17 24 39');       // Gray-900
-    root.style.setProperty('--color-text-muted', '107 114 128');   // Gray-500
-    root.style.setProperty('--color-border', '209 213 219');       // Gray-300
-    
-    // Add light class
-    root.classList.add('theme-light');
-    root.classList.remove('theme-cyberpunk');
-  }
+  root.dataset.theme = getThemeName(tenant);
+
+  // Legacy classes for screens not yet ported to the design system tokens
+  const cyberpunk = getThemeConfig(tenant).style === 'cyberpunk';
+  root.classList.toggle('theme-cyberpunk', cyberpunk);
+  root.classList.toggle('theme-light', !cyberpunk);
 }
 
 /**

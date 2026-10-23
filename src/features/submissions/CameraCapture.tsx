@@ -273,21 +273,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
             </PermissionPrompt>
           </div>
         ) : error ? (
-          <div className="text-center text-white p-6 max-w-md mx-auto">
-            <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-red-500/30 blur-3xl rounded-full" />
-              <Camera className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto text-red-400" />
-            </div>
-            <p className="text-lg mb-6 text-gray-300">{error}</p>
-            <button
-              onClick={retryWithBasicConstraints}
-              className="px-6 py-3 border border-white/20 text-white 
-                       hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                       transition-all font-semibold touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              Try Again
-            </button>
+          <div className="flex flex-col items-center gap-6 p-6 max-w-md mx-auto text-center">
+            <Camera className="size-16 text-danger-text" aria-hidden="true" />
+            <p className="text-lg text-text-muted">{error}</p>
+            <Button variant="secondary" onClick={retryWithBasicConstraints}>
+              Try again
+            </Button>
           </div>
         ) : capturedImage ? (
           <img 

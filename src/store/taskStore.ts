@@ -9,6 +9,10 @@ interface TaskState {
   error: string | null;
   filter: 'all' | 'available' | 'completed';
   sortBy: 'points' | 'distance' | 'difficulty';
+  /** The task whose photo or video is being sent, which keeps running after the player leaves */
+  uploadingTaskId: string | null;
+  /** Quiz misses per task, kept here so closing and reopening a quiz doesn't reset its attempts */
+  quizProgress: Record<string, { attempts: number; wrong: (string | number)[] }>;
 
   // Actions
   setTasks: (tasks: Task[]) => void;
@@ -17,6 +21,8 @@ interface TaskState {
   setError: (error: string | null) => void;
   setFilter: (filter: 'all' | 'available' | 'completed') => void;
   setSortBy: (sortBy: 'points' | 'distance' | 'difficulty') => void;
+  setUploadingTaskId: (uploadingTaskId: string | null) => void;
+  recordQuizMiss: (taskId: string, answer: string | number) => void;
   clearTasks: () => void;
 }
 
@@ -29,6 +35,8 @@ export const useTaskStore = create<TaskState>((set) => ({
   error: null,
   filter: 'available',
   sortBy: 'points',
+  uploadingTaskId: null,
+  quizProgress: {},
 
   // Actions
   setTasks: (tasks) =>
@@ -61,10 +69,24 @@ export const useTaskStore = create<TaskState>((set) => ({
       sortBy,
     }),
 
+  setUploadingTaskId: (uploadingTaskId) => set({ uploadingTaskId }),
+
+  recordQuizMiss: (taskId, answer) =>
+    set((state) => {
+      const current = state.quizProgress[taskId] ?? { attempts: 0, wrong: [] };
+      return {
+        quizProgress: {
+          ...state.quizProgress,
+          [taskId]: { attempts: current.attempts + 1, wrong: [...current.wrong, answer] },
+        },
+      };
+    }),
+
   clearTasks: () =>
     set({
       tasks: [],
       selectedTask: null,
+      quizProgress: {},
       error: null,
       isLoading: false,
     }),

@@ -3,6 +3,18 @@ import { Video, X, Check } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { formatClock } from '../../utils/format';
 
+// Only read from the shutter handler and its timer, never during render
+const now = () => Date.now();
+const secondsSince = (start: number) => Math.floor((now() - start) / 1000);
+
+// iOS Safari before 18.4 can't record WebM, so fall back to MP4
+function pickRecordingType(): { mimeType: string; type: string; ext: string } {
+  if (MediaRecorder.isTypeSupported?.('video/webm;codecs=vp8,opus')) {
+    return { mimeType: 'video/webm;codecs=vp8,opus', type: 'video/webm', ext: 'webm' };
+  }
+  return { mimeType: 'video/mp4', type: 'video/mp4', ext: 'mp4' };
+}
+
 interface VideoCaptureProps {
   onCapture: (file: File) => void;
   onCancel: () => void;
@@ -20,13 +32,16 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
-  const elapsedRef = useRef(0);
+  const startedAtRef = useRef(0);
+  const recordingTypeRef = useRef({ type: 'video/webm', ext: 'webm' });
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideo, setRecordedVideo] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // From Stop until the recorder hands over the clip; the shutter stays off so a double tap can't start a new take
+  const [stopping, setStopping] = useState(false);
   const [permissionRequested, setPermissionRequested] = useState(false);
 
   const startCamera = async () => {
@@ -133,9 +148,9 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     try {
       chunksRef.current = [];
       
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: 'video/webm;codecs=vp8,opus',
-      });
+      const { mimeType, type, ext } = pickRecordingType();
+      recordingTypeRef.current = { type, ext };
+      const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
 
       mediaRecorderRef.current = mediaRecorder;
 
@@ -155,7 +170,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         // Use setTimeout to ensure state updates properly
         setTimeout(() => {
           try {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+            const blob = new Blob(chunksRef.current, { type: recordingTypeRef.current.type });
             console.log('🎥 Blob created, size:', blob.size);
             
             const url = URL.createObjectURL(blob);
@@ -173,11 +188,13 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             }
             
             setIsLoading(false); // Clear loading state
+            setStopping(false);
             console.log('🎥 Loading state cleared');
           } catch (err) {
             console.error('❌ Error creating video blob:', err);
             setError('Failed to process video. Please try again.');
             setIsLoading(false);
+            setStopping(false);
           }
         }, 100); // Small delay to ensure state updates properly
       };
@@ -186,12 +203,13 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Start timer; recording stops itself at the limit
-      elapsedRef.current = 0;
+      // Start timer; recording stops itself at the limit. Time comes from the clock, since
+      // mobile browsers throttle intervals while the screen is locked but keep recording
+      startedAtRef.current = now();
       timerRef.current = window.setInterval(() => {
-        elapsedRef.current += 1;
-        setRecordingTime(elapsedRef.current);
-        if (elapsedRef.current >= maxDuration) {
+        const elapsed = Math.min(maxDuration, secondsSince(startedAtRef.current));
+        setRecordingTime(elapsed);
+        if (elapsed >= maxDuration) {
           stopRecording();
         }
       }, 1000);
@@ -206,6 +224,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       console.log('🎥 Stopping MediaRecorder, state:', mediaRecorderRef.current.state);
+      setStopping(true);
       mediaRecorderRef.current.stop();
     } else {
       console.log('⚠️ MediaRecorder already inactive or null');
@@ -244,10 +263,11 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       return;
     }
 
-    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    const { type, ext } = recordingTypeRef.current;
+    const blob = new Blob(chunksRef.current, { type });
     console.log('🎥 Creating file from blob, size:', blob.size);
     
-    const file = new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
+    const file = new File([blob], `video-${Date.now()}.${ext}`, { type });
     console.log('🎥 File created:', file.name, file.size, 'bytes');
     
     onCapture(file);
@@ -442,8 +462,8 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         )}
       </div>
 
-      {/* Controls on dark glass; hidden while an error is shown */}
-      {!error && (
+      {/* Controls on dark glass; hidden while a camera error is shown, kept once there is a clip to retake or send */}
+      {(!error || recordedVideo) && (
         <div className="ur-glass p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] flex-shrink-0">
           {!permissionRequested ? (
             <Button variant="secondary" block onClick={handleCancel}>
@@ -465,7 +485,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
-                disabled={isLoading}
+                disabled={isLoading || stopping}
                 aria-label={isRecording ? 'Stop recording' : 'Record video'}
                 className={`ur-shutter ur-shutter--video${isRecording ? ' ur-shutter--recording' : ''} disabled:opacity-50`}
               />

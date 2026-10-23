@@ -14,8 +14,8 @@ interface QuizInputProps {
   onCancel: () => void;
   maxLength?: number;
   attemptsLeft?: number;
-  /** The last answer that was wrong, if any */
-  wrongAnswer?: string | number;
+  /** Every answer that was wrong so far, oldest first */
+  wrongAnswers?: (string | number)[];
   /** All attempts used */
   failed?: boolean;
 }
@@ -32,7 +32,7 @@ export const QuizInput: React.FC<QuizInputProps> = ({
   onCancel,
   maxLength = 500,
   attemptsLeft,
-  wrongAnswer,
+  wrongAnswers = [],
   failed = false,
 }) => {
   const [answer, setAnswer] = useState('');
@@ -58,7 +58,8 @@ export const QuizInput: React.FC<QuizInputProps> = ({
         ? !isNaN(parseFloat(answer))
         : answer.trim().length > 0;
   const remainingChars = maxLength - answer.length;
-  const missed = wrongAnswer !== undefined;
+  const missed = wrongAnswers.length > 0;
+  const lastWrong = wrongAnswers.at(-1);
 
   if (failed) {
     return (
@@ -95,9 +96,10 @@ export const QuizInput: React.FC<QuizInputProps> = ({
       <div className="flex flex-col gap-4 text-text">
         <p id={questionId} className="text-body-lg">{question}</p>
 
-        {attemptsLeft !== undefined && missed && (
+        {/* Mounted empty from the start: screen readers announce changes to a live region, not a new one */}
+        {attemptsLeft !== undefined && (
           <p aria-live="polite" className="font-mono text-sm font-bold text-danger-text">
-            {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
+            {missed ? `${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left` : ''}
           </p>
         )}
 
@@ -112,16 +114,16 @@ export const QuizInput: React.FC<QuizInputProps> = ({
           <div role="radiogroup" aria-labelledby={questionId} className="flex flex-col gap-2">
             {options.map((option, index) => {
               const selected = selectedOption === option;
-              const wrong = wrongAnswer === option;
+              const wrong = wrongAnswers.includes(option);
               return (
                 <label
                   key={option}
-                  className={`flex items-center gap-3 min-h-touch px-3 py-2 rounded-control border-2 cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring has-[:focus-visible]:outline-offset-2 ${
-                    selected
-                      ? 'border-accent bg-accent-soft'
-                      : wrong
-                        ? 'border-dashed border-danger bg-danger-soft'
-                        : 'border-line bg-surface'
+                  className={`flex items-center gap-3 min-h-touch px-3 py-2 rounded-control border-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring has-[:focus-visible]:outline-offset-2 ${
+                    wrong
+                      ? 'border-dashed border-danger bg-danger-soft'
+                      : selected
+                        ? 'border-accent bg-accent-soft cursor-pointer'
+                        : 'border-line bg-surface cursor-pointer'
                   }`}
                 >
                   <input
@@ -129,6 +131,7 @@ export const QuizInput: React.FC<QuizInputProps> = ({
                     name={questionId}
                     value={option}
                     checked={selected}
+                    disabled={wrong}
                     onChange={() => setSelectedOption(option)}
                     className="sr-only"
                   />
@@ -179,11 +182,11 @@ export const QuizInput: React.FC<QuizInputProps> = ({
               />
             )}
             <p id={ruleId} className="text-sm text-text-muted">
-              {type === 'number' ? 'Enter a number.' : "Spelling and capitals don't matter."}
+              {type === 'number' ? 'Enter a number.' : "Capitals don't matter and small typos are OK."}
             </p>
             {missed && (
               <p className="text-sm text-danger-text">
-                “{String(wrongAnswer)}” is wrong.
+                “{String(lastWrong)}” is wrong.
               </p>
             )}
             {type === 'text' && showCharCounter(remainingChars) && (

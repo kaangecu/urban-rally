@@ -1,11 +1,12 @@
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../types/schema';
 import { uploadImage } from '../../services/storage.service';
 import { createSubmission } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
+import { useTaskStore } from '../../store/taskStore';
 import { TaskSubmission } from './TaskSubmission';
 
 const photo = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
@@ -49,11 +50,41 @@ describe('Upload states', () => {
     render(<TaskSubmission task={task} onSuccess={() => {}} onCancel={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: 'Capture' }));
 
-    expect(await screen.findByText(/still on your phone/i)).toBeInTheDocument();
+    expect(await screen.findByText('Not sent yet. Keep this screen open and try again.')).toBeInTheDocument();
     expect(screen.queryByText(/upload later/i)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(uploadImage).toHaveBeenCalledTimes(2);
     expect(vi.mocked(uploadImage).mock.calls[1][0]).toBe(photo);
   });
+
+  it('does not report success to a screen the player has left, however they left', async () => {
+    let finishUpload: (url: string) => void = () => {};
+    vi.mocked(uploadImage).mockImplementation(() => new Promise((resolve) => { finishUpload = resolve; }));
+    vi.mocked(createSubmission).mockResolvedValue(undefined as never);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const onSuccess = vi.fn();
+    const { unmount } = render(<TaskSubmission task={task} onSuccess={onSuccess} onCancel={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Capture' }));
+
+    unmount(); // e.g. a tap on the backdrop
+    await act(async () => finishUpload('https://photo'));
+    await act(async () => vi.advanceTimersByTime(3000));
+    expect(onSuccess).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('marks the task as sending while its upload runs, even after the player leaves', async () => {
+    let finishUpload: (url: string) => void = () => {};
+    vi.mocked(uploadImage).mockImplementation(() => new Promise((resolve) => { finishUpload = resolve; }));
+    vi.mocked(createSubmission).mockResolvedValue(undefined as never);
+    const { unmount } = render(<TaskSubmission task={task} onSuccess={() => {}} onCancel={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Capture' }));
+    expect(useTaskStore.getState().uploadingTaskId).toBe('gate');
+
+    unmount();
+    await act(async () => finishUpload('https://photo'));
+    expect(useTaskStore.getState().uploadingTaskId).toBeNull();
+  });
 });
+

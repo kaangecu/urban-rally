@@ -94,3 +94,17 @@ describe('TaskDetail', () => {
     });
   });
 });
+
+describe('TaskDetail while its upload runs', () => {
+  it('shows "Sending…" and blocks a second capture of the same task', () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      team: { id: 'team', eventId: 'e', tenantId: 'x', score: 0, completedTaskIds: [] } as never,
+      tenant: { id: 'x', name: 'Rally' } as never,
+    });
+    useTaskStore.setState({ selectedTask: task('PHOTO'), uploadingTaskId: 't1' });
+    render(<TaskDetail />);
+    expect(screen.getByRole('button', { name: 'Sending…' })).toBeDisabled();
+    useTaskStore.setState({ uploadingTaskId: null });
+  });
+});

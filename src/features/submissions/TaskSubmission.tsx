@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import type { Task } from '../../types/schema';
@@ -8,6 +8,7 @@ import { QuizInput } from './QuizInput';
 import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
+import { useTaskStore } from '../../store/taskStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
 import { formatPoints } from '../../utils/format';
 import { submissionFailed } from '../../utils/messages';
@@ -19,6 +20,8 @@ interface TaskSubmissionProps {
   onSuccess: (points: number) => void;
   onCancel: () => void;
 }
+
+const NO_MISSES: (string | number)[] = [];
 
 type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 'failed';
 
@@ -35,12 +38,26 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   
   // The captured file stays in memory so Try again resends it without a new photo
   const [lastFile, setLastFile] = useState<{ kind: 'photo' | 'video'; file: File } | null>(null);
-  const finish = (points: number) => onSuccess(points);
+  // Set when the player leaves during an upload, by Keep playing or any unmount; the upload carries on without them
+  const leftRef = useRef(false);
+  useEffect(() => {
+    leftRef.current = false;
+    return () => {
+      leftRef.current = true;
+    };
+  }, []);
+  const finish = (points: number) => {
+    if (!leftRef.current) onSuccess(points);
+  };
+  const setUploadingTaskId = useTaskStore((s) => s.setUploadingTaskId);
 
-  // Quiz attempt tracking (Phase 1)
-  const [quizAttempts, setQuizAttempts] = useState<number>(0);
+  // Quiz attempt tracking (Phase 1); stored per task so a reopen can't reset it
   const maxQuizAttempts = 3;
-  const [wrongAnswer, setWrongAnswer] = useState<string | number | undefined>(undefined);
+  const quizProgress = useTaskStore((s) => s.quizProgress[task.id]);
+  const recordQuizMiss = useTaskStore((s) => s.recordQuizMiss);
+  const quizAttempts = quizProgress?.attempts ?? 0;
+  const wrongAnswers = quizProgress?.wrong ?? NO_MISSES;
+  const quizFailed = task.type === 'QUIZ' && (state === 'failed' || quizAttempts >= maxQuizAttempts);
 
   console.log('🎯 TaskSubmission rendered', { 
     taskType: task.type, 
@@ -92,6 +109,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setUploadProgress(0);
     setState('uploading');
     setError(null);
+    setUploadingTaskId(task.id);
 
     try {
       // Upload photo
@@ -133,6 +151,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       setError(submissionFailed('photo'));
       setState('error');
+    } finally {
+      setUploadingTaskId(null);
     }
   };
 
@@ -146,6 +166,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setUploadProgress(0);
     setState('uploading');
     setError(null);
+    setUploadingTaskId(task.id);
 
     try {
       // Upload video
@@ -187,6 +208,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       setError(submissionFailed('video'));
       setState('error');
+    } finally {
+      setUploadingTaskId(null);
     }
   };
 
@@ -242,10 +265,9 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       // If answer is wrong, increment attempts and show feedback
       if (!validationResult.isCorrect) {
-        setQuizAttempts(currentAttempt);
+        recordQuizMiss(task.id, answer);
         const attemptsRemaining = maxQuizAttempts - currentAttempt;
         
-        setWrongAnswer(answer);
         setState(attemptsRemaining > 0 ? 'capture' : 'failed');
         return;
       }
@@ -312,6 +334,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
   const renderQuiz = () => (
     <QuizInput
+      // A new attempt starts with a clean form, so a wrong choice is never left selected
+      key={quizAttempts}
       question={task.description}
       type={task.quizType || 'text'}
       options={task.quizOptions}
@@ -319,12 +343,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       onSubmit={handleQuizSubmit}
       onCancel={onCancel}
       attemptsLeft={maxQuizAttempts - quizAttempts}
-      wrongAnswer={wrongAnswer}
-      failed={state === 'failed'}
+      wrongAnswers={wrongAnswers}
+      failed={quizFailed}
     />
   );
 
-  if (state === 'failed' && task.type === 'QUIZ') {
+  if (quizFailed) {
     return renderQuiz();
   }
 
@@ -400,7 +424,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
           <div>
             <p className="font-bold text-red-300">
-              {lastFile ? `Your ${lastFile.kind} is still on your phone` : 'Not sent'}
+              {lastFile ? 'Not sent yet. Keep this screen open and try again.' : 'Not sent'}
             </p>
             <p className="text-sm text-red-200 mt-1">{error}</p>
           </div>

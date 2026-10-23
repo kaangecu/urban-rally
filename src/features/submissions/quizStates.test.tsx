@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../types/schema';
 import { useAuthStore } from '../../store/authStore';
+import { useTaskStore } from '../../store/taskStore';
 import { QuizInput } from './QuizInput';
 import { TaskSubmission } from './TaskSubmission';
 
@@ -30,7 +31,7 @@ describe('QuizInput choices', () => {
 
   it('states the matching rule for text answers', () => {
     render(<QuizInput question="Name the tower" type="text" onSubmit={() => {}} onCancel={() => {}} />);
-    expect(screen.getByText("Spelling and capitals don't matter.")).toBeInTheDocument();
+    expect(screen.getByText("Capitals don't matter and small typos are OK.")).toBeInTheDocument();
   });
 });
 
@@ -47,6 +48,7 @@ describe('Quiz attempts', () => {
       team: { id: 'team', eventId: 'e', tenantId: 'x', score: 0, completedTaskIds: [] } as never,
       tenant: { id: 'x', name: 'Rally' } as never,
     });
+    useTaskStore.setState({ quizProgress: {} });
   });
 
   async function answer(option: string) {
@@ -75,5 +77,46 @@ describe('Quiz attempts', () => {
     await answer('Main');
     expect(screen.getByRole('heading', { name: 'Out of attempts' })).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('clears a wrong choice and locks it, so it cannot be sent again', async () => {
+    render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    await answer('Rhine');
+    const rhine = screen.getByRole('radio', { name: /Rhine/ });
+    expect(rhine).not.toBeChecked();
+    expect(rhine).toBeDisabled();
+    expect(rhine.closest('label')).toHaveClass('border-dashed');
+    expect(screen.getByRole('button', { name: 'Check answer' })).toBeDisabled();
+  });
+
+  it('keeps every miss marked, not only the latest', async () => {
+    render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    await answer('Rhine');
+    await answer('Elbe');
+    expect(screen.getByRole('radio', { name: /Rhine.*Wrong/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Elbe.*Wrong/ })).toBeDisabled();
+  });
+
+  it('has the attempts live region in place before the first miss, so the first change is announced', () => {
+    const { container } = render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    const live = container.ownerDocument.querySelector('[aria-live="polite"]');
+    expect(live).toBeInTheDocument();
+    expect(live).toBeEmptyDOMElement();
+  });
+
+  it('remembers attempts when the quiz is closed and opened again', async () => {
+    const first = render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    await answer('Rhine');
+    first.unmount();
+
+    const second = render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    expect(screen.getByText('2 attempts left')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Rhine.*Wrong/ })).toBeInTheDocument();
+    await answer('Elbe');
+    await answer('Main');
+    second.unmount();
+
+    render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
+    expect(screen.getByRole('heading', { name: 'Out of attempts' })).toBeInTheDocument();
   });
 });

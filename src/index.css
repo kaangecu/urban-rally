@@ -436,6 +436,10 @@ body {
 .ur-marker--selected { color: var(--ur-on-accent); }
 .ur-marker--selected .ur-marker__shape { background: var(--ur-accent); }
 .ur-marker--selected::before { content: ""; position: absolute; inset: -5px; border: 2px solid var(--ur-accent); border-radius: var(--radius-pill); box-shadow: var(--ur-glow-accent); animation: none; }
+/* Leaflet's own chrome in theme colours: no grey flash between tiles, a readable attribution */
+.leaflet-container { background: var(--ur-bg); }
+.leaflet-container .leaflet-control-attribution { background: var(--ur-glass); color: var(--ur-text-muted); }
+.leaflet-control-attribution a { color: var(--ur-accent-text); }
 .leaflet-marker-icon:focus-visible { outline: 2px solid var(--ur-focus-ring); outline-offset: 2px; border-radius: var(--radius-pill); }
 .ur-radius { stroke: var(--ur-text-muted); fill: var(--ur-text-muted); }
 .ur-me { display: block; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--ur-focus-ring); border: 3px solid var(--ur-bg); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ur-focus-ring) 25%, transparent); }

@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import { DivIcon, type LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed } from 'lucide-react';
 import { useMapStore } from '../../store/mapStore';
+import { useTrackUserLocation } from '../../hooks/useTrackUserLocation';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
-import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
 import type { Task } from '../../types/schema';
 import { formatPoints } from '../../utils/format';
 import { getTaskTypeInfo } from '../../utils/taskTypes';
@@ -15,7 +14,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Sheet } from '../../components/ui/Sheet';
 import { TaskTypeTag } from '../../components/ui/TaskTypeTag';
-import { getInitialCenter, getMarkerLabel, getMarkerState, type MarkerState } from './markers';
+import { getInitialCenter, getMarkerState, type MarkerState } from './markers';
+import { markerIcon } from './markerIcon';
 
 // Map controller component to handle center/zoom updates
 function MapController() {
@@ -40,38 +40,10 @@ const userIcon = new DivIcon({
 
 // User location marker component
 function UserLocationMarker() {
-  const { userLocation, setUserLocation, setTrackingLocation, focusOnUser } = useMapStore();
-  const watchIdRef = useRef<number | null>(null);
+  const userLocation = useMapStore((state) => state.userLocation);
+  const focusOnUser = useMapStore((state) => state.focusOnUser);
   const centredRef = useRef(false);
-
-  useEffect(() => {
-    // Get initial location
-    getCurrentLocation()
-      .then((location) => {
-        setUserLocation(location);
-      })
-      .catch((error) => {
-        console.error('Error getting location:', error);
-      });
-
-    // Start watching location
-    watchIdRef.current = watchLocation(
-      (location) => {
-        setUserLocation(location);
-      },
-      (error) => {
-        console.error('Location tracking error:', error);
-        setTrackingLocation(false);
-      }
-    );
-
-    return () => {
-      // Cleanup: stop watching location
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
-  }, []);
+  useTrackUserLocation();
 
   // Centre on the player once, when they are first located
   useEffect(() => {
@@ -86,17 +58,6 @@ function UserLocationMarker() {
   return (
     <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} title="Your location" keyboard={false} />
   );
-}
-
-function markerIcon(task: Task, state: MarkerState, selected: boolean) {
-  const { Icon } = getTaskTypeInfo(task.type);
-  const icon = renderToStaticMarkup(<Icon className="ur-marker__icon" aria-hidden="true" />);
-  return new DivIcon({
-    className: '',
-    html: `<span class="ur-marker ur-marker--${state}${selected ? ' ur-marker--selected' : ''}"><span class="ur-marker__shape"></span>${icon}</span>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 44],
-  });
 }
 
 // Task marker component
@@ -116,7 +77,6 @@ function TaskMarker({ task, state, selected }: TaskMarkerProps) {
       <Marker
         position={[task.coordinates.lat, task.coordinates.lng]}
         icon={markerIcon(task, state, selected)}
-        title={getMarkerLabel(task, state)}
         eventHandlers={{
           click: () => setSelectedMarkerId(task.id),
         }}

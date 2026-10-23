@@ -419,3 +419,24 @@ body {
 .theme-light {
   --blur-strength: 0px;
 }
+
+/* Map markers: state shows in shape and fill, not colour alone */
+.ur-marker { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--ur-bg); }
+.ur-marker__shape { position: absolute; inset: 3px; background: var(--ur-text); border-radius: 50% 50% 50% var(--radius-sm); transform: rotate(-45deg); }
+.ur-marker__icon { position: relative; width: 20px; height: 20px; }
+.ur-marker--in-range { color: var(--ur-on-progress); }
+.ur-marker--in-range .ur-marker__shape { background: var(--ur-progress); }
+.ur-marker--in-range::before { content: ""; position: absolute; inset: -8px; border: 2px solid var(--ur-progress); border-radius: var(--radius-pill); animation: ur-pulse var(--duration-pulse) ease-out infinite; }
+.ur-marker--done { color: var(--ur-progress-text); }
+.ur-marker--done .ur-marker__shape { background: var(--ur-surface); }
+.ur-marker--done::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--ur-progress); border-radius: var(--radius-pill); transform: scale(0.72); }
+.ur-marker--locked { color: var(--ur-text-faint); }
+.ur-marker--locked .ur-marker__shape { background: var(--ur-surface-raised); }
+.ur-marker--locked::after { content: ""; position: absolute; inset: 0; border: 2px dashed var(--ur-line-strong); border-radius: var(--radius-pill); transform: scale(0.72); }
+.ur-marker--selected { color: var(--ur-on-accent); }
+.ur-marker--selected .ur-marker__shape { background: var(--ur-accent); }
+.ur-marker--selected::before { content: ""; position: absolute; inset: -5px; border: 2px solid var(--ur-accent); border-radius: var(--radius-pill); box-shadow: var(--ur-glow-accent); animation: none; }
+.leaflet-marker-icon:focus-visible { outline: 2px solid var(--ur-focus-ring); outline-offset: 2px; border-radius: var(--radius-pill); }
+.ur-radius { stroke: var(--ur-text-muted); fill: var(--ur-text-muted); }
+.ur-me { display: block; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--ur-focus-ring); border: 3px solid var(--ur-bg); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ur-focus-ring) 25%, transparent); }
+@keyframes ur-pulse { from { transform: scale(0.8); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }

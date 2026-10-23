@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Lightbulb, X } from 'lucide-react';
+import { showCharCounter } from '../../utils/messages';
 
 interface QuizInputProps {
   question: string;
@@ -242,9 +243,11 @@ export const QuizInput: React.FC<QuizInputProps> = ({
                         <span className="text-cyan-300">✓ Answer ready to submit</span>
                       )}
                     </p>
-                    <p className={`text-sm ${remainingChars < 50 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                      {remainingChars} characters remaining
-                    </p>
+                    {showCharCounter(remainingChars) && (
+                      <p className="text-sm text-yellow-400">
+                        {remainingChars} characters remaining
+                      </p>
+                    )}
                   </div>
                 )}
 

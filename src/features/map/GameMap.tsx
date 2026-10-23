@@ -94,7 +94,7 @@ function UserLocationMarker() {
         <Popup>
           <div className="text-center">
             <p className="font-semibold">Your Location</p>
-            <p className="text-xs text-gray-600">
+            <p className="text-[13px] text-gray-600">
               {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
             </p>
           </div>
@@ -181,7 +181,7 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold text-blue-600">{formatPoints(task.points)}</span>
               {isCompleted && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
+                <span className="text-[13px] bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
                   ✓ Completed
                 </span>
               )}

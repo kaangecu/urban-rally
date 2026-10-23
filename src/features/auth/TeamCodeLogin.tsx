@@ -14,7 +14,8 @@ import {
   Shield, 
   FileText,
   Sparkles,
-  Trophy
+  Trophy,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { getTeamByAccessCode, linkTeamToUser, updateTeamProfile } from '../../services/team.service';
@@ -460,7 +461,7 @@ export function TeamCodeLogin() {
                           <Check className="w-4 h-4 mr-1" /> Valid email
                         </motion.p>
                       )}
-                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-2 text-[13px] text-gray-500 dark:text-gray-400">
                         You can skip this step if you prefer
                       </p>
                     </div>
@@ -549,8 +550,9 @@ export function TeamCodeLogin() {
 
                       {/* GDPR Notice */}
                       <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-xs text-green-800 dark:text-green-200">
-                          <strong>🇪🇺 GDPR Notice:</strong> Your data is processed in accordance with 
+                        <p className="text-[13px] text-green-800 dark:text-green-200">
+                          <ShieldCheck className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+                          <strong>GDPR Notice:</strong> Your data is processed in accordance with 
                           German and EU data protection laws. You can withdraw consent or request 
                           data deletion at any time by contacting privacy@urbanrally.app
                         </p>

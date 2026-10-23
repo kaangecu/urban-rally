@@ -3,6 +3,7 @@ import type { Task } from '../../types/schema';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { isCyberpunkTheme } from '../../utils/theme';
+import { getTaskTypeInfo } from '../../utils/taskTypes';
 
 interface TaskCardProps {
   task: Task;
@@ -15,25 +16,6 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
   const [imageError, setImageError] = useState(false);
   
   const useCyberpunk = tenant ? isCyberpunkTheme(tenant) : false;
-
-  const getTypeIcon = (type: Task['type']) => {
-    switch (type) {
-      case 'GPS_LOCATION':
-        return '📍';
-      case 'PHOTO':
-        return '📸';
-      case 'VIDEO':
-        return '🎥';
-      case 'QUIZ':
-        return '❓';
-      case 'QR_CODE':
-        return '📱';
-      case 'SPONSORED':
-        return '⭐';
-      default:
-        return '✨';
-    }
-  };
 
   const getDifficultyColor = (difficulty?: 'easy' | 'medium' | 'hard') => {
     if (useCyberpunk) {
@@ -63,9 +45,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
     }
   };
 
-  const getTypeLabel = (type: Task['type']) => {
-    return type.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
+  const { label: typeLabel, Icon: TypeIcon } = getTaskTypeInfo(task.type);
 
   return (
     <div
@@ -106,7 +86,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
             ? 'glass-frosted-dark border-b border-white/10'
             : 'bg-gradient-to-br from-blue-100 to-indigo-100'
         }`}>
-          <span className="text-6xl">{getTypeIcon(task.type)}</span>
+          <TypeIcon className="w-16 h-16" aria-hidden="true" />
           {isCompleted && (
             <div className={`absolute top-2 right-2 px-3 py-1 rounded-full font-semibold text-sm flex items-center gap-1 ${
               useCyberpunk
@@ -141,25 +121,25 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
         {/* Task Metadata */}
         <div className="flex flex-wrap gap-2 mb-3">
           {/* Type Badge */}
-          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded ${
+          <span className={`inline-flex items-center gap-1 px-2 py-1 text-[13px] font-semibold rounded ${
             useCyberpunk
               ? 'glass-frosted neon-border-pink text-pink-300'
               : 'bg-blue-100 text-blue-800'
           }`}>
-            {getTypeIcon(task.type)}
-            {getTypeLabel(task.type)}
+            <TypeIcon className="w-3.5 h-3.5" aria-hidden="true" />
+            {typeLabel}
           </span>
 
           {/* Difficulty Badge */}
           {task.difficulty && (
-            <span className={`px-2 py-1 text-xs font-semibold rounded ${getDifficultyColor(task.difficulty)}`}>
+            <span className={`px-2 py-1 text-[13px] font-semibold rounded ${getDifficultyColor(task.difficulty)}`}>
               {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
             </span>
           )}
 
           {/* Sponsored Badge */}
           {task.sponsorName && (
-            <span className={`px-2 py-1 text-xs font-semibold rounded ${
+            <span className={`px-2 py-1 text-[13px] font-semibold rounded ${
               useCyberpunk
                 ? 'glass-frosted border border-yellow-500/50 text-yellow-300'
                 : 'bg-purple-100 text-purple-800'

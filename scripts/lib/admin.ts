@@ -14,6 +14,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { createInterface } from 'readline/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
@@ -29,6 +30,22 @@ if (!projectId) {
 }
 
 const usingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+
+// Writing to the real project needs a person at a terminal typing the project
+// ID. Agents run without a TTY, so they can only seed the emulator.
+if (!usingEmulator) {
+  if (!process.stdin.isTTY) {
+    console.error('❌ Refusing to write to the real Firebase project without an interactive terminal. Use the emulator.');
+    process.exit(1);
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(`⚠️  This writes to the REAL project. Type "${projectId}" to continue: `);
+  rl.close();
+  if (answer.trim() !== projectId) {
+    console.error('❌ Cancelled.');
+    process.exit(1);
+  }
+}
 
 const app = initializeApp(
   usingEmulator ? { projectId } : { projectId, credential: applicationDefault() }

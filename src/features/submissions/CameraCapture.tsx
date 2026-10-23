@@ -18,9 +18,11 @@ async function getCameraPermission(): Promise<CameraPermission> {
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
   onCancel: () => void;
+  /** What to photograph, shown above the viewfinder */
+  brief?: string;
 }
 
-export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) => {
+export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel, brief }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -200,30 +202,26 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   }, [facingMode, permissionRequested]);
 
   return (
-    <div 
-      className="fixed inset-0 bg-black z-[120] flex flex-col h-screen"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm flex-shrink-0">
+    // The camera is always dark, whatever the app theme
+    <div data-theme="night" className="fixed inset-0 bg-black text-text z-[120] flex flex-col h-screen">
+      <div className="ur-glass flex items-center gap-3 p-3 flex-shrink-0">
         <button
+          type="button"
           onClick={handleCancel}
-          className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 
-                   transition-all touch-manipulation"
-          style={{ minWidth: '44px', minHeight: '44px' }}
           aria-label="Cancel"
+          className="grid place-items-center size-touch shrink-0 rounded-pill text-text focus-visible:outline-2 focus-visible:outline-focus-ring"
         >
-          <X className="w-6 h-6 text-white" />
+          <X className="size-6" aria-hidden="true" />
         </button>
-        
-        {!capturedImage && permissionRequested && !error && (
+        <p className="flex-1 min-w-0 font-display font-semibold line-clamp-2">{brief}</p>
+        {!capturedImage && permissionRequested && !error && !blocked && (
           <button
+            type="button"
             onClick={toggleCamera}
-            className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 
-                     transition-all touch-manipulation"
-            style={{ minWidth: '44px', minHeight: '44px' }}
             aria-label="Flip camera"
+            className="grid place-items-center size-touch shrink-0 rounded-pill text-text focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
-            <RotateCw className="w-6 h-6 text-white" />
+            <RotateCw className="size-6" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -281,7 +279,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
         ) : capturedImage ? (
           <img 
             src={capturedImage} 
-            alt="Captured" 
+            alt="Your photo" 
             className="w-full h-full object-contain"
           />
         ) : (
@@ -303,73 +301,36 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* Controls - Fixed at bottom, always visible */}
-      <div className="p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent backdrop-blur-sm flex-shrink-0 safe-area-bottom">
-        {!permissionRequested || blocked ? (
-          <button
-            onClick={handleCancel}
-            className="w-full py-4 px-6 border border-white/20 text-white 
-                     hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                     transition-all font-semibold touch-manipulation"
-            style={{ minHeight: '48px' }}
-          >
-            Cancel
-          </button>
-        ) : capturedImage ? (
-          <div className="flex gap-3 sm:gap-4">
-            <button
-              onClick={retakePhoto}
-              className="flex-1 py-4 px-6 border border-white/20 text-white 
-                       hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                       transition-all font-semibold touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              Retake
-            </button>
-            <button
-              onClick={confirmPhoto}
-              className="group relative flex-1 overflow-hidden rounded-lg font-bold py-4 px-6 touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              {/* Gradient Background Layers */}
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 
-                            group-hover:from-green-500 group-hover:to-emerald-500 
-                            transition-all duration-300" />
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 
-                            blur-xl opacity-50 group-hover:opacity-70 
-                            transition-opacity duration-300" />
-              
-              {/* Button Content */}
-              <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider">
-                <Check className="w-5 h-5" />
-                Use Photo
-              </span>
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={capturePhoto}
-            disabled={isLoading || !!error}
-            className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
-                     disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-            style={{ minHeight: '56px' }}
-          >
-            {/* Gradient Background Layers */}
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 
-                          group-hover:from-cyan-500 group-hover:to-blue-500 
-                          transition-all duration-300 group-disabled:from-gray-700 group-disabled:to-gray-600" />
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 
-                          blur-xl opacity-50 group-hover:opacity-70 
-                          transition-opacity duration-300 group-disabled:opacity-0" />
-            
-            {/* Button Content */}
-            <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider text-base sm:text-lg">
-              <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
-              Take Photo
-            </span>
-          </button>
-        )}
-      </div>
+      {/* Controls on dark glass; hidden while an error is shown */}
+      {!error && !checkingPermission && (
+        <div className="ur-glass p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] flex-shrink-0">
+          {!permissionRequested || blocked ? (
+            <Button variant="secondary" block onClick={handleCancel}>
+              Cancel
+            </Button>
+          ) : capturedImage ? (
+            <div className="flex gap-3">
+              <Button variant="secondary" block onClick={retakePhoto}>
+                Retake
+              </Button>
+              <Button block onClick={confirmPhoto}>
+                <Check className="size-5" aria-hidden="true" />
+                Use photo
+              </Button>
+            </div>
+          ) : (
+            <div className="grid place-items-center">
+              <button
+                type="button"
+                onClick={capturePhoto}
+                disabled={isLoading}
+                aria-label="Take photo"
+                className="ur-shutter disabled:opacity-50"
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

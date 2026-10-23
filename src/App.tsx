@@ -7,6 +7,7 @@ import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
 import { BottomNav } from './components/navigation/BottomNav';
 import { applyTheme, isCyberpunkTheme } from './utils/theme';
+import { LogOut } from 'lucide-react';
 
 function App() {
   const { isAuthenticated, team, tenant, logout } = useAuthStore();
@@ -70,7 +71,8 @@ function App() {
                 }`}
                 title="Logout"
               >
-                🚪 Logout
+                <LogOut className="inline w-4 h-4 mr-1" aria-hidden="true" />
+                Logout
               </button>
             </div>
           </div>

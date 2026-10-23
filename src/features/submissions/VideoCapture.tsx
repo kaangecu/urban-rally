@@ -547,7 +547,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             </button>
             
             {!isRecording && permissionRequested && (
-              <p className="text-center text-gray-400 text-xs sm:text-sm">
+              <p className="text-center text-gray-400 text-[13px] sm:text-sm">
                 Maximum duration: {maxDuration} seconds
               </p>
             )}

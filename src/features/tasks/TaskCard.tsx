@@ -86,7 +86,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
             ? 'glass-frosted-dark border-b border-white/10'
             : 'bg-gradient-to-br from-blue-100 to-indigo-100'
         }`}>
-          <TypeIcon className="w-16 h-16" aria-hidden="true" />
+          <TypeIcon className={`w-16 h-16 ${useCyberpunk ? 'text-pink-300' : 'text-blue-600'}`} aria-hidden="true" />
           {isCompleted && (
             <div className={`absolute top-2 right-2 px-3 py-1 rounded-full font-semibold text-sm flex items-center gap-1 ${
               useCyberpunk

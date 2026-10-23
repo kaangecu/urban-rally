@@ -20,7 +20,9 @@ type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
   const { team, tenant } = useAuthStore();
-  const { Icon: TypeIcon } = getTaskTypeInfo(task.type);
+  const { label: typeLabel, Icon: TypeIcon } = getTaskTypeInfo(task.type);
+  // Types without a capture screen yet get a named but disabled button
+  const canCapture = ['PHOTO', 'VIDEO', 'QUIZ', 'GPS', 'GPS_LOCATION'].includes(task.type);
   const [state, setState] = useState<SubmissionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -436,7 +438,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           {/* Primary Action Button */}
           <button
             onClick={startCapture}
-            disabled={task.type === 'GPS' && distanceFromTask !== null}
+            disabled={!canCapture || (task.type === 'GPS' && distanceFromTask !== null)}
             className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
                      disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             style={{ minHeight: '56px' }}
@@ -456,6 +458,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
               {task.type === 'VIDEO' && 'Record Video'}
               {task.type === 'QUIZ' && 'Answer Quiz'}
               {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && 'Take Photo at Location'}
+              {!canCapture && typeLabel}
             </span>
           </button>
 

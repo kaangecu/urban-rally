@@ -33,6 +33,14 @@ describe('TaskList states', () => {
     expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
   });
 
+  it('shows the error, not the empty state, when the load fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    loadTasks.mockRejectedValue(new Error('offline'));
+    render(<TaskList />);
+    expect(await screen.findByText("Tasks didn't load")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'No tasks yet' })).not.toBeInTheDocument();
+  });
+
   it('shows the empty state and hides progress when there are no tasks', async () => {
     loadTasks.mockResolvedValue([]);
     render(<TaskList />);

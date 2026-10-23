@@ -65,4 +65,30 @@ describe('Sheet', () => {
     await userEvent.click(screen.getByTestId('sheet-backdrop'));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('keeps the trap and Escape working after a tap on non-focusable sheet content', async () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open terms' }));
+    const dialog = screen.getByRole('dialog');
+
+    await userEvent.click(screen.getByText('Rules of the game'));
+    await userEvent.tab();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    await userEvent.click(screen.getByText('Rules of the game'));
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('locks page scroll while open and restores it on close', async () => {
+    document.body.style.overflow = 'auto';
+    render(<Harness />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open terms' }));
+    expect(document.body.style.overflow).toBe('hidden');
+
+    await userEvent.keyboard('{Escape}');
+    expect(document.body.style.overflow).toBe('auto');
+    document.body.style.overflow = '';
+  });
 });

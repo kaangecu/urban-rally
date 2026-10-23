@@ -6,11 +6,22 @@ import type { Task } from '../../types/schema';
 import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { ScoreReadout } from '../../components/ui/ScoreReadout';
+import { TaskNotice } from './TaskNotice';
 import { TaskDetail } from './TaskDetail';
 
+// onSent: the submission landed (also after the player left); onSuccess: close this capture
 vi.mock('../submissions/TaskSubmission', () => ({
-  TaskSubmission: ({ onSuccess }: { onSuccess: (points: number) => void }) => (
-    <button type="button" onClick={() => onSuccess(150)}>Finish upload</button>
+  TaskSubmission: ({ onSent, onSuccess, onSendFailed }: {
+    onSent: (points: number | null) => void;
+    onSuccess: () => void;
+    onSendFailed: () => void;
+  }) => (
+    <>
+      <button type="button" onClick={() => { onSent(150); onSuccess(); }}>Finish upload</button>
+      <button type="button" onClick={() => onSent(150)}>Earlier upload lands</button>
+      <button type="button" onClick={() => { onSent(null); onSuccess(); }}>Teammate was first</button>
+      <button type="button" onClick={() => onSendFailed()}>Upload fails after leaving</button>
+    </>
   ),
 }));
 
@@ -49,6 +60,52 @@ describe('Task done', () => {
   });
 });
 
+describe('Task done, review fixes', () => {
+  it('does not close the capture that is open when an earlier upload lands', async () => {
+    render(<TaskDetail />);
+    await userEvent.click(screen.getByRole('button', { name: 'Take photo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Earlier upload lands' }));
+
+    expect(screen.getByRole('button', { name: 'Finish upload' })).toBeInTheDocument();
+    expect(useAuthStore.getState().team!.score).toBe(250);
+  });
+
+  it('says the task is already done, without "+0 pts", when a teammate got there first', async () => {
+    render(<TaskDetail />);
+    await userEvent.click(screen.getByRole('button', { name: 'Take photo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Teammate was first' }));
+
+    expect(useTaskStore.getState().notice).toBe('Your team already did this task.');
+    expect(useAuthStore.getState().team!.completedTaskIds).toContain('gate');
+    expect(useAuthStore.getState().team!.score).toBe(100);
+  });
+
+  it('tells the player when an upload they left fails', async () => {
+    render(<TaskDetail />);
+    await userEvent.click(screen.getByRole('button', { name: 'Take photo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Upload fails after leaving' }));
+
+    expect(useTaskStore.getState().notice).toBe("“Gate” wasn't sent. Open it and try again.");
+    expect(useTaskStore.getState().noticeTone).toBe('danger');
+  });
+});
+
+describe('TaskNotice', () => {
+  it('shows the notice wherever the player is and can be dismissed', async () => {
+    useTaskStore.getState().setNotice('Sent! +150 pts.');
+    render(<TaskNotice />);
+    expect(screen.getByRole('status')).toHaveTextContent('Sent! +150 pts.');
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(useTaskStore.getState().notice).toBeNull();
+  });
+
+  it('is cleared on logout, so the next team never sees it', () => {
+    useTaskStore.getState().setNotice('Sent! +150 pts.');
+    useAuthStore.getState().logout();
+    expect(useTaskStore.getState().notice).toBeNull();
+  });
+});
+
 describe('ScoreReadout delta', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -58,5 +115,14 @@ describe('ScoreReadout delta', () => {
     act(() => rerender(<ScoreReadout score={250} />));
     expect(screen.getByText('250')).toBeInTheDocument();
     expect(screen.getByText('+150 pts')).toBeInTheDocument();
+  });
+
+  it('drops the delta when the score goes down before it hides', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+    const { rerender } = render(<ScoreReadout score={100} />);
+    act(() => rerender(<ScoreReadout score={250} />));
+    act(() => rerender(<ScoreReadout score={200} />));
+    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.queryByText(/\+150 pts/)).not.toBeInTheDocument();
   });
 });

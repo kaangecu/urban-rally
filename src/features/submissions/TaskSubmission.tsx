@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import type { Task } from '../../types/schema';
@@ -15,7 +15,8 @@ import { MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
   task: Task;
-  onSuccess: () => void;
+  /** Called with the points earned once the submission is saved, even if the player left the screen */
+  onSuccess: (points: number) => void;
   onCancel: () => void;
 }
 
@@ -32,11 +33,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   
   // The captured file stays in memory so Try again resends it without a new photo
   const [lastFile, setLastFile] = useState<{ kind: 'photo' | 'video'; file: File } | null>(null);
-  // Set when the player leaves during an upload; the upload carries on without them
-  const leftRef = useRef(false);
-  const finish = () => {
-    if (!leftRef.current) onSuccess();
-  };
+  const finish = (points: number) => onSuccess(points);
 
   // Quiz attempt tracking (Phase 1)
   const [quizAttempts, setQuizAttempts] = useState<number>(0);
@@ -114,7 +111,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        finish();
+        finish(task.points);
       }, 1500);
     } catch (err) {
       console.error('Error submitting photo:', err);
@@ -124,7 +121,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(0);
         }, 2000);
         return;
       }
@@ -168,7 +165,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        finish();
+        finish(task.points);
       }, 1500);
     } catch (err) {
       console.error('Error submitting video:', err);
@@ -178,7 +175,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(0);
         }, 2000);
         return;
       }
@@ -274,7 +271,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       }
       
       setTimeout(() => {
-        finish();
+        finish(pointsAwarded);
       }, 1500);
     } catch (err) {
       console.error('Error submitting quiz:', err);
@@ -284,7 +281,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(0);
         }, 2000);
         return;
       }
@@ -424,10 +421,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             <Button
               variant="secondary"
               block
-              onClick={() => {
-                leftRef.current = true;
-                onCancel();
-              }}
+              onClick={onCancel}
             >
               Keep playing
             </Button>

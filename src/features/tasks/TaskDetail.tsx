@@ -28,7 +28,8 @@ function Requirement({ Icon, children }: { Icon: LucideIcon; children: string })
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask } = useTaskStore();
-  const { team } = useAuthStore();
+  const { team, recordCompletion } = useAuthStore();
+  const setNotice = useTaskStore((state) => state.setNotice);
   const userLocation = useMapStore((state) => state.userLocation);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tooFarId = useId();
@@ -152,11 +153,12 @@ export function TaskDetail() {
       {isSubmitting && !isCompleted && (
         <TaskSubmission
           task={task}
-          onSuccess={() => {
+          onSuccess={(points) => {
+            recordCompletion(task.id, points);
+            setNotice(`Sent! ${formatPoints(points, { signed: true })}. Organisers can still reject it.`);
             setIsSubmitting(false);
-            setSelectedTask(null);
-            // Refresh team data to show updated score
-            window.location.reload();
+            // Only close if the player is still on this task
+            if (useTaskStore.getState().selectedTask?.id === task.id) setSelectedTask(null);
           }}
           onCancel={() => setIsSubmitting(false)}
         />

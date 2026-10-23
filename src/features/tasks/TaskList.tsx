@@ -9,6 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { Toast } from '../../components/ui/Toast';
 import { TaskCard } from './TaskCard';
 import { ClipboardList } from 'lucide-react';
 
@@ -24,6 +25,8 @@ export function TaskList() {
     setLoading, 
     setError,
     setFilter,
+    notice,
+    setNotice,
   } = useTaskStore();
   const userLocation = useMapStore((state) => state.userLocation);
 
@@ -80,6 +83,8 @@ export function TaskList() {
 
   return (
     <div className="flex flex-col gap-4">
+      {notice && <Toast message={notice} onDismiss={() => setNotice(null)} />}
+
       {ready && stats && stats.total > 0 && (
         <ProgressBar
           label="Progress"

@@ -9,6 +9,8 @@ interface TaskState {
   error: string | null;
   filter: 'all' | 'available' | 'completed';
   sortBy: 'points' | 'distance' | 'difficulty';
+  /** Short confirmation shown on the list, e.g. after a task is sent */
+  notice: string | null;
 
   // Actions
   setTasks: (tasks: Task[]) => void;
@@ -18,6 +20,7 @@ interface TaskState {
   setFilter: (filter: 'all' | 'available' | 'completed') => void;
   setSortBy: (sortBy: 'points' | 'distance' | 'difficulty') => void;
   clearTasks: () => void;
+  setNotice: (notice: string | null) => void;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
@@ -29,6 +32,7 @@ export const useTaskStore = create<TaskState>((set) => ({
   error: null,
   filter: 'available',
   sortBy: 'points',
+  notice: null,
 
   // Actions
   setTasks: (tasks) =>
@@ -63,6 +67,8 @@ export const useTaskStore = create<TaskState>((set) => ({
     set({
       sortBy,
     }),
+
+  setNotice: (notice) => set({ notice }),
 
   clearTasks: () =>
     set({

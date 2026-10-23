@@ -163,13 +163,20 @@ export function TaskDetail() {
       {isSubmitting && !isCompleted && (
         <TaskSubmission
           task={task}
-          onSuccess={(points) => {
-            recordCompletion(task.id, points);
-            setNotice(`Sent! ${formatPoints(points, { signed: true })}. Organisers can still reject it.`);
+          onSent={(points) => {
+            recordCompletion(task.id, points ?? 0);
+            setNotice(
+              points === null
+                ? 'Your team already did this task.'
+                : `Sent! ${formatPoints(points, { signed: true })}. Organisers can still reject it.`
+            );
+          }}
+          // Only reached while this capture is still open, so it never closes another task's
+          onSuccess={() => {
             setIsSubmitting(false);
-            // Only close if the player is still on this task
             if (useTaskStore.getState().selectedTask?.id === task.id) setSelectedTask(null);
           }}
+          onSendFailed={() => setNotice(`“${task.title}” wasn't sent. Open it and try again.`, 'danger')}
           onCancel={() => setIsSubmitting(false)}
         />
       )}

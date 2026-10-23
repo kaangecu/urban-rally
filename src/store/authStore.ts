@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Team, Tenant } from '../types/schema';
+import { useTaskStore } from './taskStore';
 
 interface AuthState {
   // State
@@ -65,14 +66,17 @@ export const useAuthStore = create<AuthState>()(
           };
         }),
 
-      logout: () =>
+      logout: () => {
+        // The next team on this phone starts clean: no tasks, quiz attempts or notices from this one
+        useTaskStore.getState().clearTasks();
         set({
           team: null,
           tenant: null,
           isAuthenticated: false,
           error: null,
           isLoading: false,
-        }),
+        });
+      },
     }),
     {
       name: 'urban-rally-auth', // Storage key

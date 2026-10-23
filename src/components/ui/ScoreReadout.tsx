@@ -19,6 +19,7 @@ export function ScoreReadout({ score }: { score: number }) {
     previous.current = score;
     if (score <= from) {
       setShown(score);
+      setDelta(null);
       return;
     }
     setDelta(score - from);

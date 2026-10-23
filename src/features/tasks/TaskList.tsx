@@ -10,7 +10,6 @@ import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { Toast } from '../../components/ui/Toast';
 import { TaskCard } from './TaskCard';
 import { ClipboardList } from 'lucide-react';
 
@@ -26,8 +25,6 @@ export function TaskList() {
     setLoading, 
     setError,
     setFilter,
-    notice,
-    setNotice,
   } = useTaskStore();
   const userLocation = useMapStore((state) => state.userLocation);
   useTrackUserLocation();
@@ -85,11 +82,6 @@ export function TaskList() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Always mounted so the confirmation is announced; empty and out of the layout until there is one */}
-      <div className={notice ? undefined : 'absolute'}>
-        <Toast message={notice} onDismiss={() => setNotice(null)} />
-      </div>
-
       {ready && stats && stats.total > 0 && (
         <ProgressBar
           label="Progress"

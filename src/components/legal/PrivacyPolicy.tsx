@@ -4,6 +4,7 @@
  */
 
 import type { LegalLang } from './language';
+import { formatLegalDate } from './language';
 import { LegalSections, type LegalSection } from './LegalSections';
 
 interface PolicyText {
@@ -313,7 +314,7 @@ export function PrivacyPolicy({ lang }: { lang: LegalLang }) {
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">{t.title}</h1>
 
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        {t.updated}: {new Date().toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB')}
+        {t.updated}: {formatLegalDate(lang)}
         <br />
         Version: 1.0
       </p>

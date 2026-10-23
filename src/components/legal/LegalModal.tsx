@@ -81,18 +81,18 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between gap-2 p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 lang={lang} className="min-w-0 break-words hyphens-auto text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {title[lang]}
                 </h2>
-                <div className="ml-auto mr-2 flex rounded-full border border-gray-300 dark:border-gray-600 overflow-hidden">
+                <div className="ml-auto flex shrink-0 rounded-full border border-gray-300 dark:border-gray-600 overflow-hidden">
                   {LANGS.map((l) => (
                     <button
                       key={l}
                       type="button"
                       onClick={() => switchLang(l)}
                       aria-pressed={lang === l}
-                      className={`px-3 text-sm font-semibold ${
+                      className={`min-h-11 min-w-11 px-3 text-sm font-semibold ${
                         lang === l
                           ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                           : 'text-gray-700 dark:text-gray-300'
@@ -103,8 +103,9 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
                   ))}
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="shrink-0 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   aria-label={lang === 'de' ? 'Schließen' : 'Close'}
                 >
                   <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />

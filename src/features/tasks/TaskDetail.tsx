@@ -6,7 +6,7 @@ import { useMapStore } from '../../store/mapStore';
 import { TaskSubmission } from '../submissions/TaskSubmission';
 import { formatPoints } from '../../utils/format';
 import { calculateDistance, formatDistance } from '../../utils/geo.utils';
-import { getTaskAction, getTaskTypeInfo } from '../../utils/taskTypes';
+import { canCaptureTask, getTaskAction, getTaskTypeInfo } from '../../utils/taskTypes';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DifficultyMeter } from '../../components/ui/DifficultyMeter';
@@ -51,7 +51,7 @@ export function TaskDetail() {
               Close
             </Button>
           ) : (
-            <Button block size="lg" onClick={() => setIsSubmitting(true)}>
+            <Button block size="lg" disabled={!canCaptureTask(task.type)} onClick={() => setIsSubmitting(true)}>
               <Icon className="size-5" aria-hidden="true" />
               {getTaskAction(task.type)}
             </Button>

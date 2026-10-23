@@ -8,7 +8,7 @@ import { Alert } from '../../components/ui/Alert';
 import { TaskSubmission } from '../submissions/TaskSubmission';
 import { formatPoints } from '../../utils/format';
 import { calculateDistance, formatDistance } from '../../utils/geo.utils';
-import { getTaskAction, getTaskTypeInfo } from '../../utils/taskTypes';
+import { canCaptureTask, getTaskAction, getTaskTypeInfo } from '../../utils/taskTypes';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DifficultyMeter } from '../../components/ui/DifficultyMeter';
@@ -27,7 +27,7 @@ function Requirement({ Icon, children }: { Icon: LucideIcon; children: string })
 }
 
 export function TaskDetail() {
-  const { selectedTask, setSelectedTask } = useTaskStore();
+  const { selectedTask, setSelectedTask, uploadingTaskId } = useTaskStore();
   const { team } = useAuthStore();
   const userLocation = useMapStore((state) => state.userLocation);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +48,7 @@ export function TaskDetail() {
   // Only block when even the most generous reading of the fix is out of range; the server re-checks anyway
   const tooFar = isCheckIn && distance !== null && distance - watched.accuracy > radius;
   const close = () => setSelectedTask(null);
+  const sending = uploadingTaskId === task.id;
 
   return (
     <>
@@ -64,12 +65,18 @@ export function TaskDetail() {
             <Button
               block
               size="lg"
-              disabled={tooFar}
+              disabled={sending || tooFar || !canCaptureTask(task.type)}
               aria-describedby={tooFar ? tooFarId : undefined}
               onClick={() => setIsSubmitting(true)}
             >
-              <Icon className="size-5" aria-hidden="true" />
-              {getTaskAction(task.type)}
+              {sending ? (
+                'Sending…'
+              ) : (
+                <>
+                  <Icon className="size-5" aria-hidden="true" />
+                  {getTaskAction(task.type)}
+                </>
+              )}
             </Button>
           )
         }

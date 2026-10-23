@@ -8,6 +8,11 @@
       "Bash(npm run deploy*)",
       "Bash(npm run migrate*)",
       "Bash(npx tsx scripts/migrate-database.ts *)",
+      "Bash(npm run setup-*)",
+      "Bash(npm run add-*)",
+      "Bash(npx tsx scripts/*)",
+      "Bash(tsx scripts/*)",
+      "Bash(*scripts/setup-testing.sh*)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "Bash(git push * --force*)",
@@ -38,7 +43,32 @@
       "Bash(gh api *)"
     ]
   },
+  "outputStyle": "Learning",
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail",
+        "ref": "v5.3.2"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",

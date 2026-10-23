@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Inside Claude Code (CLAUDECODE=1), print failures only to save tokens
+    ...(process.env.CLAUDECODE && { reporters: ['dot'], silent: 'passed-only' as const }),
     // TEMPORARY: no unit tests exist yet. Remove once the new tests-first suite lands.
     passWithNoTests: true,
     coverage: {

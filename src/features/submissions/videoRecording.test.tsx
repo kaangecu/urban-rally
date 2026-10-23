@@ -5,7 +5,7 @@ import { formatClock } from '../../utils/format';
 import { VideoCapture } from './VideoCapture';
 
 const stop = vi.fn();
-let recorder: FakeRecorder | null = null;
+const recorders: FakeRecorder[] = [];
 
 class FakeRecorder {
   static supported = ['video/webm;codecs=vp8,opus'];
@@ -15,7 +15,7 @@ class FakeRecorder {
   options: MediaRecorderOptions | undefined;
   constructor(_stream: unknown, options?: MediaRecorderOptions) {
     this.options = options;
-    recorder = this;
+    recorders.push(this);
   }
   state = 'inactive';
   ondataavailable: ((event: { data: Blob }) => void) | null = null;
@@ -43,7 +43,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   stop.mockReset();
-  recorder = null;
+  recorders.length = 0;
   FakeRecorder.supported = ['video/webm;codecs=vp8,opus'];
 });
 
@@ -55,9 +55,9 @@ async function openCamera() {
 // Records a clip and lets the recorder finish, as a browser would after stop()
 async function recordClip(type = 'video/webm') {
   fireEvent.click(screen.getByRole('button', { name: 'Record video' }));
-  recorder!.ondataavailable?.({ data: new Blob(['clip'], { type }) });
+  recorders.at(-1)!.ondataavailable?.({ data: new Blob(['clip'], { type }) });
   fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
-  act(() => recorder!.onstop?.());
+  act(() => recorders.at(-1)!.onstop?.());
   act(() => vi.advanceTimersByTime(100));
 }
 
@@ -126,7 +126,7 @@ describe('VideoCapture recording', () => {
     await openCamera();
     await recordClip('video/mp4');
 
-    expect(recorder!.options?.mimeType).toBe('video/mp4');
+    expect(recorders.at(-1)!.options?.mimeType).toBe('video/mp4');
     fireEvent.click(screen.getByRole('button', { name: 'Use video' }));
     const file: File = onCapture.mock.calls[0][0];
     expect(file.type).toBe('video/mp4');

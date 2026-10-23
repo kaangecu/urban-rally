@@ -8,6 +8,7 @@ import { QuizInput } from './QuizInput';
 import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
+import { useTaskStore } from '../../store/taskStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
 import { formatPoints } from '../../utils/format';
 import { submissionFailed } from '../../utils/messages';
@@ -34,11 +35,18 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   
   // The captured file stays in memory so Try again resends it without a new photo
   const [lastFile, setLastFile] = useState<{ kind: 'photo' | 'video'; file: File } | null>(null);
-  // Set when the player leaves during an upload; the upload carries on without them
+  // Set when the player leaves during an upload, by Keep playing or any unmount; the upload carries on without them
   const leftRef = useRef(false);
+  useEffect(() => {
+    leftRef.current = false;
+    return () => {
+      leftRef.current = true;
+    };
+  }, []);
   const finish = () => {
     if (!leftRef.current) onSuccess();
   };
+  const setUploadingTaskId = useTaskStore((s) => s.setUploadingTaskId);
 
   // Quiz attempt tracking (Phase 1)
   const [quizAttempts, setQuizAttempts] = useState<number>(0);
@@ -94,6 +102,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setUploadProgress(0);
     setState('uploading');
     setError(null);
+    setUploadingTaskId(task.id);
 
     try {
       // Upload photo
@@ -135,6 +144,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       setError(submissionFailed('photo'));
       setState('error');
+    } finally {
+      setUploadingTaskId(null);
     }
   };
 
@@ -148,6 +159,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setUploadProgress(0);
     setState('uploading');
     setError(null);
+    setUploadingTaskId(task.id);
 
     try {
       // Upload video
@@ -189,6 +201,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       setError(submissionFailed('video'));
       setState('error');
+    } finally {
+      setUploadingTaskId(null);
     }
   };
 
@@ -411,7 +425,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
           <div>
             <p className="font-bold text-red-300">
-              {lastFile ? `Your ${lastFile.kind} is still on your phone` : 'Not sent'}
+              {lastFile ? 'Not sent yet. Keep this screen open and try again.' : 'Not sent'}
             </p>
             <p className="text-sm text-red-200 mt-1">{error}</p>
           </div>

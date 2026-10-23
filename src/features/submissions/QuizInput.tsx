@@ -1,309 +1,200 @@
-import React, { useState } from 'react';
-import { Check, Lightbulb, X } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { Check, Lightbulb, XCircle } from 'lucide-react';
 import { showCharCounter } from '../../utils/messages';
+import { Button } from '../../components/ui/Button';
+import { Sheet } from '../../components/ui/Sheet';
 
 interface QuizInputProps {
   question: string;
   type?: 'text' | 'multiple-choice' | 'number';
   options?: string[]; // For multiple choice
+  /** The task's own hint, shown after a miss */
   hint?: string;
   onSubmit: (answer: string | number) => void;
   onCancel: () => void;
   maxLength?: number;
-  // Phase 3: Attempt tracking
-  currentAttempt?: number; // Current attempt number (1-based)
-  maxAttempts?: number; // Maximum allowed attempts
-  progressiveHints?: string[]; // Array of hints to show based on attempt
+  attemptsLeft?: number;
+  /** Every answer that was wrong so far, oldest first */
+  wrongAnswers?: (string | number)[];
+  /** All attempts used */
+  failed?: boolean;
 }
 
-export const QuizInput: React.FC<QuizInputProps> = ({ 
+const KEYS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+// Checking stays on the phone for now; the Stage 2 functions move it to the server
+export const QuizInput: React.FC<QuizInputProps> = ({
   question,
   type = 'text',
   options = [],
   hint,
-  onSubmit, 
+  onSubmit,
   onCancel,
   maxLength = 500,
-  // Phase 3: Attempt tracking
-  currentAttempt = 0,
-  maxAttempts = 3,
-  progressiveHints = [],
+  attemptsLeft,
+  wrongAnswers = [],
+  failed = false,
 }) => {
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const questionId = useId();
+  const ruleId = useId();
 
   const handleSubmit = () => {
     if (type === 'multiple-choice') {
-      if (selectedOption) {
-        onSubmit(selectedOption);
-      }
+      if (selectedOption) onSubmit(selectedOption);
     } else if (type === 'number') {
       const numAnswer = parseFloat(answer.trim());
-      if (!isNaN(numAnswer)) {
-        onSubmit(numAnswer);
-      }
-    } else {
-      if (answer.trim()) {
-        onSubmit(answer.trim());
-      }
+      if (!isNaN(numAnswer)) onSubmit(numAnswer);
+    } else if (answer.trim()) {
+      onSubmit(answer.trim());
     }
   };
 
-  const isValid = type === 'multiple-choice' 
-    ? selectedOption !== '' 
-    : answer.trim().length > 0;
-  
+  const isValid =
+    type === 'multiple-choice'
+      ? selectedOption !== ''
+      : type === 'number'
+        ? !isNaN(parseFloat(answer))
+        : answer.trim().length > 0;
   const remainingChars = maxLength - answer.length;
-  
-  // Phase 3: Get progressive hint based on current attempt
-  const currentHint = currentAttempt > 0 && currentAttempt <= progressiveHints.length
-    ? progressiveHints[currentAttempt - 1]
-    : hint;
+  const missed = wrongAnswers.length > 0;
+  const lastWrong = wrongAnswers.at(-1);
+
+  if (failed) {
+    return (
+      <Sheet
+        open
+        title="Out of attempts"
+        onClose={onCancel}
+        footer={
+          <Button variant="secondary" block onClick={onCancel}>
+            Back to tasks
+          </Button>
+        }
+      >
+        <div className="flex items-start gap-3">
+          <XCircle className="size-6 shrink-0 text-danger-text" aria-hidden="true" />
+          <p>That was the last try, so this quiz gives no points. Pick another task to keep scoring.</p>
+        </div>
+      </Sheet>
+    );
+  }
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[120] flex items-center justify-center p-4"
+    <Sheet
+      open
+      title="Quiz"
+      onClose={onCancel}
+      footer={
+        <Button block onClick={handleSubmit} disabled={!isValid}>
+          <Check className="size-5" aria-hidden="true" />
+          Check answer
+        </Button>
+      }
     >
-      {/* Glass Modal with Neon Orbs */}
-      <div 
-        className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-        style={{ backgroundColor: 'rgba(17, 24, 39, 0.95)' }}
-      >
-        {/* Neon Gradient Orbs */}
-        <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-pink-500/30 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-cyan-500/30 blur-3xl pointer-events-none" />
-        
-        {/* Content Container */}
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/10 backdrop-blur-xl bg-gray-900/80">
-            <div className="flex-1">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Quiz Question</h2>
-              
-              {/* Phase 3: Attempt Counter */}
-              {currentAttempt > 0 && maxAttempts > 0 && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[13px] sm:text-sm text-gray-400">
-                    Attempt {currentAttempt} of {maxAttempts}
-                  </span>
-                  <div className="flex gap-1">
-                    {Array.from({ length: maxAttempts }).map((_, index) => (
-                      <div
-                        key={index}
-                        className={`h-2 w-2 rounded-full transition-all ${
-                          index < currentAttempt - 1
-                            ? 'bg-red-500' // Used attempts
-                            : index === currentAttempt - 1
-                            ? 'bg-cyan-500 ring-2 ring-cyan-400/50 scale-125' // Current attempt
-                            : 'bg-gray-600' // Remaining attempts
-                        }`}
-                        title={
-                          index < currentAttempt - 1
-                            ? 'Attempt used'
-                            : index === currentAttempt - 1
-                            ? 'Current attempt'
-                            : 'Remaining'
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={onCancel}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }}
-              aria-label="Close"
-            >
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          </div>
+      <div className="flex flex-col gap-4 text-text">
+        <p id={questionId} className="text-body-lg">{question}</p>
 
-          {/* Content */}
-          <div className="p-4 sm:p-6 space-y-6">
-            {/* Question */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                Question:
-              </label>
-              <div className="relative overflow-hidden rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-4 backdrop-blur-sm">
-                <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(6,182,212,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
-                <p className="relative text-white leading-relaxed">
-                  {question}
-                </p>
-              </div>
-            </div>
+        {/* Mounted empty from the start: screen readers announce changes to a live region, not a new one */}
+        {attemptsLeft !== undefined && (
+          <p aria-live="polite" className="font-mono text-sm font-bold text-danger-text">
+            {missed ? `${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left` : ''}
+          </p>
+        )}
 
-            {/* Phase 3: Progressive Hint (shows different hints based on attempt) */}
-            {currentHint && (
-              <div className={`relative overflow-hidden rounded-lg border p-3 backdrop-blur-sm ${
-                currentAttempt > 1 
-                  ? 'border-orange-500/30 bg-orange-950/20' // More urgent hint for later attempts
-                  : 'border-yellow-500/30 bg-yellow-950/20'
-              }`}>
-                <div className="flex items-start gap-2">
-                  <span className={`text-sm font-bold ${
-                    currentAttempt > 1 ? 'text-orange-400' : 'text-yellow-400'
-                  }`}>
-                    <Lightbulb className="w-4 h-4 mt-0.5" aria-hidden="true" />
-                  </span>
-                  <p className={`text-sm leading-relaxed ${
-                    currentAttempt > 1 ? 'text-orange-200/90' : 'text-yellow-200/90'
-                  }`}>
-                    <span className="font-semibold">
-                      {currentAttempt > 1 ? `Hint #${currentAttempt}:` : 'Hint:'}
-                    </span> {currentHint}
-                  </p>
-                </div>
-              </div>
-            )}
+        {missed && hint && (
+          <p className="flex items-start gap-2 p-3 rounded-control bg-surface-raised border border-line text-text">
+            <Lightbulb className="size-5 shrink-0 text-attention-text" aria-hidden="true" />
+            {hint}
+          </p>
+        )}
 
-            {/* Multiple Choice Options */}
-            {type === 'multiple-choice' && options.length > 0 && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                  Select Your Answer:
-                </label>
-                <div className="space-y-3">
-                  {options.map((option, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedOption(option)}
-                      className={`group w-full text-left p-4 rounded-xl border transition-all ${
-                        selectedOption === option
-                          ? 'border-cyan-500 bg-cyan-500/20 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]'
-                          : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                          selectedOption === option
-                            ? 'border-cyan-400 bg-cyan-500'
-                            : 'border-gray-400 bg-transparent group-hover:border-gray-300'
-                        }`}>
-                          {selectedOption === option && (
-                            <div className="w-2 h-2 rounded-full bg-white" />
-                          )}
-                        </div>
-                        <span className={`font-medium transition-colors ${
-                          selectedOption === option ? 'text-cyan-300' : 'text-gray-300 group-hover:text-white'
-                        }`}>
-                          {option}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Text Answer Input */}
-            {(type === 'text' || type === 'number') && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                  Your Answer:
-                </label>
-                {type === 'number' ? (
+        {type === 'multiple-choice' && options.length > 0 && (
+          <div role="radiogroup" aria-labelledby={questionId} className="flex flex-col gap-2">
+            {options.map((option, index) => {
+              const selected = selectedOption === option;
+              const wrong = wrongAnswers.includes(option);
+              return (
+                <label
+                  key={option}
+                  className={`flex items-center gap-3 min-h-touch px-3 py-2 rounded-control border-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring has-[:focus-visible]:outline-offset-2 ${
+                    wrong
+                      ? 'border-dashed border-danger bg-danger-soft'
+                      : selected
+                        ? 'border-accent bg-accent-soft cursor-pointer'
+                        : 'border-line bg-surface cursor-pointer'
+                  }`}
+                >
                   <input
-                    type="number"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Enter a number..."
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                             text-white placeholder-gray-500 
-                             focus:bg-white/10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 
-                             backdrop-blur-sm transition-all
-                             text-base sm:text-sm"
-                    autoFocus
+                    type="radio"
+                    name={questionId}
+                    value={option}
+                    checked={selected}
+                    disabled={wrong}
+                    onChange={() => setSelectedOption(option)}
+                    className="sr-only"
                   />
-                ) : (
-                  <textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    maxLength={maxLength}
-                    placeholder="Type your answer here..."
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                             text-white placeholder-gray-500 
-                             focus:bg-white/10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 
-                             resize-none backdrop-blur-sm transition-all
-                             text-base sm:text-sm"
-                    rows={6}
-                    autoFocus
-                  />
-                )}
-                
-                {/* Character Counter (for text input only) */}
-                {type === 'text' && (
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-3">
-                    <p className="text-sm text-gray-400">
-                      {answer.trim().length === 0 ? (
-                        'Answer is required'
-                      ) : (
-                        <span className="text-cyan-300">✓ Answer ready to submit</span>
-                      )}
-                    </p>
-                    {showCharCounter(remainingChars) && (
-                      <p className="text-sm text-yellow-400">
-                        {remainingChars} characters remaining
-                      </p>
-                    )}
-                  </div>
-                )}
+                  <span
+                    aria-hidden="true"
+                    className={`grid place-items-center size-8 shrink-0 rounded-sm border font-mono font-bold ${
+                      selected ? 'bg-accent text-on-accent border-accent' : 'border-line-strong text-text-muted'
+                    }`}
+                  >
+                    {KEYS[index] ?? index + 1}
+                  </span>
+                  <span className="flex-1">{option}</span>
+                  {wrong && (
+                    <span className="inline-flex items-center gap-1 font-display text-label font-semibold uppercase text-danger-text">
+                      <XCircle className="size-4" aria-hidden="true" />
+                      Wrong
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        )}
 
-                {/* Number validation (for number input) */}
-                {type === 'number' && (
-                  <div className="mt-3">
-                    <p className="text-sm text-gray-400">
-                      {answer.trim().length === 0 ? (
-                        'Number is required'
-                      ) : isNaN(parseFloat(answer)) ? (
-                        <span className="text-red-400">⚠ Please enter a valid number</span>
-                      ) : (
-                        <span className="text-cyan-300">✓ Number ready to submit</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
+        {(type === 'text' || type === 'number') && (
+          <div className="flex flex-col gap-2">
+            {type === 'number' ? (
+              <input
+                type="number"
+                inputMode="decimal"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                aria-labelledby={questionId}
+                aria-describedby={ruleId}
+                className="w-full min-h-control-lg px-4 rounded-control bg-surface border border-line-strong text-text"
+                autoFocus
+              />
+            ) : (
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                maxLength={maxLength}
+                aria-labelledby={questionId}
+                aria-describedby={ruleId}
+                className="w-full px-4 py-3 rounded-control bg-surface border border-line-strong text-text resize-none"
+                rows={4}
+                autoFocus
+              />
+            )}
+            <p id={ruleId} className="text-sm text-text-muted">
+              {type === 'number' ? 'Enter a number.' : "Capitals don't matter and small typos are OK."}
+            </p>
+            {missed && (
+              <p className="text-sm text-danger-text">
+                “{String(lastWrong)}” is wrong.
+              </p>
+            )}
+            {type === 'text' && showCharCounter(remainingChars) && (
+              <p className="text-sm text-warning-text">{remainingChars} characters left</p>
             )}
           </div>
-
-          {/* Actions */}
-          <div className="sticky bottom-0 flex flex-col sm:flex-row gap-3 p-4 sm:p-6 border-t border-white/10 backdrop-blur-xl bg-gray-900/80">
-            <button
-              onClick={onCancel}
-              className="order-2 sm:order-1 flex-1 py-4 px-6 border border-white/20 text-gray-300 
-                       hover:bg-white/10 hover:text-white rounded-lg backdrop-blur-sm 
-                       transition-all font-semibold touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!isValid}
-              className="order-1 sm:order-2 group relative flex-1 overflow-hidden rounded-lg font-bold py-4 px-6 
-                       disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              {/* Gradient Background Layers */}
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 
-                            group-hover:from-pink-500 group-hover:to-purple-500 
-                            transition-all duration-300 group-disabled:from-gray-700 group-disabled:to-gray-600" />
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 
-                            blur-xl opacity-50 group-hover:opacity-70 
-                            transition-opacity duration-300 group-disabled:opacity-0" />
-              
-              {/* Button Content */}
-              <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider">
-                <Check className="w-5 h-5" />
-                Submit Answer
-              </span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
-    </div>
+    </Sheet>
   );
 };

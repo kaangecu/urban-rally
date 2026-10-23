@@ -20,6 +20,8 @@ interface TaskSubmissionProps {
   onCancel: () => void;
 }
 
+const NO_MISSES: (string | number)[] = [];
+
 type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 'failed';
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
@@ -48,9 +50,13 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   };
   const setUploadingTaskId = useTaskStore((s) => s.setUploadingTaskId);
 
-  // Quiz attempt tracking (Phase 1)
-  const [quizAttempts, setQuizAttempts] = useState<number>(0);
+  // Quiz attempt tracking (Phase 1); stored per task so a reopen can't reset it
   const maxQuizAttempts = 3;
+  const quizProgress = useTaskStore((s) => s.quizProgress[task.id]);
+  const recordQuizMiss = useTaskStore((s) => s.recordQuizMiss);
+  const quizAttempts = quizProgress?.attempts ?? 0;
+  const wrongAnswers = quizProgress?.wrong ?? NO_MISSES;
+  const quizFailed = task.type === 'QUIZ' && (state === 'failed' || quizAttempts >= maxQuizAttempts);
 
   console.log('🎯 TaskSubmission rendered', { 
     taskType: task.type, 
@@ -258,20 +264,10 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       // If answer is wrong, increment attempts and show feedback
       if (!validationResult.isCorrect) {
-        setQuizAttempts(currentAttempt);
+        recordQuizMiss(task.id, answer);
         const attemptsRemaining = maxQuizAttempts - currentAttempt;
         
-        if (attemptsRemaining > 0) {
-          setError(
-            `${validationResult.feedback}\nYou have ${attemptsRemaining} ${
-              attemptsRemaining === 1 ? 'attempt' : 'attempts'
-            } remaining.`
-          );
-          setState('capture'); // Allow retry
-        } else {
-          setError(`${validationResult.feedback}\n❌ Maximum attempts reached. Task failed.`);
-          setState('failed');
-        }
+        setState(attemptsRemaining > 0 ? 'capture' : 'failed');
         return;
       }
       
@@ -335,6 +331,26 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setState('capture');
   };
 
+  const renderQuiz = () => (
+    <QuizInput
+      // A new attempt starts with a clean form, so a wrong choice is never left selected
+      key={quizAttempts}
+      question={task.description}
+      type={task.quizType || 'text'}
+      options={task.quizOptions}
+      hint={task.quizHint}
+      onSubmit={handleQuizSubmit}
+      onCancel={onCancel}
+      attemptsLeft={maxQuizAttempts - quizAttempts}
+      wrongAnswers={wrongAnswers}
+      failed={quizFailed}
+    />
+  );
+
+  if (quizFailed) {
+    return renderQuiz();
+  }
+
   // Render capture interfaces
   if (state === 'capture') {
     console.log('📸 Rendering capture interface for type:', task.type);
@@ -350,25 +366,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     }
     
     if (task.type === 'QUIZ' && task.description) {
-      console.log('❓ Rendering QuizInput');
-      return (
-        <QuizInput 
-          question={task.description}
-          type={task.quizType || 'text'}
-          options={task.quizOptions}
-          hint={task.quizHint}
-          onSubmit={handleQuizSubmit}
-          onCancel={onCancel}
-          // Phase 3: Pass attempt tracking props
-          currentAttempt={quizAttempts + 1} // Next attempt number
-          maxAttempts={maxQuizAttempts}
-          progressiveHints={[
-            task.quizHint || '',  // First hint (from task)
-            'Think carefully about the answer...',  // Second attempt hint
-            'Consider alternative spellings or common variations...', // Third attempt hint
-          ]}
-        />
-      );
+      return renderQuiz();
     }
 
     if (!locationChecked) {

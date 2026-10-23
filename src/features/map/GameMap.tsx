@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import { Icon, type LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMapStore } from '../../store/mapStore';
+import { useTrackUserLocation } from '../../hooks/useTrackUserLocation';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
-import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
 import type { Task } from '../../types/schema';
 import { formatPoints } from '../../utils/format';
 
@@ -38,37 +38,8 @@ function MapController() {
 
 // User location marker component
 function UserLocationMarker() {
-  const { userLocation, setUserLocation, setTrackingLocation } = useMapStore();
-  const watchIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    // Get initial location
-    getCurrentLocation()
-      .then((location) => {
-        setUserLocation(location);
-      })
-      .catch((error) => {
-        console.error('Error getting location:', error);
-      });
-
-    // Start watching location
-    watchIdRef.current = watchLocation(
-      (location) => {
-        setUserLocation(location);
-      },
-      (error) => {
-        console.error('Location tracking error:', error);
-        setTrackingLocation(false);
-      }
-    );
-
-    return () => {
-      // Cleanup: stop watching location
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
-  }, []);
+  const userLocation = useMapStore((state) => state.userLocation);
+  useTrackUserLocation();
 
   if (!userLocation) return null;
 

@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { getTasksByEvent, getAvailableTasks, getIncompleteTasks, getCompletedTasks, sortTasks, getTaskStats } from '../../services/task.service';
 import { useMapStore } from '../../store/mapStore';
+import { useTrackUserLocation } from '../../hooks/useTrackUserLocation';
 import { calculateDistance } from '../../utils/geo.utils';
 import { formatPoints } from '../../utils/format';
 import { Alert } from '../../components/ui/Alert';
@@ -26,6 +27,7 @@ export function TaskList() {
     setFilter,
   } = useTaskStore();
   const userLocation = useMapStore((state) => state.userLocation);
+  useTrackUserLocation();
 
   // Load tasks on mount
   useEffect(() => {
@@ -85,7 +87,7 @@ export function TaskList() {
           label="Progress"
           value={stats.completed}
           max={stats.total}
-          valueText={`${stats.completed} / ${stats.total} tasks · ${stats.earnedPoints} / ${formatPoints(stats.totalPoints)}`}
+          valueText={`${stats.completed} / ${stats.total} tasks · ${stats.earnedPoints.toLocaleString('en-US')} / ${formatPoints(stats.totalPoints)}`}
         />
       )}
 

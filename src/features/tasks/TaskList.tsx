@@ -77,9 +77,12 @@ export function TaskList() {
     { value: 'completed', label: 'Done', count: stats?.completed ?? 0 },
   ] as const;
 
+  const showSkeleton = isLoading && tasks.length === 0;
+  const ready = !showSkeleton && !error;
+
   return (
     <div className="flex flex-col gap-4">
-      {stats && (
+      {ready && stats && stats.total > 0 && (
         <ProgressBar
           label="Progress"
           value={stats.completed}
@@ -88,28 +91,30 @@ export function TaskList() {
         />
       )}
 
-      <div className="flex gap-2">
-        {chips.map(({ value, label, count }) => {
-          const active = filter === value;
-          return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter(value)}
-              className={`inline-flex items-center gap-2 min-h-touch px-4 rounded-pill border font-display text-label font-semibold uppercase focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 ${
-                active ? 'bg-accent-soft border-accent text-accent-text' : 'bg-surface border-line-strong text-text'
-              }`}
-            >
-              {label}{' '}
-              <span className="font-mono tracking-normal">{count}</span>
-            </button>
-          );
-        })}
-      </div>
+      {ready && tasks.length > 0 && (
+        <div className="flex gap-2">
+          {chips.map(({ value, label, count }) => {
+            const active = filter === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFilter(value)}
+                className={`inline-flex items-center gap-2 min-h-touch px-4 rounded-pill border font-display text-label font-semibold uppercase focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 ${
+                  active ? 'bg-accent-soft border-accent text-accent-text' : 'bg-surface border-line-strong text-text'
+                }`}
+              >
+                {label}{' '}
+                <span className="font-mono tracking-normal">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      {isLoading && (
-        <div className="flex flex-col gap-3" aria-busy="true">
+      {showSkeleton && (
+        <div role="status" aria-label="Loading tasks" className="flex flex-col gap-3">
           <Skeleton shape="card" />
           <Skeleton shape="card" />
           <Skeleton shape="card" />
@@ -118,15 +123,29 @@ export function TaskList() {
 
       {error && <Alert variant="danger" title="Tasks didn't load" text={error} />}
 
-      {!isLoading && !error && filteredAndSortedTasks.length === 0 && (
+      {ready && tasks.length === 0 && (
         <EmptyState
           Icon={ClipboardList}
-          title={filter === 'completed' ? 'No tasks done yet' : 'No tasks to do'}
-          text={filter === 'completed' ? 'Finished tasks show up here.' : 'Check back later for new tasks.'}
+          title="No tasks yet"
+          text="Your organisers open tasks when the event starts. Check back then."
         />
       )}
 
-      {!isLoading && !error && filteredAndSortedTasks.length > 0 && (
+      {ready && tasks.length > 0 && filteredAndSortedTasks.length === 0 && (
+        filter === 'completed' ? (
+          <EmptyState
+            Icon={ClipboardList}
+            title="Nothing done yet"
+            text="Tasks you finish show up here."
+            actionLabel="Show tasks to do"
+            onAction={() => setFilter('available')}
+          />
+        ) : (
+          <EmptyState Icon={ClipboardList} title="No tasks to do" text="You've done every open task. New ones may still unlock." />
+        )
+      )}
+
+      {ready && filteredAndSortedTasks.length > 0 && (
         <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {filteredAndSortedTasks.map((task) => (
             <li key={task.id}>

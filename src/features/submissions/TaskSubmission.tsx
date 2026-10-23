@@ -7,6 +7,7 @@ import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
+import { submissionFailed } from '../../utils/messages';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
@@ -112,7 +113,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         return;
       }
       
-      setError(err instanceof Error ? err.message : 'Failed to submit photo');
+      setError(submissionFailed('photo'));
       setState('error');
     }
   };
@@ -164,7 +165,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         return;
       }
       
-      setError(err instanceof Error ? err.message : 'Failed to submit video');
+      setError(submissionFailed('video'));
       setState('error');
     }
   };
@@ -279,7 +280,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         return;
       }
       
-      setError(err instanceof Error ? err.message : 'Failed to submit answer');
+      setError(submissionFailed('answer'));
       setState('error');
     }
   };

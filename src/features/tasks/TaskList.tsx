@@ -85,7 +85,10 @@ export function TaskList() {
 
   return (
     <div className="flex flex-col gap-4">
-      {notice && <Toast message={notice} onDismiss={() => setNotice(null)} />}
+      {/* Always mounted so the confirmation is announced; empty and out of the layout until there is one */}
+      <div className={notice ? undefined : 'absolute'}>
+        <Toast message={notice} onDismiss={() => setNotice(null)} />
+      </div>
 
       {ready && stats && stats.total > 0 && (
         <ProgressBar

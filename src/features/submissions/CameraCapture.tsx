@@ -1,5 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, X, RotateCw, Check } from 'lucide-react';
+import { Camera, CameraOff, X, RotateCw, Check, ImageUp } from 'lucide-react';
+import { PermissionPrompt } from '../../components/ui/PermissionPrompt';
+import { Button } from '../../components/ui/Button';
+
+type CameraPermission = 'granted' | 'prompt' | 'denied';
+
+/** Browsers without the Permissions API for cameras are treated as "prompt". */
+async function getCameraPermission(): Promise<CameraPermission> {
+  try {
+    const status = await navigator.permissions.query({ name: 'camera' as PermissionName });
+    return status.state;
+  } catch {
+    return 'prompt';
+  }
+}
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
@@ -16,6 +30,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [permissionRequested, setPermissionRequested] = useState(false);
+  const [checkingPermission, setCheckingPermission] = useState(true);
+  const [blocked, setBlocked] = useState(false);
 
   const startCamera = async () => {
     try {
@@ -53,7 +69,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       let errorMessage = 'Unable to access camera.';
       
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        errorMessage = 'Camera permission denied. Please enable camera access in your browser settings and reload the page.';
+        setBlocked(true);
+        setIsLoading(false);
+        return;
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         errorMessage = 'No camera found on this device.';
       } else if (name === 'NotReadableError' || name === 'TrackStartError') {
@@ -154,6 +172,20 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
     onCancel();
   };
 
+  // Skip the explainer when the camera is already allowed; it is only for the first ask
+  useEffect(() => {
+    getCameraPermission().then((state) => {
+      if (state === 'granted') setPermissionRequested(true);
+      if (state === 'denied') setBlocked(true);
+      setCheckingPermission(false);
+    });
+  }, []);
+
+  const handleGalleryPick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) onCapture(file);
+  };
+
   useEffect(() => {
     // Only start camera automatically if user already requested permission
     if (permissionRequested) {
@@ -198,35 +230,36 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
 
       {/* Camera/Preview - Allow scrolling on very small screens */}
       <div className="flex-1 relative flex items-center justify-center overflow-auto min-h-0">
-        {!permissionRequested ? (
-          // Permission request screen
-          <div className="text-center text-white p-6 max-w-md mx-auto">
-            <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-cyan-500/30 blur-3xl rounded-full" />
-              <Camera className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto text-cyan-400" />
-            </div>
-            <h3 className="text-xl sm:text-2xl font-bold mb-3">Camera Access Needed</h3>
-            <p className="text-gray-300 mb-8 text-sm sm:text-base">
-              We need access to your camera to take a photo for this task.
-            </p>
-            <button
-              onClick={startCamera}
-              className="group relative overflow-hidden rounded-lg font-bold py-4 px-8 touch-manipulation"
-              style={{ minHeight: '56px' }}
+        {checkingPermission ? null : blocked ? (
+          <div className="w-full max-w-md mx-auto p-4">
+            <PermissionPrompt
+              Icon={CameraOff}
+              title="Camera is blocked"
+              text="Your browser isn't letting Urban Rally use the camera. To turn it back on:"
             >
-              {/* Gradient Background Layers */}
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 
-                            group-hover:from-cyan-500 group-hover:to-blue-500 
-                            transition-all duration-300" />
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 
-                            blur-xl opacity-50 group-hover:opacity-70 
-                            transition-opacity duration-300" />
-              
-              {/* Button Content */}
-              <span className="relative z-10 text-white uppercase tracking-wider text-base sm:text-lg">
-                Enable Camera
-              </span>
-            </button>
+              <ol className="list-decimal pl-6 text-text">
+                <li>Tap the lock or settings icon next to the web address.</li>
+                <li>Set Camera to Allow.</li>
+                <li>Reload the page and open the task again.</li>
+              </ol>
+              <label className="relative inline-flex items-center justify-center gap-2 min-h-touch px-6 rounded-pill bg-surface text-text border border-line-strong font-display text-[15px] font-bold uppercase tracking-[0.08em] cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring has-[:focus-visible]:outline-offset-2">
+                <ImageUp className="size-5" aria-hidden="true" />
+                Choose a photo instead
+                <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleGalleryPick} />
+              </label>
+            </PermissionPrompt>
+          </div>
+        ) : !permissionRequested ? (
+          <div className="w-full max-w-md mx-auto p-4">
+            <PermissionPrompt
+              Icon={Camera}
+              title="Allow the camera"
+              text="This task needs a photo. Your browser will ask once; photos are only sent when you tap Use photo."
+            >
+              <Button block onClick={startCamera}>
+                Allow camera
+              </Button>
+            </PermissionPrompt>
           </div>
         ) : error ? (
           <div className="text-center text-white p-6 max-w-md mx-auto">
@@ -235,27 +268,15 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
               <Camera className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto text-red-400" />
             </div>
             <p className="text-lg mb-6 text-gray-300">{error}</p>
-            {error.includes('reload the page') ? (
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 border border-white/20 text-white 
-                         hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                         transition-all font-semibold touch-manipulation"
-                style={{ minHeight: '48px' }}
-              >
-                Reload Page
-              </button>
-            ) : (
-              <button
-                onClick={retryWithBasicConstraints}
-                className="px-6 py-3 border border-white/20 text-white 
-                         hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                         transition-all font-semibold touch-manipulation"
-                style={{ minHeight: '48px' }}
-              >
-                Try Again
-              </button>
-            )}
+            <button
+              onClick={retryWithBasicConstraints}
+              className="px-6 py-3 border border-white/20 text-white 
+                       hover:bg-white/10 rounded-lg backdrop-blur-sm 
+                       transition-all font-semibold touch-manipulation"
+              style={{ minHeight: '48px' }}
+            >
+              Try Again
+            </button>
           </div>
         ) : capturedImage ? (
           <img 
@@ -284,7 +305,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
 
       {/* Controls - Fixed at bottom, always visible */}
       <div className="p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent backdrop-blur-sm flex-shrink-0 safe-area-bottom">
-        {!permissionRequested ? (
+        {!permissionRequested || blocked ? (
           <button
             onClick={handleCancel}
             className="w-full py-4 px-6 border border-white/20 text-white 

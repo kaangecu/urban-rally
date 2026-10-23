@@ -82,7 +82,9 @@ export async function createSubmission(
     return submissionId;
   } catch (error) {
     console.error('Error creating submission:', error);
-    throw new Error('Failed to create submission');
+    // The screen shows "already done" for this one instead of asking for a retry
+    if (error instanceof Error && error.message === 'Task already completed') throw error;
+    throw new Error('Failed to create submission', { cause: error });
   }
 }
 

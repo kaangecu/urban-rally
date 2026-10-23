@@ -23,6 +23,7 @@ import { getTenantById, applyTenantTheme } from '../../services/tenant.service';
 import { LegalModal } from '../../components/legal/LegalModal';
 import { TermsOfService } from '../../components/legal/TermsOfService';
 import { PrivacyPolicy } from '../../components/legal/PrivacyPolicy';
+import { MESSAGES } from '../../utils/messages';
 
 // Form data interface
 interface LoginFormData {
@@ -138,7 +139,7 @@ export function TeamCodeLogin() {
       const team = await getTeamByAccessCode(formData.accessCode);
       
       if (!team) {
-        setError('Invalid team code. Please check and try again.');
+        setError(MESSAGES.codeNotFound);
         setCurrentStep(1); // Go back to team code step
         return;
       }
@@ -198,7 +199,7 @@ export function TeamCodeLogin() {
       
     } catch (err) {
       console.error('Login error:', err);
-      setError('Something went wrong. Please try again.');
+      setError(MESSAGES.joinFailed);
     } finally {
       setIsSubmitting(false);
       setLoading(false);
@@ -226,7 +227,7 @@ export function TeamCodeLogin() {
             UrbanRally
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
-            Join the adventure in {STEPS[currentStep - 1].title.toLowerCase()}
+            {MESSAGES.joinSubtitle}
           </p>
         </motion.div>
 
@@ -618,7 +619,7 @@ export function TeamCodeLogin() {
                     </>
                   ) : (
                     <>
-                      Start Adventure
+                      Join
                       <Sparkles className="w-5 h-5 ml-2" />
                     </>
                   )}

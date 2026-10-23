@@ -25,3 +25,25 @@ const TYPES: Record<TaskType, TaskTypeInfo> = {
 export function getTaskTypeInfo(type: TaskType): TaskTypeInfo {
   return TYPES[type] ?? { label: 'Task', Icon: Sparkles };
 }
+
+/** The detail screen's one primary action, named after what the player does. */
+/** Types with a capture screen; the rest can be shown but not completed yet */
+export function canCaptureTask(type: TaskType): boolean {
+  return ['PHOTO', 'VIDEO', 'QUIZ', 'GPS', 'GPS_LOCATION'].includes(type);
+}
+
+export function getTaskAction(type: TaskType): string {
+  switch (type) {
+    case 'PHOTO':
+      return 'Take photo';
+    case 'VIDEO':
+      return 'Record video';
+    case 'QUIZ':
+      return 'Answer quiz';
+    case 'GPS':
+    case 'GPS_LOCATION':
+      return 'Check in';
+    default:
+      return 'Start task';
+  }
+}

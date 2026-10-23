@@ -1,237 +1,139 @@
 import { useState } from 'react';
+import { Camera, Lock, MapPin, Navigation, PenLine, Star, Video, type LucideIcon } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
+import { useMapStore } from '../../store/mapStore';
 import { TaskSubmission } from '../submissions/TaskSubmission';
 import { formatPoints } from '../../utils/format';
-import { Camera, MapPin, PenLine, Star, Video } from 'lucide-react';
+import { calculateDistance, formatDistance } from '../../utils/geo.utils';
+import { canCaptureTask, getTaskAction, getTaskTypeInfo } from '../../utils/taskTypes';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { DifficultyMeter } from '../../components/ui/DifficultyMeter';
+import { Sheet } from '../../components/ui/Sheet';
+import { TaskTypeTag } from '../../components/ui/TaskTypeTag';
+
+const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3 } as const;
+
+function Requirement({ Icon, children }: { Icon: LucideIcon; children: string }) {
+  return (
+    <li className="flex items-center gap-3 min-h-touch text-text">
+      <Icon className="size-5 shrink-0 text-text-muted" aria-hidden="true" />
+      {children}
+    </li>
+  );
+}
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask } = useTaskStore();
   const { team } = useAuthStore();
+  const userLocation = useMapStore((state) => state.userLocation);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  console.log('📋 TaskDetail rendered', { 
-    taskId: selectedTask?.id, 
-    isSubmitting,
-    isCompleted: team?.completedTaskIds.includes(selectedTask?.id || '') || false
-  });
 
   if (!selectedTask) return null;
 
-  const isCompleted = team?.completedTaskIds.includes(selectedTask.id) || false;
+  const task = selectedTask;
+  const isCompleted = team?.completedTaskIds.includes(task.id) || false;
+  const { label, Icon } = getTaskTypeInfo(task.type);
+  const isCheckIn = task.type === 'GPS' || task.type === 'GPS_LOCATION';
+  const distance = userLocation && task.coordinates ? calculateDistance(userLocation, task.coordinates) : null;
+  const close = () => setSelectedTask(null);
 
   return (
     <>
-      {/* Main TaskDetail Modal - Cyberpunk Glass Design */}
-      <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
-        onClick={() => setSelectedTask(null)}
+      <Sheet
+        open={!isSubmitting}
+        title={task.title}
+        onClose={close}
+        footer={
+          isCompleted ? (
+            <Button variant="secondary" block onClick={close}>
+              Close
+            </Button>
+          ) : (
+            <Button block size="lg" disabled={!canCaptureTask(task.type)} onClick={() => setIsSubmitting(true)}>
+              <Icon className="size-5" aria-hidden="true" />
+              {getTaskAction(task.type)}
+            </Button>
+          )
+        }
       >
-        <div 
-          className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            // Fallback for older browsers that don't support backdrop-filter
-            backgroundColor: 'rgba(17, 24, 39, 0.95)'
-          }}
-        >
-          {/* Glassmorphic Glow Effects */}
-          <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-pink-500/30 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-cyan-500/30 blur-3xl pointer-events-none" />
-          
-          {/* Header */}
-          <div className="sticky top-0 z-20 border-b border-white/10 px-6 py-4 flex items-center justify-between backdrop-blur-xl bg-gray-900/80">
-            <h2 className="text-2xl font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-              Task Details
-            </h2>
-            <button
-              onClick={() => setSelectedTask(null)}
-              className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        <div className="flex flex-col gap-4">
+          {task.imageUrl && <img src={task.imageUrl} alt="" className="w-full h-40 object-cover rounded-card" />}
 
-        {/* Content */}
-        <div className="relative z-10 p-6 space-y-6">
-          {/* Task Image */}
-          {selectedTask.imageUrl && (
-            <div className="relative overflow-hidden rounded-xl border border-white/10">
-              <img
-                src={selectedTask.imageUrl}
-                alt={selectedTask.title}
-                className="w-full h-64 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            </div>
-          )}
-
-          {/* Title & Status Badge */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              {isCompleted ? (
-                <span className="mb-2 inline-block rounded-full border border-green-500/50 bg-green-950/50 px-3 py-1 text-[13px] font-bold uppercase tracking-wider text-green-300 shadow-[0_0_10px_-3px_rgba(34,197,94,0.7)]">
-                  ✓ Completed
-                </span>
-              ) : (
-                <span className="mb-2 inline-block rounded-full border border-cyan-500/50 bg-cyan-950/50 px-3 py-1 text-[13px] font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_10px_-3px_rgba(6,182,212,0.7)]">
-                  Task
-                </span>
-              )}
-              <h3 className="text-2xl font-extrabold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] mb-2">
-                {selectedTask.title}
-              </h3>
-              <p className="text-gray-300 leading-relaxed">{selectedTask.description}</p>
-            </div>
-            
-            {/* Points Badge */}
-            <div className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 rounded-full shadow-[0_0_15px_-3px_rgba(236,72,153,0.6)] shrink-0">
-              <span className="font-bold text-white text-lg">{formatPoints(selectedTask.points)}</span>
-            </div>
-          </div>
-
-          {/* Bonus Points */}
-          {selectedTask.bonusPoints && (
-            <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-purple-950/30 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(168,85,247,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
-              <div className="relative flex items-center justify-between">
-                <span className="text-purple-300 font-medium">Bonus Available</span>
-                <span className="text-2xl font-bold text-purple-400">
-                  {formatPoints(selectedTask.bonusPoints, { signed: true })}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Requirements */}
-          <div>
-            <h4 className="font-semibold text-white mb-4 text-lg">Requirements</h4>
-            <div className="space-y-3">
-              {selectedTask.type === 'GPS' || selectedTask.type === 'GPS_LOCATION' ? (
-                <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <MapPin className="w-6 h-6 shrink-0" aria-hidden="true" />
-                  <span>Visit the location (within {selectedTask.radius || 50}m)</span>
-                </div>
-              ) : null}
-              
-              {selectedTask.requiresPhoto && (
-                <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <Camera className="w-6 h-6 shrink-0" aria-hidden="true" />
-                  <span>Take a photo</span>
-                </div>
-              )}
-              
-              {selectedTask.requiresVideo && (
-                <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <Video className="w-6 h-6 shrink-0" aria-hidden="true" />
-                  <span>Record a video</span>
-                </div>
-              )}
-              
-              {selectedTask.requiresText && (
-                <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <PenLine className="w-6 h-6 shrink-0" aria-hidden="true" />
-                  <span>Provide a text answer</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sponsor Info */}
-          {selectedTask.sponsorName && (
-            <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-yellow-950/20 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(234,179,8,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
-              <div className="relative flex items-center gap-3">
-                <Star className="w-8 h-8 shrink-0 text-yellow-400" aria-hidden="true" />
-                <div>
-                  <p className="font-semibold text-white text-sm uppercase tracking-wide">Sponsored by</p>
-                  <p className="text-yellow-400 font-bold text-lg">{selectedTask.sponsorName}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hints */}
-          {selectedTask.hints && selectedTask.hints.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-white mb-4 text-lg">Available Hints</h4>
-              <div className="space-y-3">
-                {selectedTask.hints.map((hint, index) => (
-                  <div
-                    key={hint.id}
-                    className="relative group cursor-pointer"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
-                    
-                    <div className="relative flex items-center justify-between rounded-xl border border-white/10 bg-gray-900/60 p-4 backdrop-blur-xl hover:border-yellow-500/50 transition-colors">
-                      <div>
-                        <p className="font-bold text-white">Hint #{index + 1}</p>
-                        <p className="text-sm text-yellow-400 font-mono">Costs {formatPoints(hint.cost)}</p>
-                      </div>
-                      <button className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-lg transition-all shadow-[0_0_15px_-3px_rgba(234,179,8,0.6)]">
-                        Unlock
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-white/10">
-            {!isCompleted ? (
-              <>
-                <button 
-                  onClick={() => {
-                    console.log('🎬 Start Task button clicked!');
-                    setIsSubmitting(true);
-                  }}
-                  className="relative group flex-1 overflow-hidden rounded-lg font-bold py-4 px-6 transition-all"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 group-hover:from-pink-500 group-hover:to-purple-500 transition-all" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 blur-xl opacity-50 group-hover:opacity-70 transition-opacity" />
-                  <span className="relative text-white uppercase tracking-wider drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-                    Start task
-                  </span>
-                </button>
-                <button
-                  onClick={() => setSelectedTask(null)}
-                  className="px-6 py-4 border border-white/20 text-gray-300 font-semibold rounded-lg hover:bg-white/10 hover:text-white transition-colors backdrop-blur-sm"
-                >
-                  Cancel
-                </button>
-              </>
+          <div className="flex flex-wrap items-center gap-2">
+            <TaskTypeTag label={label} Icon={Icon} sponsored={!!task.sponsorName} />
+            {task.difficulty && <DifficultyMeter level={DIFFICULTY_LEVEL[task.difficulty]} />}
+            {isCompleted ? (
+              <Badge variant="done">{formatPoints(task.points)} earned</Badge>
             ) : (
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="flex-1 bg-white/10 border border-white/20 text-gray-300 font-semibold py-4 px-6 rounded-lg hover:bg-white/20 hover:text-white transition-colors backdrop-blur-sm"
-              >
-                Close
-              </button>
+              <Badge variant="points">{formatPoints(task.points, { signed: true })}</Badge>
             )}
           </div>
-        </div>
-      </div>
-      </div>
 
-      {/* TaskSubmission Overlay - renders on top when active */}
+          {distance !== null && (
+            <p className="flex items-center gap-2 font-mono text-sm text-text-muted">
+              <Navigation className="size-4" aria-hidden="true" />
+              {formatDistance(distance)} away
+            </p>
+          )}
+
+          {task.description && <p className="text-text">{task.description}</p>}
+
+          <section>
+            <h3 className="font-display text-label font-semibold uppercase text-text-muted">Requirements</h3>
+            <ul>
+              {isCheckIn && <Requirement Icon={MapPin}>{`Be within ${task.radius || 50}m of the place`}</Requirement>}
+              {task.requiresPhoto && <Requirement Icon={Camera}>Take a photo</Requirement>}
+              {task.requiresVideo && <Requirement Icon={Video}>Record a video</Requirement>}
+              {task.requiresText && <Requirement Icon={PenLine}>Write an answer</Requirement>}
+            </ul>
+          </section>
+
+          {task.bonusPoints ? (
+            <p className="text-text-muted">Bonus available: {formatPoints(task.bonusPoints, { signed: true })}</p>
+          ) : null}
+
+          {task.sponsorName && (
+            <p className="flex items-center gap-2 text-text-muted">
+              <Star className="size-5 text-attention-text" aria-hidden="true" />
+              Sponsored by <span className="font-bold text-text">{task.sponsorName}</span>
+            </p>
+          )}
+
+          {task.hints && task.hints.length > 0 && (
+            <section>
+              <h3 className="font-display text-label font-semibold uppercase text-text-muted">Hints</h3>
+              <ul className="flex flex-col gap-2 mt-2">
+                {task.hints.map((hint, index) => (
+                  <li key={hint.id} className="flex items-center justify-between gap-3 p-3 rounded-control bg-surface border border-line">
+                    <span className="flex flex-col">
+                      <span className="font-bold text-text">Hint {index + 1}</span>
+                      <span className="font-mono text-sm text-text-muted">Costs {formatPoints(hint.cost)}</span>
+                    </span>
+                    <Button variant="secondary">
+                      <Lock className="size-4" aria-hidden="true" />
+                      Unlock
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      </Sheet>
+
+      {/* Capture opens straight from the primary button */}
       {isSubmitting && !isCompleted && (
         <TaskSubmission
-          task={selectedTask}
+          task={task}
           onSuccess={() => {
-            console.log('✅ TaskSubmission success');
             setIsSubmitting(false);
             setSelectedTask(null);
             // Refresh team data to show updated score
             window.location.reload();
           }}
-          onCancel={() => {
-            console.log('❌ TaskSubmission cancelled');
-            setIsSubmitting(false);
-          }}
+          onCancel={() => setIsSubmitting(false)}
         />
       )}
     </>

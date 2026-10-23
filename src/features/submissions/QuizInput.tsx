@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, Lightbulb, X } from 'lucide-react';
 
 interface QuizInputProps {
   question: string;
@@ -82,7 +82,7 @@ export const QuizInput: React.FC<QuizInputProps> = ({
               {/* Phase 3: Attempt Counter */}
               {currentAttempt > 0 && maxAttempts > 0 && (
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="text-xs sm:text-sm text-gray-400">
+                  <span className="text-[13px] sm:text-sm text-gray-400">
                     Attempt {currentAttempt} of {maxAttempts}
                   </span>
                   <div className="flex gap-1">
@@ -145,7 +145,7 @@ export const QuizInput: React.FC<QuizInputProps> = ({
                   <span className={`text-sm font-bold ${
                     currentAttempt > 1 ? 'text-orange-400' : 'text-yellow-400'
                   }`}>
-                    {currentAttempt > 1 ? '🔥' : '💡'}
+                    <Lightbulb className="w-4 h-4 mt-0.5" aria-hidden="true" />
                   </span>
                   <p className={`text-sm leading-relaxed ${
                     currentAttempt > 1 ? 'text-orange-200/90' : 'text-yellow-200/90'

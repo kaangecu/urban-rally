@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { TaskSubmission } from '../submissions/TaskSubmission';
+import { Camera, MapPin, PenLine, Star, Video } from 'lucide-react';
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask } = useTaskStore();
@@ -70,11 +71,11 @@ export function TaskDetail() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               {isCompleted ? (
-                <span className="mb-2 inline-block rounded-full border border-green-500/50 bg-green-950/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-300 shadow-[0_0_10px_-3px_rgba(34,197,94,0.7)]">
+                <span className="mb-2 inline-block rounded-full border border-green-500/50 bg-green-950/50 px-3 py-1 text-[13px] font-bold uppercase tracking-wider text-green-300 shadow-[0_0_10px_-3px_rgba(34,197,94,0.7)]">
                   ✓ Completed
                 </span>
               ) : (
-                <span className="mb-2 inline-block rounded-full border border-cyan-500/50 bg-cyan-950/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_10px_-3px_rgba(6,182,212,0.7)]">
+                <span className="mb-2 inline-block rounded-full border border-cyan-500/50 bg-cyan-950/50 px-3 py-1 text-[13px] font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_10px_-3px_rgba(6,182,212,0.7)]">
                   Active Quest
                 </span>
               )}
@@ -109,28 +110,28 @@ export function TaskDetail() {
             <div className="space-y-3">
               {selectedTask.type === 'GPS' || selectedTask.type === 'GPS_LOCATION' ? (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <span className="text-2xl">📍</span>
+                  <MapPin className="w-6 h-6 shrink-0" aria-hidden="true" />
                   <span>Visit the location (within {selectedTask.radius || 50}m)</span>
                 </div>
               ) : null}
               
               {selectedTask.requiresPhoto && (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <span className="text-2xl">📸</span>
+                  <Camera className="w-6 h-6 shrink-0" aria-hidden="true" />
                   <span>Take a photo</span>
                 </div>
               )}
               
               {selectedTask.requiresVideo && (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <span className="text-2xl">🎥</span>
+                  <Video className="w-6 h-6 shrink-0" aria-hidden="true" />
                   <span>Record a video</span>
                 </div>
               )}
               
               {selectedTask.requiresText && (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
-                  <span className="text-2xl">✍️</span>
+                  <PenLine className="w-6 h-6 shrink-0" aria-hidden="true" />
                   <span>Provide a text answer</span>
                 </div>
               )}
@@ -142,7 +143,7 @@ export function TaskDetail() {
             <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-yellow-950/20 p-4 backdrop-blur-sm">
               <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(234,179,8,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
               <div className="relative flex items-center gap-3">
-                <span className="text-3xl">⭐</span>
+                <Star className="w-8 h-8 shrink-0 text-yellow-400" aria-hidden="true" />
                 <div>
                   <p className="font-semibold text-white text-sm uppercase tracking-wide">Sponsored by</p>
                   <p className="text-yellow-400 font-bold text-lg">{selectedTask.sponsorName}</p>

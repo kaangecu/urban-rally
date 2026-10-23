@@ -8,6 +8,7 @@ import { createSubmission, verifyGPSLocation } from '../../services/submission.s
 import { useAuthStore } from '../../store/authStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { getTaskTypeInfo } from '../../utils/taskTypes';
 
 interface TaskSubmissionProps {
   task: Task;
@@ -19,6 +20,9 @@ type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
   const { team, tenant } = useAuthStore();
+  const { label: typeLabel, Icon: TypeIcon } = getTaskTypeInfo(task.type);
+  // Types without a capture screen yet get a named but disabled button
+  const canCapture = ['PHOTO', 'VIDEO', 'QUIZ', 'GPS', 'GPS_LOCATION'].includes(task.type);
   const [state, setState] = useState<SubmissionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -327,8 +331,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           maxAttempts={maxQuizAttempts}
           progressiveHints={[
             task.quizHint || '',  // First hint (from task)
-            '🔍 Think carefully about the answer...',  // Second attempt hint
-            '💭 Consider alternative spellings or common variations...', // Third attempt hint
+            'Think carefully about the answer...',  // Second attempt hint
+            'Consider alternative spellings or common variations...', // Third attempt hint
           ]}
         />
       );
@@ -434,7 +438,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           {/* Primary Action Button */}
           <button
             onClick={startCapture}
-            disabled={task.type === 'GPS' && distanceFromTask !== null}
+            disabled={!canCapture || (task.type === 'GPS' && distanceFromTask !== null)}
             className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
                      disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             style={{ minHeight: '56px' }}
@@ -449,10 +453,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             
             {/* Button Content */}
             <span className="relative z-10 text-white uppercase tracking-wider text-base sm:text-lg">
-              {task.type === 'PHOTO' && '📸 Take Photo'}
-              {task.type === 'VIDEO' && '🎥 Record Video'}
-              {task.type === 'QUIZ' && '❓ Answer Quiz'}
-              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && '📍 Take Photo at Location'}
+              <TypeIcon className="inline w-5 h-5 mr-2 -mt-1" aria-hidden="true" />
+              {task.type === 'PHOTO' && 'Take Photo'}
+              {task.type === 'VIDEO' && 'Record Video'}
+              {task.type === 'QUIZ' && 'Answer Quiz'}
+              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && 'Take Photo at Location'}
+              {!canCapture && typeLabel}
             </span>
           </button>
 

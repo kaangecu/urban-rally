@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { getTasksByEvent, getAvailableTasks, getIncompleteTasks, getCompletedTasks, sortTasks, getTaskStats } from '../../services/task.service';
 import { TaskCard } from './TaskCard';
+import { ClipboardList } from 'lucide-react';
 
 export function TaskList() {
   const { team, tenant } = useAuthStore();
@@ -169,7 +170,7 @@ export function TaskList() {
       {/* Empty State */}
       {!isLoading && !error && filteredAndSortedTasks.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
-          <p className="text-6xl mb-4">📝</p>
+          <ClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-400" aria-hidden="true" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             {filter === 'completed' ? 'No completed tasks yet' : 'No tasks available'}
           </h3>

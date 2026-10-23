@@ -38,3 +38,16 @@ export const appConfig = {
   // Touch UI
   minTouchTargetSize: 44, // pixels
 } as const;
+
+// Map tiles per theme. CARTO basemaps need no API key; check CARTO's terms for commercial use before launch.
+const CARTO_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+export const mapTiles = {
+  night: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', attribution: CARTO_ATTRIBUTION },
+  daylight: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: CARTO_ATTRIBUTION },
+} as const;
+
+export function getTileLayer(theme: 'night' | 'daylight') {
+  return mapTiles[theme];
+}

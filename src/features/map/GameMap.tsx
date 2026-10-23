@@ -14,6 +14,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Sheet } from '../../components/ui/Sheet';
 import { TaskTypeTag } from '../../components/ui/TaskTypeTag';
+import { getTileLayer } from '../../config/app.config';
+import { getThemeName } from '../../utils/theme';
 import { getInitialCenter, getMarkerState, type MarkerState } from './markers';
 import { markerIcon } from './markerIcon';
 
@@ -131,8 +133,9 @@ function TaskPeek({ task, completed, onClose }: { task: Task | null; completed: 
 }
 
 export function GameMap() {
-  const { team } = useAuthStore();
+  const { team, tenant } = useAuthStore();
   const { tasks } = useTaskStore();
+  const tiles = getTileLayer(getThemeName(tenant));
   const { center, zoom, userLocation, selectedMarkerId, setCenter, setSelectedMarkerId, setMapReady, focusOnUser } = useMapStore();
 
   // Start on the event area; the player's own position takes over once known
@@ -153,10 +156,8 @@ export function GameMap() {
   return (
     <div className="h-full relative">
       <MapContainer center={center as LatLngExpression} zoom={zoom} className="h-full w-full z-0" zoomControl={false}>
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {/* key remounts the layer when the theme changes */}
+        <TileLayer key={tiles.url} attribution={tiles.attribution} url={tiles.url} />
 
         <MapController />
         <UserLocationMarker />

@@ -7,6 +7,7 @@ import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
 import type { Task } from '../../types/schema';
+import { formatPoints } from '../../utils/format';
 
 // Fix for default marker icons in React-Leaflet
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -178,7 +179,7 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
             <h3 className="font-bold text-gray-900 mb-1">{task.title}</h3>
             <p className="text-sm text-gray-600 mb-2">{task.description}</p>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-blue-600">{task.points} pts</span>
+              <span className="text-lg font-bold text-blue-600">{formatPoints(task.points)}</span>
               {isCompleted && (
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
                   ✓ Completed

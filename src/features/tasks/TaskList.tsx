@@ -96,7 +96,7 @@ export function TaskList() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-orange-600">{stats.earnedPoints}/{stats.totalPoints}</p>
-              <p className="text-sm text-gray-600">Points</p>
+              <p className="text-sm text-gray-600">pts</p>
             </div>
           </div>
         )}
@@ -143,7 +143,7 @@ export function TaskList() {
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="px-4 py-2 border border-gray-300 rounded-lg bg-white font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="points">Sort by Points</option>
+            <option value="points">Sort by pts</option>
             <option value="difficulty">Sort by Difficulty</option>
             <option value="distance">Sort by Distance</option>
           </select>

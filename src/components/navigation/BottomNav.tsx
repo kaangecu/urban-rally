@@ -99,7 +99,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <span className="font-bold text-white text-xs">{teamScore}</span>
           </div>
           <span className="text-[9px] font-bold uppercase drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]">
-            XP
+            pts
           </span>
         </div>
 

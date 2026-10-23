@@ -10,7 +10,6 @@ import { validateQuizAnswer } from '../../utils/quizValidation';
 import { formatPoints } from '../../utils/format';
 import { submissionFailed } from '../../utils/messages';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { getTaskTypeInfo } from '../../utils/taskTypes';
 
 interface TaskSubmissionProps {
   task: Task;
@@ -22,8 +21,8 @@ type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 
 
 export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
   const { team, tenant } = useAuthStore();
-  const { Icon: TypeIcon } = getTaskTypeInfo(task.type);
-  const [state, setState] = useState<SubmissionState>('idle');
+  // The detail's primary button already confirmed, so capture opens at once
+  const [state, setState] = useState<SubmissionState>('capture');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
@@ -57,6 +56,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             
             if (!distance.isValid) {
               setDistanceFromTask(distance.distance);
+              setState('idle');
             }
           }
         },
@@ -234,7 +234,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
               attemptsRemaining === 1 ? 'attempt' : 'attempts'
             } remaining.`
           );
-          setState('idle'); // Allow retry
+          setState('capture'); // Allow retry
         } else {
           setError(`${validationResult.feedback}\n❌ Maximum attempts reached. Task failed.`);
           setState('failed');
@@ -308,12 +308,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     
     if (task.type === 'PHOTO') {
       console.log('📸 Rendering CameraCapture');
-      return <CameraCapture onCapture={handlePhotoCapture} onCancel={() => setState('idle')} />;
+      return <CameraCapture onCapture={handlePhotoCapture} onCancel={onCancel} />;
     }
     
     if (task.type === 'VIDEO') {
       console.log('🎥 Rendering VideoCapture');
-      return <VideoCapture onCapture={handleVideoCapture} onCancel={() => setState('idle')} />;
+      return <VideoCapture onCapture={handleVideoCapture} onCancel={onCancel} />;
     }
     
     if (task.type === 'QUIZ' && task.description) {
@@ -325,7 +325,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           options={task.quizOptions}
           hint={task.quizHint}
           onSubmit={handleQuizSubmit}
-          onCancel={() => setState('idle')}
+          onCancel={onCancel}
           // Phase 3: Pass attempt tracking props
           currentAttempt={quizAttempts + 1} // Next attempt number
           maxAttempts={maxQuizAttempts}
@@ -340,7 +340,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
     if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
       console.log('📍 Rendering CameraCapture for GPS');
-      return <CameraCapture onCapture={handlePhotoCapture} onCancel={() => setState('idle')} />;
+      return <CameraCapture onCapture={handlePhotoCapture} onCancel={onCancel} />;
     }
     
     console.log('⚠️ No matching task type, returning null');
@@ -424,54 +424,17 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         </div>
       )}
 
-      {/* Initial State - Submit Button */}
+      {/* Too far: the only idle case, until the detail checks distance itself */}
       {state === 'idle' && (
-        <div className="space-y-4">
-          {/* XP Display */}
-          <div className="text-center mb-6">
-            <p className="text-gray-400 mb-3 text-sm sm:text-base">Ready to complete this task?</p>
-            <div className="inline-block bg-gradient-to-r from-pink-500 to-purple-600 px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-[0_0_20px_-3px_rgba(236,72,153,0.6)]">
-              <p className="text-white font-bold text-xl sm:text-2xl">{formatPoints(task.points, { signed: true })}</p>
-            </div>
-          </div>
-
-          {/* Primary Action Button */}
-          <button
-            onClick={startCapture}
-            disabled={task.type === 'GPS' && distanceFromTask !== null}
-            className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
-                     disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-            style={{ minHeight: '56px' }}
-          >
-            {/* Gradient Background Layers */}
-            <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 
-                          group-hover:from-pink-500 group-hover:to-purple-500 
-                          transition-all duration-300 group-disabled:from-gray-700 group-disabled:to-gray-600" />
-            <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 
-                          blur-xl opacity-50 group-hover:opacity-70 
-                          transition-opacity duration-300 group-disabled:opacity-0" />
-            
-            {/* Button Content */}
-            <span className="relative z-10 text-white uppercase tracking-wider text-base sm:text-lg">
-              <TypeIcon className="inline w-5 h-5 mr-2 -mt-1" aria-hidden="true" />
-              {task.type === 'PHOTO' && 'Take Photo'}
-              {task.type === 'VIDEO' && 'Record Video'}
-              {task.type === 'QUIZ' && 'Answer Quiz'}
-              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && 'Take Photo at Location'}
-            </span>
-          </button>
-
-          {/* Secondary Action Button */}
-          <button
-            onClick={onCancel}
-            className="w-full py-4 px-6 border border-white/20 text-gray-300 
-                     hover:bg-white/10 hover:text-white rounded-lg backdrop-blur-sm 
-                     transition-all font-semibold touch-manipulation"
-            style={{ minHeight: '48px' }}
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          onClick={onCancel}
+          className="w-full py-4 px-6 border border-white/20 text-gray-300 
+                   hover:bg-white/10 hover:text-white rounded-lg backdrop-blur-sm 
+                   transition-all font-semibold touch-manipulation"
+          style={{ minHeight: '48px' }}
+        >
+          Close
+        </button>
       )}
 
       {/* Error State - Retry Button */}

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ProgressBar } from '../../components/ui/ProgressBar';
+import { Button } from '../../components/ui/Button';
 import type { Task } from '../../types/schema';
 import { CameraCapture } from './CameraCapture';
 import { VideoCapture } from './VideoCapture';
@@ -9,7 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
 import { formatPoints } from '../../utils/format';
 import { submissionFailed } from '../../utils/messages';
-import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
   task: Task;
@@ -28,6 +30,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
   const [distanceFromTask, setDistanceFromTask] = useState<number | null>(null);
   
+  // The captured file stays in memory so Try again resends it without a new photo
+  const [lastFile, setLastFile] = useState<{ kind: 'photo' | 'video'; file: File } | null>(null);
+  // Set when the player leaves during an upload; the upload carries on without them
+  const leftRef = useRef(false);
+  const finish = () => {
+    if (!leftRef.current) onSuccess();
+  };
+
   // Quiz attempt tracking (Phase 1)
   const [quizAttempts, setQuizAttempts] = useState<number>(0);
   const maxQuizAttempts = 3;
@@ -75,6 +85,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       return;
     }
 
+    setLastFile({ kind: 'photo', file });
+    setUploadProgress(0);
     setState('uploading');
     setError(null);
 
@@ -101,7 +113,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        onSuccess();
+        finish();
       }, 1500);
     } catch (err) {
       console.error('Error submitting photo:', err);
@@ -111,7 +123,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          onSuccess();
+          finish();
         }, 2000);
         return;
       }
@@ -127,6 +139,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       return;
     }
 
+    setLastFile({ kind: 'video', file });
+    setUploadProgress(0);
     setState('uploading');
     setError(null);
 
@@ -153,7 +167,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        onSuccess();
+        finish();
       }, 1500);
     } catch (err) {
       console.error('Error submitting video:', err);
@@ -163,7 +177,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          onSuccess();
+          finish();
         }, 2000);
         return;
       }
@@ -268,7 +282,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       }
       
       setTimeout(() => {
-        onSuccess();
+        finish();
       }, 1500);
     } catch (err) {
       console.error('Error submitting quiz:', err);
@@ -278,7 +292,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          onSuccess();
+          finish();
         }, 2000);
         return;
       }
@@ -380,11 +394,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       {/* Error Message */}
       {state === 'error' && error && (
-        <div className="mb-4 p-4 rounded-xl border border-red-500/30 bg-red-950/30 backdrop-blur-sm flex items-start gap-3">
-          <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(239,68,68,0.2)_1px,transparent_1px)] bg-[length:10px_10px] rounded-xl" />
-          <AlertCircle className="relative w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-          <div className="relative">
-            <p className="text-sm font-bold text-red-300 uppercase tracking-wider">Submission Failed</p>
+        <div role="alert" className="mb-4 p-4 rounded-xl border border-red-500/30 bg-red-950/30 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-bold text-red-300">
+              {lastFile ? `Your ${lastFile.kind} is still on your phone` : 'Not sent'}
+            </p>
             <p className="text-sm text-red-200 mt-1">{error}</p>
           </div>
         </div>
@@ -404,23 +419,27 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         </div>
       )}
 
-      {/* Uploading State */}
+      {/* Uploading State: the player can leave and the upload carries on */}
       {state === 'uploading' && (
-        <div className="p-6 sm:p-8 text-center">
-          <div className="relative inline-block mb-6">
-            <div className="absolute inset-0 bg-cyan-500/30 blur-3xl rounded-full" />
-            <Loader2 className="relative w-12 h-12 sm:w-16 sm:h-16 text-cyan-400 mx-auto animate-spin" />
-          </div>
-          <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Uploading...</h3>
-          
-          {/* Progress Bar */}
-          <div className="relative w-full h-3 bg-white/5 rounded-full border border-white/10 overflow-hidden backdrop-blur-sm">
-            <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300 shadow-[0_0_10px_-2px_rgba(6,182,212,0.8)]"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-          <p className="text-sm text-cyan-300 mt-3 font-semibold">{uploadProgress}%</p>
+        <div className="flex flex-col gap-4 p-2 text-white">
+          <ProgressBar
+            label={`Sending your ${lastFile?.kind ?? 'answer'}`}
+            value={Math.round(uploadProgress)}
+            max={100}
+            valueText={`${Math.round(uploadProgress)}%`}
+          />
+          {lastFile && (
+            <Button
+              variant="secondary"
+              block
+              onClick={() => {
+                leftRef.current = true;
+                onCancel();
+              }}
+            >
+              Keep playing
+            </Button>
+          )}
         </div>
       )}
 
@@ -441,7 +460,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       {state === 'error' && (
         <div className="space-y-4 mt-4">
           <button
-            onClick={startCapture}
+            onClick={() => {
+              const last = lastFile;
+              if (!last) return startCapture();
+              if (last.kind === 'photo') handlePhotoCapture(last.file);
+              else handleVideoCapture(last.file);
+            }}
             className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 touch-manipulation"
             style={{ minHeight: '56px' }}
           >
@@ -455,7 +479,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             
             {/* Button Content */}
             <span className="relative z-10 text-white uppercase tracking-wider text-base sm:text-lg">
-              Try Again
+              Try again
             </span>
           </button>
 

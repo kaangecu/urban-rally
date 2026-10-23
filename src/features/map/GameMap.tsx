@@ -5,9 +5,9 @@ import { DivIcon, type LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed } from 'lucide-react';
 import { useMapStore } from '../../store/mapStore';
+import { useTrackUserLocation } from '../../hooks/useTrackUserLocation';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
-import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
 import type { Task } from '../../types/schema';
 import { formatPoints } from '../../utils/format';
 import { getTaskTypeInfo } from '../../utils/taskTypes';
@@ -40,38 +40,10 @@ const userIcon = new DivIcon({
 
 // User location marker component
 function UserLocationMarker() {
-  const { userLocation, setUserLocation, setTrackingLocation, focusOnUser } = useMapStore();
-  const watchIdRef = useRef<number | null>(null);
+  const userLocation = useMapStore((state) => state.userLocation);
+  const focusOnUser = useMapStore((state) => state.focusOnUser);
   const centredRef = useRef(false);
-
-  useEffect(() => {
-    // Get initial location
-    getCurrentLocation()
-      .then((location) => {
-        setUserLocation(location);
-      })
-      .catch((error) => {
-        console.error('Error getting location:', error);
-      });
-
-    // Start watching location
-    watchIdRef.current = watchLocation(
-      (location) => {
-        setUserLocation(location);
-      },
-      (error) => {
-        console.error('Location tracking error:', error);
-        setTrackingLocation(false);
-      }
-    );
-
-    return () => {
-      // Cleanup: stop watching location
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
-  }, []);
+  useTrackUserLocation();
 
   // Centre on the player once, when they are first located
   useEffect(() => {

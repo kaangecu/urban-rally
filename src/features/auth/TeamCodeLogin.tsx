@@ -641,17 +641,17 @@ export function TeamCodeLogin() {
       <LegalModal
         isOpen={showTerms}
         onClose={() => setShowTerms(false)}
-        title="Terms of Service"
+        title={{ en: 'Terms of Service', de: 'Nutzungsbedingungen' }}
       >
-        <TermsOfService />
+        {(lang) => <TermsOfService lang={lang} />}
       </LegalModal>
 
       <LegalModal
         isOpen={showPrivacy}
         onClose={() => setShowPrivacy(false)}
-        title="Privacy Policy"
+        title={{ en: 'Privacy Policy', de: 'Datenschutzerklärung' }}
       >
-        <PrivacyPolicy />
+        {(lang) => <PrivacyPolicy lang={lang} />}
       </LegalModal>
     </div>
   );

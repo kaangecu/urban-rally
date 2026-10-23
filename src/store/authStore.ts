@@ -48,11 +48,8 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         }),
 
-      setLoading: (isLoading) =>
-        set({
-          isLoading,
-          error: null,
-        }),
+      // Starting a load clears the last error; finishing one must not wipe an error set by the load
+      setLoading: (isLoading) => set(isLoading ? { isLoading, error: null } : { isLoading }),
 
       logout: () =>
         set({

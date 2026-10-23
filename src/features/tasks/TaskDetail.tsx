@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { TaskSubmission } from '../submissions/TaskSubmission';
+import { formatPoints } from '../../utils/format';
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask } = useTaskStore();
@@ -84,9 +85,9 @@ export function TaskDetail() {
               <p className="text-gray-300 leading-relaxed">{selectedTask.description}</p>
             </div>
             
-            {/* XP Badge */}
+            {/* Points Badge */}
             <div className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 rounded-full shadow-[0_0_15px_-3px_rgba(236,72,153,0.6)] shrink-0">
-              <span className="font-bold text-white text-lg">{selectedTask.points} XP</span>
+              <span className="font-bold text-white text-lg">{formatPoints(selectedTask.points)}</span>
             </div>
           </div>
 
@@ -97,7 +98,7 @@ export function TaskDetail() {
               <div className="relative flex items-center justify-between">
                 <span className="text-purple-300 font-medium">Bonus Available</span>
                 <span className="text-2xl font-bold text-purple-400">
-                  +{selectedTask.bonusPoints} XP
+                  {formatPoints(selectedTask.bonusPoints, { signed: true })}
                 </span>
               </div>
             </div>
@@ -166,7 +167,7 @@ export function TaskDetail() {
                     <div className="relative flex items-center justify-between rounded-xl border border-white/10 bg-gray-900/60 p-4 backdrop-blur-xl hover:border-yellow-500/50 transition-colors">
                       <div>
                         <p className="font-bold text-white">Hint #{index + 1}</p>
-                        <p className="text-sm text-yellow-400 font-mono">{hint.cost} XP Cost</p>
+                        <p className="text-sm text-yellow-400 font-mono">Costs {formatPoints(hint.cost)}</p>
                       </div>
                       <button className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-lg transition-all shadow-[0_0_15px_-3px_rgba(234,179,8,0.6)]">
                         Unlock

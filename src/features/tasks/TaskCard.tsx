@@ -182,7 +182,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
               {task.points}
             </span>
             <span className={`text-sm ${useCyberpunk ? 'text-gray-500' : 'text-gray-600'}`}>
-              points
+              pts
             </span>
           </div>
 

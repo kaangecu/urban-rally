@@ -53,8 +53,8 @@
 /* Tailwind v4 Theme Configuration */
 @theme {
   /* Touch-friendly minimum sizes */
-  --min-height-touch: 44px;
-  --min-width-touch: 44px;
+  --min-height-touch: 48px;
+  --min-width-touch: 48px;
 
   /* Border radius (design system v3 "Blend"; --radius-lg kept for screens not yet ported) */
   --radius: 0.75rem;                    /* 12px */
@@ -273,10 +273,12 @@ body {
   touch-action: manipulation;
 }
 
-/* Touch-friendly minimum sizes */
-button, a, [role="button"] {
-  min-height: 44px;
-  min-width: 44px;
+/* Touch-friendly minimum sizes. In the base layer so min-h-* utilities can override them */
+@layer base {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Mobile viewport height support */

@@ -41,6 +41,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   // Quiz attempt tracking (Phase 1)
   const [quizAttempts, setQuizAttempts] = useState<number>(0);
   const maxQuizAttempts = 3;
+  const [wrongAnswer, setWrongAnswer] = useState<string | number | undefined>(undefined);
 
   console.log('🎯 TaskSubmission rendered', { 
     taskType: task.type, 
@@ -242,17 +243,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setQuizAttempts(currentAttempt);
         const attemptsRemaining = maxQuizAttempts - currentAttempt;
         
-        if (attemptsRemaining > 0) {
-          setError(
-            `${validationResult.feedback}\nYou have ${attemptsRemaining} ${
-              attemptsRemaining === 1 ? 'attempt' : 'attempts'
-            } remaining.`
-          );
-          setState('capture'); // Allow retry
-        } else {
-          setError(`${validationResult.feedback}\n❌ Maximum attempts reached. Task failed.`);
-          setState('failed');
-        }
+        setWrongAnswer(answer);
+        setState(attemptsRemaining > 0 ? 'capture' : 'failed');
         return;
       }
       
@@ -316,6 +308,24 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     setState('capture');
   };
 
+  const renderQuiz = () => (
+    <QuizInput
+      question={task.description}
+      type={task.quizType || 'text'}
+      options={task.quizOptions}
+      hint={task.quizHint}
+      onSubmit={handleQuizSubmit}
+      onCancel={onCancel}
+      attemptsLeft={maxQuizAttempts - quizAttempts}
+      wrongAnswer={wrongAnswer}
+      failed={state === 'failed'}
+    />
+  );
+
+  if (state === 'failed' && task.type === 'QUIZ') {
+    return renderQuiz();
+  }
+
   // Render capture interfaces
   if (state === 'capture') {
     console.log('📸 Rendering capture interface for type:', task.type);
@@ -331,25 +341,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     }
     
     if (task.type === 'QUIZ' && task.description) {
-      console.log('❓ Rendering QuizInput');
-      return (
-        <QuizInput 
-          question={task.description}
-          type={task.quizType || 'text'}
-          options={task.quizOptions}
-          hint={task.quizHint}
-          onSubmit={handleQuizSubmit}
-          onCancel={onCancel}
-          // Phase 3: Pass attempt tracking props
-          currentAttempt={quizAttempts + 1} // Next attempt number
-          maxAttempts={maxQuizAttempts}
-          progressiveHints={[
-            task.quizHint || '',  // First hint (from task)
-            'Think carefully about the answer...',  // Second attempt hint
-            'Consider alternative spellings or common variations...', // Third attempt hint
-          ]}
-        />
-      );
+      return renderQuiz();
     }
 
     if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {

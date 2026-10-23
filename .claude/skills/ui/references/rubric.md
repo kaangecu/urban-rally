@@ -18,7 +18,7 @@ For `ui-reviewer`. Review screenshots at 390×844 in both themes against the ref
 Use these to calibrate how specific a comment should be.
 
 **Bad: say so like this**
-- "Terms modal (light): headings are `text-white` on a white panel, 1.0:1. `LegalModal.tsx` applies `prose-invert` without a theme branch. Use `themeClasses.textMain`."
+- "Terms modal (light): headings are `text-white` on a white panel, 1.0:1. `TermsOfService.tsx` and `PrivacyPolicy.tsx` apply `prose-invert` without a theme branch. Use `themeClasses.textMain`." (This is the app before #40, which fixes it.)
 - "Bottom nav: labels are 9px uppercase. Raise to 13px minimum; they are the most-used controls."
 - "Map: open and done pins are blue versus green (1.45:1 to each other) plus a 12px tick on done (`GameMap.tsx:130-152`). Give each state its own shape, not only a colour."
 - "Task list: the stats panel pushes the first task title to about 690px, below the fold on a 390×844 phone. Move progress into one line and show tasks first."

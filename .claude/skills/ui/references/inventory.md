@@ -24,7 +24,7 @@ Snapshot of main at 0b2cca7 (12 Oct 2026). Check the files before relying on a n
 
 - Glass: `glass-card`, `glass-card-strong`, `glass-card-subtle`, `glass-header`, `glass-modal`, `glass-frosted`, `glass-frosted-dark`. Blur drops to 12px under 768px.
 - Neon: `neon-glow`, `neon-border`, `neon-border-cyan`, `neon-border-pink`.
-- Measured problem: `glass-card` (40% tint) puts white text at 2.7:1 over a white map tile, and `glass-frosted` (5% white) at 1.0:1. Only use them over dark content, or with an 85%+ tint over the map.
+- Measured problem: `glass-card` (40% tint) puts white text at 2.7:1 over a white map tile, and `glass-frosted` (5% white) at 1.0:1. Only use them over dark content, or with an 86%+ tint over the map.
 
 ## Components and exemplars
 

@@ -19,7 +19,7 @@ Write this plan in your reply before editing, and keep it short:
 4. **Wireframe.** An ASCII sketch at 390px wide, showing what is above the fold.
 5. **Themes.** What changes between light and cyberpunk.
 
-For anything bigger than one screen, propose a `SPEC.md` and wait for approval before building.
+For anything bigger than one screen, follow the AGENTS.md workflow: write a one-page spec from `docs/specs/TEMPLATE.md`, write the failing tests, and stop for review before building.
 
 ## 2. Rules
 
@@ -51,8 +51,8 @@ For anything bigger than one screen, propose a `SPEC.md` and wait for approval b
 
 - **Light theme:** solid white surfaces on `gray-100`, a single tenant `primaryColor` for the main action, and no glow or blur.
 - **Cyberpunk theme:** near-black ground, neon pink and cyan. Glow means "live": focus, the active tab, the selected item. Don't glow everything.
-- **Glass (`glass-*`, `backdrop-blur`):** only over live content, meaning the map, the camera viewfinder or a photo. Over a flat dark page the blur is invisible but still costs GPU time. Never put glass inside scrolling lists, and never stack glass on glass. Use a dark tint of 86% or more over the map (text stays 11.6:1 on a white tile). Over the camera use the dark tint in both themes: a light tint needs 90% before red text passes over a black frame.
-- **Blend style (the target for ported screens):** corners are 16px on cards and 12px on controls; buttons, tags and chips are pills; there are no chamfers. The only gradient is a one-hue magenta on the primary button, and a disabled primary goes flat grey. One soft magenta glow sits behind the header. Glass goes where content moves underneath it: the header and the floating bottom nav over a scrolling list, plus the map, the camera bars and sheets. Cards inside the list stay solid. Lists leave room at the bottom so the floating nav never hides the last item or the focused element.
+- **Blend style (the target for ported screens):** corners are 16px on cards and 12px on controls; buttons, tags and chips are pills; there are no chamfers. The only gradient is a one-hue magenta on the primary button, and a disabled primary goes flat grey. One soft magenta glow sits behind the header. Lists leave room at the bottom so the floating nav never hides the last item or the focused element.
+- **Glass (`glass-*`, `backdrop-blur`):** only where content moves underneath it: the header and the floating bottom nav over a scrolling list, panels over the map, the camera bars and bottom sheets. Cards inside a list stay solid, and glass never stacks on glass. Over a flat page that doesn't move the blur is invisible but still costs GPU time. Use a tint of 86% or more over the map (text stays 11.6:1 on a white tile). Over the camera use the dark tint in both themes: a light tint needs 90% before red text passes over a black frame.
 - Anything that differs by theme gets a branch for both themes. Components that only style for cyberpunk (TaskDetail, BottomNav today) are known gaps. Don't copy that pattern.
 
 ## 4. Avoid the generic AI look
@@ -70,8 +70,10 @@ Models drift toward safe defaults. Check your plan and your result against this 
 
 Run this loop for every visible change.
 
-1. **Run the app.** Start the emulators and the dev server (`npm run emulators`, `npm run setup-all`, `npm run dev`). Never use the real Firebase project.
-2. **Screenshot.** Run `node .claude/skills/ui/scripts/shoot.mjs <url-or-file> --out .ui-shots/<name>` to capture 390×844 in light and dark color schemes. The script also prints any horizontal overflow and tap targets smaller than 44px. For a cyberpunk-tenant screen, sign in with a cyberpunk tenant's team.
+1. **Run the app.** Start the emulators with `npm run emulators`, then the dev server with `VITE_USE_EMULATOR=true npm run dev`. Never run the `setup-*` or `add-*` seed scripts: they write to the real Firebase project. If the emulator has no event or team to play with, ask the user how to get test data into it.
+2. **Screenshot.** Run `node .claude/skills/ui/scripts/shoot.mjs <url-or-file> --name <screen>-<theme> --state .ui-shots/<theme>.json` to capture 390×844. The script also prints any horizontal overflow and tap targets smaller than 44px. The theme comes from the signed-in team's tenant, so take one shot per theme, each with a saved sign-in:
+   - Save a sign-in once per theme: run `npx playwright codegen --save-storage=.ui-shots/light.json http://localhost:5173` against the emulator, join with a light tenant's team, and close the window. Do the same with a cyberpunk tenant's team for `.ui-shots/cyberpunk.json`.
+   - Leave out `--state` for signed-out screens such as join.
 3. **Compare against a reference.** The reference is the before screenshot, the matching frame on the screen board (see `references/inventory.md`), or a mockup the user gave you. List the differences you intended and the ones you didn't.
 4. **Get a separate review.** Hand the screenshots, the reference and the diff to the `ui-reviewer` subagent. It didn't write the code, so it grades more honestly.
 5. **Iterate.** Fix what you agree with. Do at most **2 review rounds**, because almost all the gain comes from the first one. Re-read your diff after each round, since code quality tends to slip.

@@ -27,7 +27,7 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - Load the `ui` skill (`.claude/skills/ui/SKILL.md`) before changing anything visible.
 - Tokens live in `src/index.css` (`@theme`) and `src/utils/theme.ts`. Reuse the existing `glass-*` and `neon-*` classes and `themeClasses` before writing new styles.
 - No new raw palette classes (`bg-gray-500`), hex values or arbitrary `[...]` classes in new code.
-- Touch targets at least 44px; text at least 14px; inputs 16px.
+- Touch targets at least 44px; text at least 14px, except short uppercase labels at 13px; inputs 16px.
 - Every screen needs its empty, loading and error states, a 390px phone layout, and both the light and cyberpunk themes.
 - Check UI changes with a 390×844 screenshot and the `ui-reviewer` subagent (at most 2 rounds). Its review is advice, not a gate.
 - Never run `--update-snapshots` unless I ask.

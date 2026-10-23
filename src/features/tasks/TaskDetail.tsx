@@ -28,7 +28,8 @@ function Requirement({ Icon, children }: { Icon: LucideIcon; children: string })
 
 export function TaskDetail() {
   const { selectedTask, setSelectedTask, uploadingTaskId } = useTaskStore();
-  const { team } = useAuthStore();
+  const { team, recordCompletion } = useAuthStore();
+  const setNotice = useTaskStore((state) => state.setNotice);
   const userLocation = useMapStore((state) => state.userLocation);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const tooFarId = useId();
@@ -162,12 +163,20 @@ export function TaskDetail() {
       {isSubmitting && !isCompleted && (
         <TaskSubmission
           task={task}
+          onSent={(points) => {
+            recordCompletion(task.id, points ?? 0);
+            setNotice(
+              points === null
+                ? 'Your team already did this task.'
+                : `Sent! ${formatPoints(points, { signed: true })}. Organisers can still reject it.`
+            );
+          }}
+          // Only reached while this capture is still open, so it never closes another task's
           onSuccess={() => {
             setIsSubmitting(false);
-            setSelectedTask(null);
-            // Refresh team data to show updated score
-            window.location.reload();
+            if (useTaskStore.getState().selectedTask?.id === task.id) setSelectedTask(null);
           }}
+          onSendFailed={() => setNotice(`“${task.title}” wasn't sent. Open it and try again.`, 'danger')}
           onCancel={() => setIsSubmitting(false)}
         />
       )}

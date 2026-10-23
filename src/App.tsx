@@ -4,6 +4,7 @@ import { useTeamSync } from './hooks/useTeamSync';
 import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
+import { TaskNotice } from './features/tasks/TaskNotice';
 import { GameMap } from './features/map/GameMap';
 import { AppHeader } from './components/navigation/AppHeader';
 import { BottomNav } from './components/navigation/BottomNav';
@@ -61,6 +62,7 @@ function App() {
 
       {/* Task Detail Modal - Renders at document level with high z-index */}
       <TaskDetail />
+      <TaskNotice />
     </div>
   );
 }

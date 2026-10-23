@@ -9,6 +9,9 @@ interface TaskState {
   error: string | null;
   filter: 'all' | 'available' | 'completed';
   sortBy: 'points' | 'distance' | 'difficulty';
+  /** Short confirmation shown on the list, e.g. after a task is sent */
+  notice: string | null;
+  noticeTone: 'success' | 'danger';
   /** The task whose photo or video is being sent, which keeps running after the player leaves */
   uploadingTaskId: string | null;
   /** Quiz misses per task, kept here so closing and reopening a quiz doesn't reset its attempts */
@@ -24,6 +27,7 @@ interface TaskState {
   setUploadingTaskId: (uploadingTaskId: string | null) => void;
   recordQuizMiss: (taskId: string, answer: string | number) => void;
   clearTasks: () => void;
+  setNotice: (notice: string | null, tone?: 'success' | 'danger') => void;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
@@ -35,6 +39,8 @@ export const useTaskStore = create<TaskState>((set) => ({
   error: null,
   filter: 'available',
   sortBy: 'points',
+  notice: null,
+  noticeTone: 'success',
   uploadingTaskId: null,
   quizProgress: {},
 
@@ -69,6 +75,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       sortBy,
     }),
 
+  setNotice: (notice, noticeTone = 'success') => set({ notice, noticeTone }),
   setUploadingTaskId: (uploadingTaskId) => set({ uploadingTaskId }),
 
   recordQuizMiss: (taskId, answer) =>
@@ -87,6 +94,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       tasks: [],
       selectedTask: null,
       quizProgress: {},
+      notice: null,
       error: null,
       isLoading: false,
     }),

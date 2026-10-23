@@ -16,7 +16,12 @@ import { MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
   task: Task;
+  /** The submission was saved, even if the player has left: the points earned, or null if the team had already done it */
+  onSent?: (points: number | null) => void;
+  /** Closes this capture once it is done; never called after the player left */
   onSuccess: () => void;
+  /** A photo or video upload failed after the player left the screen */
+  onSendFailed?: () => void;
   onCancel: () => void;
 }
 
@@ -24,7 +29,7 @@ const NO_MISSES: (string | number)[] = [];
 
 type SubmissionState = 'idle' | 'capture' | 'uploading' | 'success' | 'error' | 'failed';
 
-export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess, onCancel }) => {
+export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSent, onSuccess, onSendFailed, onCancel }) => {
   const { team, tenant } = useAuthStore();
   // The detail's primary button already confirmed, so capture opens at once
   const [state, setState] = useState<SubmissionState>('capture');
@@ -45,9 +50,12 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       leftRef.current = true;
     };
   }, []);
-  const finish = () => {
+  const finish = (points: number | null) => {
+    onSent?.(points);
     if (!leftRef.current) onSuccess();
   };
+  // A quiz can award less than the task's points (later attempt, forgiven typo)
+  const [awardedPoints, setAwardedPoints] = useState<number | null>(null);
   const setUploadingTaskId = useTaskStore((s) => s.setUploadingTaskId);
 
   // Quiz attempt tracking (Phase 1); stored per task so a reopen can't reset it
@@ -133,7 +141,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        finish();
+        finish(task.points);
       }, 1500);
     } catch (err) {
       console.error('Error submitting photo:', err);
@@ -143,13 +151,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(null);
         }, 2000);
         return;
       }
       
       setError(submissionFailed('photo'));
       setState('error');
+      if (leftRef.current) onSendFailed?.();
     } finally {
       setUploadingTaskId(null);
     }
@@ -190,7 +199,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
       setState('success');
       setTimeout(() => {
-        finish();
+        finish(task.points);
       }, 1500);
     } catch (err) {
       console.error('Error submitting video:', err);
@@ -200,13 +209,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(null);
         }, 2000);
         return;
       }
       
       setError(submissionFailed('video'));
       setState('error');
+      if (leftRef.current) onSendFailed?.();
     } finally {
       setUploadingTaskId(null);
     }
@@ -285,6 +295,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           : undefined,
       });
 
+      setAwardedPoints(pointsAwarded);
       setState('success');
       
       // Show success message with points info (including fuzzy match indicator)
@@ -297,7 +308,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       }
       
       setTimeout(() => {
-        finish();
+        finish(pointsAwarded);
       }, 1500);
     } catch (err) {
       console.error('Error submitting quiz:', err);
@@ -307,7 +318,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
         setError('✅ You have already completed this task!');
         setState('success'); // Show as success since task is done
         setTimeout(() => {
-          finish();
+          finish(null);
         }, 2000);
         return;
       }
@@ -439,7 +450,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Task Completed!</h3>
           <div className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 rounded-full shadow-[0_0_20px_-3px_rgba(34,197,94,0.6)]">
-            <p className="text-white font-bold text-lg">{formatPoints(task.points, { signed: true })}</p>
+            <p className="text-white font-bold text-lg">{formatPoints(awardedPoints ?? task.points, { signed: true })}</p>
           </div>
         </div>
       )}
@@ -457,10 +468,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             <Button
               variant="secondary"
               block
-              onClick={() => {
-                leftRef.current = true;
-                onCancel();
-              }}
+              onClick={onCancel}
             >
               Keep playing
             </Button>

@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { QuizInput } from './QuizInput';
 import { TaskSubmission } from './TaskSubmission';
+import { createSubmission } from '../../services/submission.service';
 
 vi.mock('../../services/storage.service', () => ({ uploadImage: vi.fn(), uploadVideo: vi.fn() }));
 vi.mock('../../services/submission.service', () => ({ createSubmission: vi.fn(), verifyGPSLocation: vi.fn() }));
@@ -118,5 +119,17 @@ describe('Quiz attempts', () => {
 
     render(<TaskSubmission task={quiz} onSuccess={() => {}} onCancel={() => {}} />);
     expect(screen.getByRole('heading', { name: 'Out of attempts' })).toBeInTheDocument();
+  });
+
+  it('shows the points actually awarded on the success screen', async () => {
+    vi.mocked(createSubmission).mockResolvedValue(undefined as never);
+    const onSent = vi.fn();
+    render(<TaskSubmission task={quiz} onSent={onSent} onSuccess={() => {}} onCancel={() => {}} />);
+    await answer('Rhine');
+    await answer('Spree');
+
+    // 60 pts on the second attempt: 75%
+    expect(await screen.findByText('+45 pts')).toBeInTheDocument();
+    expect(screen.queryByText('+60 pts')).not.toBeInTheDocument();
   });
 });

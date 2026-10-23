@@ -26,6 +26,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Bumped on every new request and on cleanup; a stream that resolves for an older request is stopped at once
+  const requestRef = useRef(0);
 
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
@@ -35,11 +37,24 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [blocked, setBlocked] = useState(false);
 
+  // Hands the stream to the viewfinder, or stops it if the request is out of date
+  const attachStream = (stream: MediaStream, request: number) => {
+    if (request !== requestRef.current) {
+      stream.getTracks().forEach((track) => track.stop());
+      return false;
+    }
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+    return true;
+  };
+
   const startCamera = async () => {
+    const request = ++requestRef.current;
     try {
       setIsLoading(true);
       setError(null);
-      setPermissionRequested(true);
 
       // Stop any existing stream
       stopCamera();
@@ -56,12 +71,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (!attachStream(stream, request)) return;
 
       setIsLoading(false);
     } catch (err) {
@@ -91,6 +101,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
   };
 
   const retryWithBasicConstraints = async () => {
+    const request = ++requestRef.current;
     try {
       setIsLoading(true);
       setError(null);
@@ -101,12 +112,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (!attachStream(stream, request)) return;
 
       setIsLoading(false);
     } catch (err) {
@@ -121,6 +127,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+  };
+
+  // Stops the stream and any request still in flight
+  const closeCamera = () => {
+    requestRef.current++;
+    stopCamera();
   };
 
   const capturePhoto = () => {
@@ -197,7 +209,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
       startCamera();
     }
     return () => {
-      stopCamera();
+      closeCamera();
     };
   }, [facingMode, permissionRequested]);
 
@@ -254,7 +266,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCance
               title="Allow the camera"
               text="This task needs a photo. Your browser will ask once; photos are only sent when you tap Use photo."
             >
-              <Button block onClick={startCamera}>
+              {/* The effect below is the only starter, so this never opens a second stream */}
+              <Button block onClick={() => setPermissionRequested(true)}>
                 Allow camera
               </Button>
             </PermissionPrompt>

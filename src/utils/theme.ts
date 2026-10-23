@@ -25,8 +25,11 @@ export interface ThemeConfig {
  */
 export function isCyberpunkTheme(tenant: ThemeTenant): boolean {
   // Check explicit themeStyle field first
-  if (tenant?.themeStyle === 'cyberpunk') {
+  if (tenant?.themeStyle === 'cyberpunk' || tenant?.themeStyle === 'night') {
     return true;
+  }
+  if (tenant?.themeStyle === 'daylight' || tenant?.themeStyle === 'light') {
+    return false;
   }
   
   // Fallback: Check tenant ID
@@ -43,8 +46,6 @@ export function isCyberpunkTheme(tenant: ThemeTenant): boolean {
  */
 export function getThemeName(tenant: ThemeTenant): ThemeName {
   if (!tenant) return 'night';
-  if (tenant.themeStyle === 'daylight' || tenant.themeStyle === 'light') return 'daylight';
-  if (tenant.themeStyle === 'night') return 'night';
   return isCyberpunkTheme(tenant) ? 'night' : 'daylight';
 }
 

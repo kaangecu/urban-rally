@@ -75,7 +75,7 @@ export function TaskDetail() {
                 </span>
               ) : (
                 <span className="mb-2 inline-block rounded-full border border-cyan-500/50 bg-cyan-950/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_10px_-3px_rgba(6,182,212,0.7)]">
-                  Active Quest
+                  Task
                 </span>
               )}
               <h3 className="text-2xl font-extrabold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] mb-2">
@@ -105,7 +105,7 @@ export function TaskDetail() {
 
           {/* Requirements */}
           <div>
-            <h4 className="font-semibold text-white mb-4 text-lg">Mission Requirements</h4>
+            <h4 className="font-semibold text-white mb-4 text-lg">Requirements</h4>
             <div className="space-y-3">
               {selectedTask.type === 'GPS' || selectedTask.type === 'GPS_LOCATION' ? (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
@@ -192,7 +192,7 @@ export function TaskDetail() {
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 group-hover:from-pink-500 group-hover:to-purple-500 transition-all" />
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 blur-xl opacity-50 group-hover:opacity-70 transition-opacity" />
                   <span className="relative text-white uppercase tracking-wider drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-                    Start Mission
+                    Start task
                   </span>
                 </button>
                 <button

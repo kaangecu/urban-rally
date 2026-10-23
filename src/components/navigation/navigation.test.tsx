@@ -37,6 +37,29 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Log out' }));
     expect(onLogout).toHaveBeenCalledOnce();
   });
+
+  it('closes the team menu on Escape and returns focus to the toggle', async () => {
+    render(<AppHeader {...props} />);
+    const menu = screen.getByRole('button', { name: 'Team menu' });
+    await userEvent.click(menu);
+    await userEvent.keyboard('{Escape}');
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument();
+    expect(menu).toHaveFocus();
+  });
+
+  it('closes the team menu on a tap outside', async () => {
+    render(
+      <>
+        <AppHeader {...props} />
+        <p>Task list</p>
+      </>,
+    );
+    const menu = screen.getByRole('button', { name: 'Team menu' });
+    await userEvent.click(menu);
+    await userEvent.click(screen.getByText('Task list'));
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+  });
 });
 
 describe('BottomNav', () => {

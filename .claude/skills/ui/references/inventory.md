@@ -46,13 +46,16 @@ No component is a clean exemplar yet. Follow the structure of the nearest one an
 
 ## Screen references
 
-Screen board, one frame per screen and state: https://claude.ai/artifact/QuLMW3b4bzLAtqf7PPaLpb
+Screen board v2, the approved target in the Blend style, one frame per screen and state: https://claude.ai/artifact/BgrgDH88cHdE9TgksSko7d
 
 | Frame | Screen |
 |---|---|
-| 1.1–1.8 | Join flow, Terms and Privacy modals |
-| 2.1, 2.2, 2.3, 2.4 | Task list (light, cyberpunk, empty), map |
-| 3.1–3.10 | Task detail, submit, camera, upload, failure, success |
-| 4.1–4.4 | Video and quiz |
+| 0 | App can't start |
+| 1.1–1.4 | Join: code found, code not found, name and consent, terms sheet |
+| 2.1–2.6 | Task list (Night, Daylight, loading, empty, offline), map with task peek |
+| 3.1–3.9 | Task detail, too far, camera permission, viewfinder, photo preview, camera blocked, uploading, upload failed, task done |
+| 4.1–4.4 | Video recording, quiz answer selected, wrong answer, text answer |
+
+The old board shows the app as it looks today, useful as the "before": https://claude.ai/artifact/QuLMW3b4bzLAtqf7PPaLpb
 
 Audits with measured findings: screen audit https://claude.ai/artifact/VaAWawxAv8z95z1K5V1X3W, design review https://claude.ai/artifact/MpWiPgWKVWPMPRvCU4hDax.

@@ -7,6 +7,8 @@ description: Build, change or review Urban Rally screens and components (React 1
 
 Players use this app on a phone, outdoors, walking, often in sunlight. Each tenant picks a theme: the light theme (default) or the cyberpunk theme (`themeStyle: "cyberpunk"` or tenant id `urban-chase`, see `src/utils/theme.ts`). Work inside that system. Don't invent a new look.
 
+The target is the design system's Night and Daylight themes in the Blend style (see section 3). The theming port moves the app there. After it, a tenant picks Night or Daylight only, not its own primary colour, because the contrast checks assume the system's magenta. Until a screen is ported, match what the code does today.
+
 ## 1. Plan before code
 
 Write this plan in your reply before editing, and keep it short:
@@ -50,15 +52,16 @@ For anything bigger than one screen, propose a `SPEC.md` and wait for approval b
 - **Light theme:** solid white surfaces on `gray-100`, a single tenant `primaryColor` for the main action, and no glow or blur.
 - **Cyberpunk theme:** near-black ground, neon pink and cyan. Glow means "live": focus, the active tab, the selected item. Don't glow everything.
 - **Glass (`glass-*`, `backdrop-blur`):** only over live content, meaning the map, the camera viewfinder or a photo. Over a flat dark page the blur is invisible but still costs GPU time. Never put glass inside scrolling lists, and never stack glass on glass. Use a dark tint of 86% or more over the map (text stays 11.6:1 on a white tile). Over the camera use the dark tint in both themes: a light tint needs 90% before red text passes over a black frame.
+- **Blend style (the target for ported screens):** corners are 16px on cards and 12px on controls; buttons, tags and chips are pills; there are no chamfers. The only gradient is a one-hue magenta on the primary button, and a disabled primary goes flat grey. One soft magenta glow sits behind the header. Glass goes where content moves underneath it: the header and the floating bottom nav over a scrolling list, plus the map, the camera bars and sheets. Cards inside the list stay solid. Lists leave room at the bottom so the floating nav never hides the last item or the focused element.
 - Anything that differs by theme gets a branch for both themes. Components that only style for cyberpunk (TaskDetail, BottomNav today) are known gaps. Don't copy that pattern.
 
 ## 4. Avoid the generic AI look
 
 Models drift toward safe defaults. Check your plan and your result against this list:
 
-- Purple-to-blue or pink-to-purple gradient buttons and headings. Use one solid primary per theme instead.
+- Multi-hue gradients (pink to purple, magenta to cyan) on buttons, headings or progress. The one-hue magenta on the primary button is the only gradient.
 - Identical rounded cards with a shadow for every block, or a "stats dashboard" of big numbers above the content the player came for.
-- Decorative blurred orbs, sparkles, trophies and emoji that carry no information.
+- Decorative blurred orbs beyond the single header glow, and sparkles, trophies or emoji that carry no information.
 - An eyebrow label above every heading, and fade-ins on everything.
 - Inventing new fonts, colors or radii. Preserve the established patterns, structure and visual language.
 - Generic copy such as "Start your adventure", "Active Quest" or "Mission". Say "Task", "Take photo" or "Join".
@@ -80,5 +83,6 @@ The review is advice. It never decides on its own whether something ships, and t
 
 - `references/inventory.md`: tokens, classes, components, exemplars and known UI bugs.
 - `references/rubric.md`: the review rubric with good and bad Urban Rally examples, used by `ui-reviewer`.
-- Design direction for the cyberpunk theme (target for the Stage 2 theming port, not yet in code): https://claude.ai/artifact/4NkjoKb8Cxq9wMMVG1sQrN
-- Screen board with every current screen: https://claude.ai/artifact/QuLMW3b4bzLAtqf7PPaLpb
+- Design system with the Night and Daylight tokens and components in the Blend style (the target for the theming port, not yet in code): https://claude.ai/artifact/4NkjoKb8Cxq9wMMVG1sQrN
+- Screen board v2, the approved target for every screen in the Blend style: https://claude.ai/artifact/BgrgDH88cHdE9TgksSko7d. Compare ported screens against its frames.
+- Old screen board with the app as it looks today (the "before"): https://claude.ai/artifact/QuLMW3b4bzLAtqf7PPaLpb

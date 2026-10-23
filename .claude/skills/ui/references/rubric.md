@@ -11,7 +11,7 @@ For `ui-reviewer`. Review screenshots at 390×844 in both themes against the ref
 5. **Touch and size.** Targets are at least 44px, text at least 14px, there is no horizontal overflow, and nothing sticky covers the focused element.
 6. **Theme parity.** Light and cyberpunk both work. Text and surface colors come from the same theme branch.
 7. **Copy.** It's specific, uses "pts", handles plurals, and errors say what to do.
-8. **Generic AI look.** Gradient buttons, decorative orbs or emoji, stat panels nobody asked for, glass over a flat background.
+8. **Generic AI look.** Multi-hue gradient buttons, decorative orbs or emoji, stat panels nobody asked for, glass with nothing moving underneath it.
 
 ## Examples from this app
 

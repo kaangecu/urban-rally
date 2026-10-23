@@ -179,7 +179,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
                 ? 'bg-gradient-to-r from-pink-500 to-cyan-500 bg-clip-text text-transparent'
                 : 'text-blue-600'
             }`}>
-              {task.points}
+              {task.points.toLocaleString('en-US')}
             </span>
             <span className={`text-sm ${useCyberpunk ? 'text-gray-500' : 'text-gray-600'}`}>
               pts

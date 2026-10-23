@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyTheme, getThemeName } from './theme';
+import { applyTheme, getThemeName, isCyberpunkTheme } from './theme';
 
 describe('getThemeName', () => {
   it('defaults to night before a tenant is known', () => {
@@ -38,5 +38,23 @@ describe('applyTheme', () => {
     applyTheme({ id: 'esn-berlin', primaryColor: '#123456', secondaryColor: '#654321' });
     expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
     expect(document.documentElement.style.getPropertyValue('--color-secondary')).toBe('');
+  });
+
+  it('keeps the legacy theme class in step with data-theme', () => {
+    const root = document.documentElement;
+    applyTheme({ id: 'x', themeStyle: 'night' });
+    expect(root.dataset.theme).toBe('night');
+    expect(root.classList.contains('theme-cyberpunk')).toBe(true);
+
+    applyTheme({ id: 'urban-chase', themeStyle: 'daylight' });
+    expect(root.dataset.theme).toBe('daylight');
+    expect(root.classList.contains('theme-light')).toBe(true);
+  });
+});
+
+describe('isCyberpunkTheme', () => {
+  it('follows an explicit night or daylight themeStyle', () => {
+    expect(isCyberpunkTheme({ id: 'x', themeStyle: 'night' })).toBe(true);
+    expect(isCyberpunkTheme({ id: 'urban-chase', themeStyle: 'daylight' })).toBe(false);
   });
 });

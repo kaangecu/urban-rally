@@ -37,6 +37,33 @@ describe('Button', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it('keeps focus while loading (aria-disabled, not native disabled)', () => {
+    const { rerender } = render(<Button>Send</Button>);
+    const button = screen.getByRole('button', { name: 'Send' });
+    button.focus();
+    rerender(<Button loading>Send</Button>);
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveFocus();
+  });
+
+  it('applies one size at a time so lg is not overridden by md classes', () => {
+    render(<><Button>Md</Button><Button size="lg">Lg</Button></>);
+    const md = screen.getByRole('button', { name: 'Md' }).className.split(' ');
+    const lg = screen.getByRole('button', { name: 'Lg' }).className.split(' ');
+    expect(md).toEqual(expect.arrayContaining(['min-h-touch', 'text-[15px]']));
+    expect(lg).toEqual(expect.arrayContaining(['min-h-control-lg', 'text-base']));
+    expect(lg).not.toContain('min-h-touch');
+    expect(lg).not.toContain('text-[15px]');
+  });
+
+  it('gives the ghost variant its own padding only', () => {
+    render(<Button variant="ghost">Skip</Button>);
+    const classes = screen.getByRole('button', { name: 'Skip' }).className.split(' ');
+    expect(classes).toContain('px-3');
+    expect(classes).not.toContain('px-6');
+  });
+
   it('defaults to type="button" so it never submits a form by accident', () => {
     render(<Button>Retake</Button>);
     expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
@@ -61,6 +88,14 @@ describe('TextField', () => {
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(input).toHaveAccessibleDescription(/That code doesn't match a team\./);
     expect(input).toHaveAccessibleDescription(/On your event card/);
+  });
+
+  it('gives the code field the large size without the default height and text classes', () => {
+    render(<TextField label="Team code" code />);
+    const classes = screen.getByLabelText('Team code').className.split(' ');
+    expect(classes).toContain('min-h-control-lg');
+    expect(classes).not.toContain('min-h-touch');
+    expect(classes).not.toContain('text-body');
   });
 });
 

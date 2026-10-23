@@ -446,3 +446,8 @@ body {
 .ur-shutter::after { content: ""; width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--ur-text); transition: transform var(--duration-fast) ease-out; }
 .ur-shutter:active::after { transform: scale(0.92); }
 .ur-shutter:focus-visible { outline: 2px solid var(--ur-focus-ring); outline-offset: 2px; }
+.ur-shutter--video::after { background: var(--ur-danger); }
+.ur-shutter--recording { border-color: var(--ur-danger); }
+.ur-shutter--recording::after { width: 28px; height: 28px; border-radius: var(--radius-sm); }
+.ur-rec { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ur-danger-text); font-variant-numeric: tabular-nums; }
+.ur-rec::before { content: ""; width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--ur-danger); }

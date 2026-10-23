@@ -1,5 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Video, X, Square, Check } from 'lucide-react';
+import { Video, X, Check } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { formatClock } from '../../utils/format';
+
+// Only read from the shutter handler and its timer, never during render
+const now = () => Date.now();
+const secondsSince = (start: number) => Math.floor((now() - start) / 1000);
+
+// iOS Safari before 18.4 can't record WebM, so fall back to MP4
+function pickRecordingType(): { mimeType: string; type: string; ext: string } {
+  if (MediaRecorder.isTypeSupported?.('video/webm;codecs=vp8,opus')) {
+    return { mimeType: 'video/webm;codecs=vp8,opus', type: 'video/webm', ext: 'webm' };
+  }
+  return { mimeType: 'video/mp4', type: 'video/mp4', ext: 'mp4' };
+}
 
 interface VideoCaptureProps {
   onCapture: (file: File) => void;
@@ -18,12 +32,16 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
+  const startedAtRef = useRef(0);
+  const recordingTypeRef = useRef({ type: 'video/webm', ext: 'webm' });
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideo, setRecordedVideo] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // From Stop until the recorder hands over the clip; the shutter stays off so a double tap can't start a new take
+  const [stopping, setStopping] = useState(false);
   const [permissionRequested, setPermissionRequested] = useState(false);
 
   const startCamera = async () => {
@@ -130,9 +148,9 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     try {
       chunksRef.current = [];
       
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: 'video/webm;codecs=vp8,opus',
-      });
+      const { mimeType, type, ext } = pickRecordingType();
+      recordingTypeRef.current = { type, ext };
+      const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
 
       mediaRecorderRef.current = mediaRecorder;
 
@@ -152,7 +170,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         // Use setTimeout to ensure state updates properly
         setTimeout(() => {
           try {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+            const blob = new Blob(chunksRef.current, { type: recordingTypeRef.current.type });
             console.log('🎥 Blob created, size:', blob.size);
             
             const url = URL.createObjectURL(blob);
@@ -170,11 +188,13 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
             }
             
             setIsLoading(false); // Clear loading state
+            setStopping(false);
             console.log('🎥 Loading state cleared');
           } catch (err) {
             console.error('❌ Error creating video blob:', err);
             setError('Failed to process video. Please try again.');
             setIsLoading(false);
+            setStopping(false);
           }
         }, 100); // Small delay to ensure state updates properly
       };
@@ -183,18 +203,15 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Start timer
+      // Start timer; recording stops itself at the limit. Time comes from the clock, since
+      // mobile browsers throttle intervals while the screen is locked but keep recording
+      startedAtRef.current = now();
       timerRef.current = window.setInterval(() => {
-        setRecordingTime((prev) => {
-          const newTime = prev + 1;
-          
-          // Auto-stop at max duration
-          if (newTime >= maxDuration) {
-            stopRecording();
-          }
-          
-          return newTime;
-        });
+        const elapsed = Math.min(maxDuration, secondsSince(startedAtRef.current));
+        setRecordingTime(elapsed);
+        if (elapsed >= maxDuration) {
+          stopRecording();
+        }
       }, 1000);
     } catch (err) {
       console.error('Error starting recording:', err);
@@ -207,6 +224,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       console.log('🎥 Stopping MediaRecorder, state:', mediaRecorderRef.current.state);
+      setStopping(true);
       mediaRecorderRef.current.stop();
     } else {
       console.log('⚠️ MediaRecorder already inactive or null');
@@ -245,10 +263,11 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
       return;
     }
 
-    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    const { type, ext } = recordingTypeRef.current;
+    const blob = new Blob(chunksRef.current, { type });
     console.log('🎥 Creating file from blob, size:', blob.size);
     
-    const file = new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
+    const file = new File([blob], `video-${Date.now()}.${ext}`, { type });
     console.log('🎥 File created:', file.name, file.size, 'bytes');
     
     onCapture(file);
@@ -264,12 +283,6 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
     
     cleanup();
     onCancel();
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   console.log('🎥 VideoCapture render, state:', {
@@ -312,31 +325,21 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
   }, [permissionRequested]);
 
   return (
-    <div 
-      className="fixed inset-0 bg-black z-[120] flex flex-col h-screen"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm flex-shrink-0">
+    // The camera is always dark, whatever the app theme
+    <div data-theme="night" className="fixed inset-0 bg-black text-text z-[120] flex flex-col h-screen">
+      <div className="ur-glass flex items-center justify-between gap-3 p-3 flex-shrink-0">
         <button
+          type="button"
           onClick={handleCancel}
-          className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 
-                   transition-all touch-manipulation"
-          style={{ minWidth: '44px', minHeight: '44px' }}
           aria-label="Cancel"
+          className="grid place-items-center size-touch shrink-0 rounded-pill text-text focus-visible:outline-2 focus-visible:outline-focus-ring"
         >
-          <X className="w-6 h-6 text-white" />
+          <X className="size-6" aria-hidden="true" />
         </button>
-        
-        {isRecording && (
-          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-full bg-red-950/50 border border-red-500/30 backdrop-blur-sm">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-500/50 blur-lg rounded-full" />
-              <div className="relative w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_-2px_rgba(239,68,68,0.8)]" />
-            </div>
-            <span className="text-white font-mono text-sm sm:text-base font-bold">
-              {formatTime(recordingTime)} / {formatTime(maxDuration)}
-            </span>
-          </div>
+        {(isRecording || recordingTime > 0) && !recordedVideo && (
+          <span className="ur-rec" role="timer">
+            {formatClock(recordingTime)} / {formatClock(maxDuration)}
+          </span>
         )}
       </div>
 
@@ -459,101 +462,38 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({
         )}
       </div>
 
-      {/* Controls - Fixed at bottom, always visible */}
-      <div className="p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent backdrop-blur-sm flex-shrink-0 safe-area-bottom">
-        {!permissionRequested ? (
-          <button
-            onClick={handleCancel}
-            className="w-full py-4 px-6 border border-white/20 text-white 
-                     hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                     transition-all font-semibold touch-manipulation"
-            style={{ minHeight: '48px' }}
-          >
-            Cancel
-          </button>
-        ) : recordedVideo ? (
-          <div className="flex gap-3 sm:gap-4">
-            <button
-              onClick={retakeVideo}
-              className="flex-1 py-4 px-6 border border-white/20 text-white 
-                       hover:bg-white/10 rounded-lg backdrop-blur-sm 
-                       transition-all font-semibold touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              Retake
-            </button>
-            <button
-              onClick={confirmVideo}
-              className="group relative flex-1 overflow-hidden rounded-lg font-bold py-4 px-6 touch-manipulation"
-              style={{ minHeight: '48px' }}
-            >
-              {/* Gradient Background Layers */}
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 
-                            group-hover:from-green-500 group-hover:to-emerald-500 
-                            transition-all duration-300" />
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 
-                            blur-xl opacity-50 group-hover:opacity-70 
-                            transition-opacity duration-300" />
-              
-              {/* Button Content */}
-              <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider">
-                <Check className="w-5 h-5" />
-                Use Video
-              </span>
-            </button>
-          </div>
-        ) : isRecording ? (
-          <button
-            onClick={stopRecording}
-            className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 touch-manipulation"
-            style={{ minHeight: '56px' }}
-          >
-            {/* Red Background Layers for Recording Stop */}
-            <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-rose-600 
-                          group-hover:from-red-500 group-hover:to-rose-500 
-                          transition-all duration-300" />
-            <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-rose-600 
-                          blur-xl opacity-50 group-hover:opacity-70 
-                          transition-opacity duration-300" />
-            
-            {/* Button Content */}
-            <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider text-base sm:text-lg">
-              <Square className="w-5 h-5 sm:w-6 sm:h-6" />
-              Stop Recording
-            </span>
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <button
-              onClick={startRecording}
-              disabled={isLoading || !!error}
-              className="group relative w-full overflow-hidden rounded-lg font-bold py-4 sm:py-5 px-6 
-                       disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-              style={{ minHeight: '56px' }}
-            >
-              {/* Gradient Background Layers */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 
-                            group-hover:from-purple-500 group-hover:to-pink-500 
-                            transition-all duration-300 group-disabled:from-gray-700 group-disabled:to-gray-600" />
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 
-                            blur-xl opacity-50 group-hover:opacity-70 
-                            transition-opacity duration-300 group-disabled:opacity-0" />
-              
-              {/* Button Content */}
-              <span className="relative z-10 flex items-center justify-center gap-2 text-white uppercase tracking-wider text-base sm:text-lg">
-                <Video className="w-5 h-5 sm:w-6 sm:h-6" />
-                Start Recording
-              </span>
-            </button>
-            
-            {!isRecording && permissionRequested && (
-              <p className="text-center text-gray-400 text-[13px] sm:text-sm">
-                Maximum duration: {maxDuration} seconds
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Controls on dark glass; hidden while a camera error is shown, kept once there is a clip to retake or send */}
+      {(!error || recordedVideo) && (
+        <div className="ur-glass p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] flex-shrink-0">
+          {!permissionRequested ? (
+            <Button variant="secondary" block onClick={handleCancel}>
+              Cancel
+            </Button>
+          ) : recordedVideo ? (
+            <div className="flex gap-3">
+              <Button variant="secondary" block onClick={retakeVideo}>
+                Retake
+              </Button>
+              <Button block onClick={confirmVideo}>
+                <Check className="size-5" aria-hidden="true" />
+                Use video
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              {/* The shutter is also the stop button */}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isLoading || stopping}
+                aria-label={isRecording ? 'Stop recording' : 'Record video'}
+                className={`ur-shutter ur-shutter--video${isRecording ? ' ur-shutter--recording' : ''} disabled:opacity-50`}
+              />
+              {!isRecording && <p className="text-sm text-text-muted">Up to {maxDuration} seconds</p>}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

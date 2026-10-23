@@ -71,3 +71,41 @@ describe('PrivacyPolicy', () => {
     expect(screen.queryByText(/Your Rights/)).not.toBeInTheDocument();
   });
 });
+
+describe('Legal texts', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('show a fixed "last updated" date, not the day they are opened', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2030-01-15T12:00:00Z'));
+    const { unmount } = render(<TermsOfService lang="en" />);
+    expect(screen.getByText(/Last updated/)).not.toHaveTextContent('15/01/2030');
+    unmount();
+    render(<PrivacyPolicy lang="de" />);
+    expect(screen.getByText(/Letzte Aktualisierung/)).not.toHaveTextContent('15.01.2030');
+  });
+});
+
+describe('LegalModal header', () => {
+  it('lets a long German title wrap and hyphenate in its own language', () => {
+    render(
+      <LegalModal isOpen onClose={() => {}} title={{ en: 'Privacy Policy', de: 'Datenschutzerklärung' }}>
+        {() => null}
+      </LegalModal>
+    );
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading).toHaveAttribute('lang');
+    expect(heading.className).toMatch(/min-w-0/);
+    expect(heading.className).toMatch(/hyphens-auto/);
+  });
+
+  it('gives the EN and DE buttons a 44px touch target', () => {
+    renderTerms();
+    for (const name of ['EN', 'DE']) {
+      expect(screen.getByRole('button', { name }).className).toMatch(/min-h-11/);
+    }
+  });
+});
+

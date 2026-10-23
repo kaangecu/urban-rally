@@ -1,6 +1,55 @@
 @import "tailwindcss";
 @import 'leaflet/dist/leaflet.css';
 
+/* Design system fonts, self-hosted (SIL OFL 1.1, licences in src/assets/fonts). Latin subset from Fontsource 5.3.0. */
+@font-face {
+  font-family: "Oxanium";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/oxanium-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Oxanium";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/oxanium-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2");
+}
+
 /* Tailwind v4 Theme Configuration */
 @theme {
   /* Touch-friendly minimum sizes */
@@ -15,6 +64,11 @@
   --radius-card: 16px;
   --radius-sheet: 28px;
   --radius-pill: 999px;
+
+  /* Fonts */
+  --font-display: "Oxanium", "Chakra Petch", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
   /* Type scale */
   --text-display-xl: 40px;

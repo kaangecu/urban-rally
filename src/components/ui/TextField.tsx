@@ -25,12 +25,14 @@ export function TextField({ label, hint, error, code = false, id, className, ...
         aria-invalid={error ? true : undefined}
         aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
         className={[
-          'w-full min-h-touch px-4 rounded-control bg-surface-raised border border-line-strong text-body text-text',
+          'w-full px-4 rounded-control bg-surface-raised border border-line-strong text-text',
           'placeholder:text-text-faint focus-visible:outline-2 focus-visible:outline-offset-2',
           'focus-visible:outline-focus-ring focus-visible:border-focus-ring',
           'aria-invalid:border-2 aria-invalid:border-danger',
           'disabled:bg-surface disabled:border-line disabled:text-text-faint',
-          code && 'min-h-control-lg text-center uppercase font-mono text-[28px] font-bold tracking-[0.24em]',
+          code
+            ? 'min-h-control-lg text-center uppercase font-mono text-[28px] leading-none font-bold tracking-[0.24em]'
+            : 'min-h-touch text-body',
           className,
         ].filter(Boolean).join(' ')}
         {...props}

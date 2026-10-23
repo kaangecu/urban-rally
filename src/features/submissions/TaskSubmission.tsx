@@ -27,6 +27,8 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
   const [uploadProgress, setUploadProgress] = useState(0);
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
   const [distanceFromTask, setDistanceFromTask] = useState<number | null>(null);
+  // Check-ins wait for the location check before the camera opens, so a late fix can't pull the player out mid-shot
+  const [locationChecked, setLocationChecked] = useState(() => task.type !== 'GPS' || !navigator.geolocation);
   
   // Quiz attempt tracking (Phase 1)
   const [quizAttempts, setQuizAttempts] = useState<number>(0);
@@ -56,13 +58,16 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             
             if (!distance.isValid) {
               setDistanceFromTask(distance.distance);
-              setState('idle');
+              // Only leave capture; never interrupt an upload or a result
+              setState((current) => (current === 'capture' ? 'idle' : current));
             }
           }
+          setLocationChecked(true);
         },
         (err) => {
           console.error('Error getting location:', err);
           setError('Unable to get your location. Please enable location services.');
+          setLocationChecked(true);
         },
         { enableHighAccuracy: true }
       );
@@ -335,6 +340,14 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
             'Consider alternative spellings or common variations...', // Third attempt hint
           ]}
         />
+      );
+    }
+
+    if (!locationChecked) {
+      return (
+        <div role="status" className="fixed inset-0 z-[110] grid place-items-center bg-scrim text-text">
+          <p className="px-6 py-4 rounded-card bg-surface-raised border border-line">Checking your location…</p>
+        </div>
       );
     }
 

@@ -42,10 +42,11 @@ export function TaskDetail() {
 
   const task = selectedTask;
   const { label, Icon } = getTaskTypeInfo(task.type);
-  const here = watched ?? userLocation;
+  const here = watched.position ?? userLocation;
   const distance = here && task.coordinates ? calculateDistance(here, task.coordinates) : null;
   const radius = task.radius || 50;
-  const tooFar = isCheckIn && distance !== null && distance > radius;
+  // Only block when even the most generous reading of the fix is out of range; the server re-checks anyway
+  const tooFar = isCheckIn && distance !== null && distance - watched.accuracy > radius;
   const close = () => setSelectedTask(null);
 
   return (
@@ -87,13 +88,15 @@ export function TaskDetail() {
           </div>
 
           {tooFar && distance !== null && (
-            <div id={tooFarId}>
-              <Alert
-                variant="warning"
-                title="Too far away"
-                text={`You're ${Math.round(distance)} m away. Get within ${radius} m.`}
-              />
+            <div id={tooFarId} className="flex flex-col gap-1">
+              {/* The live region only changes when the player crosses in or out of range, not on every fix */}
+              <Alert variant="warning" title="Too far away" />
+              <p className="text-sm text-text-muted">{`You're ${Math.round(distance)} m away. Get within ${radius} m.`}</p>
             </div>
+          )}
+
+          {isCheckIn && watched.denied && !here && (
+            <Alert variant="warning" title="Turn on location to check in" />
           )}
 
           {distance !== null && !tooFar && (

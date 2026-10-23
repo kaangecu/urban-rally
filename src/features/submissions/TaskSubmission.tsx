@@ -313,7 +313,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
     
     if (task.type === 'PHOTO') {
       console.log('📸 Rendering CameraCapture');
-      return <CameraCapture onCapture={handlePhotoCapture} onCancel={onCancel} />;
+      return <CameraCapture brief={task.title} onCapture={handlePhotoCapture} onCancel={onCancel} />;
     }
     
     if (task.type === 'VIDEO') {
@@ -353,7 +353,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
 
     if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
       console.log('📍 Rendering CameraCapture for GPS');
-      return <CameraCapture onCapture={handlePhotoCapture} onCancel={onCancel} />;
+      return <CameraCapture brief={task.title} onCapture={handlePhotoCapture} onCancel={onCancel} />;
     }
     
     console.log('⚠️ No matching task type, returning null');

@@ -440,3 +440,9 @@ body {
 .ur-radius { stroke: var(--ur-text-muted); fill: var(--ur-text-muted); }
 .ur-me { display: block; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--ur-focus-ring); border: 3px solid var(--ur-bg); box-shadow: 0 0 0 6px color-mix(in srgb, var(--ur-focus-ring) 25%, transparent); }
 @keyframes ur-pulse { from { transform: scale(0.8); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+
+/* Camera shutter: 72px ring on the always-dark camera bar */
+.ur-shutter { width: var(--spacing-shutter); height: var(--spacing-shutter); border-radius: var(--radius-pill); border: 4px solid var(--ur-text); background: transparent; display: grid; place-items: center; padding: 0; cursor: pointer; }
+.ur-shutter::after { content: ""; width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--ur-text); transition: transform var(--duration-fast) ease-out; }
+.ur-shutter:active::after { transform: scale(0.92); }
+.ur-shutter:focus-visible { outline: 2px solid var(--ur-focus-ring); outline-offset: 2px; }

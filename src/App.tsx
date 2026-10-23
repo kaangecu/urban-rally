@@ -7,6 +7,7 @@ import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
 import { AppHeader } from './components/navigation/AppHeader';
 import { BottomNav } from './components/navigation/BottomNav';
+import { OfflineBanner } from './components/ui/OfflineBanner';
 import { applyTheme } from './utils/theme';
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 pb-32">
+        <OfflineBanner />
         {viewMode === 'list' ? (
           <TaskList />
         ) : (

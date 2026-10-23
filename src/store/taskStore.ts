@@ -9,6 +9,8 @@ interface TaskState {
   error: string | null;
   filter: 'all' | 'available' | 'completed';
   sortBy: 'points' | 'distance' | 'difficulty';
+  /** The task whose photo or video is being sent, which keeps running after the player leaves */
+  uploadingTaskId: string | null;
 
   // Actions
   setTasks: (tasks: Task[]) => void;
@@ -17,6 +19,7 @@ interface TaskState {
   setError: (error: string | null) => void;
   setFilter: (filter: 'all' | 'available' | 'completed') => void;
   setSortBy: (sortBy: 'points' | 'distance' | 'difficulty') => void;
+  setUploadingTaskId: (uploadingTaskId: string | null) => void;
   clearTasks: () => void;
 }
 
@@ -29,6 +32,7 @@ export const useTaskStore = create<TaskState>((set) => ({
   error: null,
   filter: 'available',
   sortBy: 'points',
+  uploadingTaskId: null,
 
   // Actions
   setTasks: (tasks) =>
@@ -60,6 +64,8 @@ export const useTaskStore = create<TaskState>((set) => ({
     set({
       sortBy,
     }),
+
+  setUploadingTaskId: (uploadingTaskId) => set({ uploadingTaskId }),
 
   clearTasks: () =>
     set({

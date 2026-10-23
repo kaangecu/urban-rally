@@ -7,6 +7,7 @@ import { uploadImage, uploadVideo } from '../../services/storage.service';
 import { createSubmission, verifyGPSLocation } from '../../services/submission.service';
 import { useAuthStore } from '../../store/authStore';
 import { validateQuizAnswer } from '../../utils/quizValidation';
+import { formatPoints } from '../../utils/format';
 import { MapPin, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TaskSubmissionProps {
@@ -256,11 +257,11 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       
       // Show success message with points info (including fuzzy match indicator)
       if (validationResult.isFuzzyMatch) {
-        setError(`${validationResult.feedback} +${pointsAwarded} points (typo forgiven)`);
+        setError(`${validationResult.feedback} ${formatPoints(pointsAwarded, { signed: true })} (typo forgiven)`);
       } else if (currentAttempt === 1) {
-        setError(`✅ Correct! Perfect score: +${pointsAwarded} points`);
+        setError(`✅ Correct! Perfect score: ${formatPoints(pointsAwarded, { signed: true })}`);
       } else {
-        setError(`✅ Correct! +${pointsAwarded} points (${currentAttempt} attempts)`);
+        setError(`✅ Correct! ${formatPoints(pointsAwarded, { signed: true })} (${currentAttempt} attempts)`);
       }
       
       setTimeout(() => {
@@ -395,7 +396,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Task Completed!</h3>
           <div className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 rounded-full shadow-[0_0_20px_-3px_rgba(34,197,94,0.6)]">
-            <p className="text-white font-bold text-lg">+{task.points} XP</p>
+            <p className="text-white font-bold text-lg">{formatPoints(task.points, { signed: true })}</p>
           </div>
         </div>
       )}
@@ -427,7 +428,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
           <div className="text-center mb-6">
             <p className="text-gray-400 mb-3 text-sm sm:text-base">Ready to complete this task?</p>
             <div className="inline-block bg-gradient-to-r from-pink-500 to-purple-600 px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-[0_0_20px_-3px_rgba(236,72,153,0.6)]">
-              <p className="text-white font-bold text-xl sm:text-2xl">+{task.points} XP</p>
+              <p className="text-white font-bold text-xl sm:text-2xl">{formatPoints(task.points, { signed: true })}</p>
             </div>
           </div>
 

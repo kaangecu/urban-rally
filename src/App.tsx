@@ -7,6 +7,7 @@ import { TaskDetail } from './features/tasks/TaskDetail';
 import { GameMap } from './features/map/GameMap';
 import { BottomNav } from './components/navigation/BottomNav';
 import { applyTheme, isCyberpunkTheme } from './utils/theme';
+import { formatPoints, formatTaskCount } from './utils/format';
 
 function App() {
   const { isAuthenticated, team, tenant, logout } = useAuthStore();
@@ -55,10 +56,10 @@ function App() {
               <div className="text-right">
                 <p className={`text-2xl font-bold ${useCyberpunk ? 'bg-gradient-to-r from-pink-500 to-cyan-500 bg-clip-text text-transparent' : ''}`} 
                    style={!useCyberpunk ? { color: 'var(--color-primary, #1a56db)' } : undefined}>
-                  {team.score} pts
+                  {formatPoints(team.score)}
                 </p>
                 <p className={`text-xs ${useCyberpunk ? 'text-gray-500' : 'text-gray-500'}`}>
-                  {team.completedTaskIds.length} tasks completed
+                  {formatTaskCount(team.completedTaskIds.length)}
                 </p>
               </div>
               <button

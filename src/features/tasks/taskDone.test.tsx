@@ -9,20 +9,29 @@ import { ScoreReadout } from '../../components/ui/ScoreReadout';
 import { TaskNotice } from './TaskNotice';
 import { TaskDetail } from './TaskDetail';
 
+type SubmissionProps = {
+  onSent: (points: number | null) => void;
+  onSuccess: () => void;
+  onSendFailed: () => void;
+  onCancel: () => void;
+};
+// The first capture's callbacks, so a test can land its upload after the player moved on
+const firstCapture: { props: SubmissionProps | null } = { props: null };
+
 // onSent: the submission landed (also after the player left); onSuccess: close this capture
 vi.mock('../submissions/TaskSubmission', () => ({
-  TaskSubmission: ({ onSent, onSuccess, onSendFailed }: {
-    onSent: (points: number | null) => void;
-    onSuccess: () => void;
-    onSendFailed: () => void;
-  }) => (
+  TaskSubmission: (props: SubmissionProps) => {
+    firstCapture.props ??= props;
+    const { onSent, onSuccess, onSendFailed, onCancel } = props;
+    return (
     <>
       <button type="button" onClick={() => { onSent(150); onSuccess(); }}>Finish upload</button>
-      <button type="button" onClick={() => onSent(150)}>Earlier upload lands</button>
+      <button type="button" onClick={onCancel}>Keep playing</button>
       <button type="button" onClick={() => { onSent(null); onSuccess(); }}>Teammate was first</button>
       <button type="button" onClick={() => onSendFailed()}>Upload fails after leaving</button>
     </>
-  ),
+    );
+  },
 }));
 
 const task = { id: 'gate', title: 'Gate', description: '', type: 'PHOTO', points: 150, isActive: true } as Task;
@@ -34,6 +43,7 @@ beforeEach(() => {
     tenant: { id: 'x', name: 'Rally' } as never,
   });
   useTaskStore.setState({ selectedTask: task, notice: null });
+  firstCapture.props = null;
 });
 
 describe('recordCompletion', () => {
@@ -64,7 +74,12 @@ describe('Task done, review fixes', () => {
   it('does not close the capture that is open when an earlier upload lands', async () => {
     render(<TaskDetail />);
     await userEvent.click(screen.getByRole('button', { name: 'Take photo' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Earlier upload lands' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Keep playing' }));
+
+    // The player opens another task and starts its capture
+    act(() => useTaskStore.setState({ selectedTask: { ...task, id: 'tower', title: 'Tower' } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Take photo' }));
+    act(() => firstCapture.props!.onSent(150));
 
     expect(screen.getByRole('button', { name: 'Finish upload' })).toBeInTheDocument();
     expect(useAuthStore.getState().team!.score).toBe(250);

@@ -24,7 +24,8 @@ export const useTaskStore = create<TaskState>((set) => ({
   // Initial state
   tasks: [],
   selectedTask: null,
-  isLoading: false,
+  // True until the first load finishes, so the list never flashes its empty state
+  isLoading: true,
   error: null,
   filter: 'available',
   sortBy: 'points',

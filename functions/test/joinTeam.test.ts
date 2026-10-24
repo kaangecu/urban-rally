@@ -151,4 +151,16 @@ describe('joinTeam', () => {
     expect(sixth.body.error?.status).toBe('RESOURCE_EXHAUSTED');
     expect(right.body.error?.status).toBe('RESOURCE_EXHAUSTED');
   });
+
+  it('counts parallel wrong codes one by one', async () => {
+    const { idToken } = await signInAnonymously();
+
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, (_, attempt) => join(`PARALLEL${attempt}`, idToken)),
+    );
+
+    const statuses = responses.map((response) => response.body.error?.status);
+    expect(statuses.filter((status) => status === 'NOT_FOUND')).toHaveLength(5);
+    expect(statuses.filter((status) => status === 'RESOURCE_EXHAUSTED')).toHaveLength(5);
+  });
 });

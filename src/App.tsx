@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useTeamSync } from './hooks/useTeamSync';
+import { useAuthSession } from './hooks/useAuthSession';
 import { TeamCodeLogin } from './features/auth/TeamCodeLogin';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskDetail } from './features/tasks/TaskDetail';
@@ -9,7 +10,8 @@ import { BottomNav } from './components/navigation/BottomNav';
 import { applyTheme, isCyberpunkTheme } from './utils/theme';
 
 function App() {
-  const { isAuthenticated, team, tenant, logout } = useAuthStore();
+  const { team, tenant } = useAuthStore();
+  const { status, logout } = useAuthSession();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   
   // Real-time sync team data with Firestore
@@ -27,8 +29,10 @@ function App() {
     }
   }, [tenant]);
 
-  // Show login screen if not authenticated
-  if (!isAuthenticated || !team) {
+  // Wait for Firebase to restore the session before choosing a screen
+  if (status === 'loading') return null;
+
+  if (status === 'join' || !team) {
     return <TeamCodeLogin />;
   }
 

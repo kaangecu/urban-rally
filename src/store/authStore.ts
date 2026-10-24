@@ -6,7 +6,6 @@ interface AuthState {
   // State
   team: Team | null;
   tenant: Tenant | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -15,7 +14,7 @@ interface AuthState {
   setTenant: (tenant: Tenant) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
-  logout: () => void;
+  clear: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,7 +23,6 @@ export const useAuthStore = create<AuthState>()(
       // Initial state
       team: null,
       tenant: null,
-      isAuthenticated: false,
       isLoading: false,
       error: null,
 
@@ -32,7 +30,6 @@ export const useAuthStore = create<AuthState>()(
       setTeam: (team) =>
         set({
           team,
-          isAuthenticated: true,
           error: null,
         }),
 
@@ -54,11 +51,10 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         }),
 
-      logout: () =>
+      clear: () =>
         set({
           team: null,
           tenant: null,
-          isAuthenticated: false,
           error: null,
           isLoading: false,
         }),
@@ -68,7 +64,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         team: state.team,
         tenant: state.tenant,
-        isAuthenticated: state.isAuthenticated,
       }),
     }
   )

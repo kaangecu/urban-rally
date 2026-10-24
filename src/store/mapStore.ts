@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Task } from '../types/schema';
+import type { Task } from '../../shared/schema';
 
 interface MapState {
   // Map state

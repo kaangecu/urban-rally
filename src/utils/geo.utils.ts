@@ -3,7 +3,7 @@
  * Helper functions for GPS and location-based features
  */
 
-import type { GeoLocation } from '../types/schema';
+import type { GeoLocation } from '../../shared/schema';
 import { appConfig } from '../config/app.config';
 
 /**

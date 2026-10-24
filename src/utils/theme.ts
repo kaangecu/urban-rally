@@ -5,7 +5,7 @@
  * Supports both light (corporate) and dark (cyberpunk) themes.
  */
 
-import type { Tenant } from '../types/schema';
+import type { Tenant } from '../../shared/schema';
 
 export type ThemeStyle = 'light' | 'cyberpunk';
 

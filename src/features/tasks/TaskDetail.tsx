@@ -90,24 +90,11 @@ export function TaskDetail() {
             </div>
           </div>
 
-          {/* Bonus Points */}
-          {selectedTask.bonusPoints && (
-            <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-purple-950/30 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(168,85,247,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
-              <div className="relative flex items-center justify-between">
-                <span className="text-purple-300 font-medium">Bonus Available</span>
-                <span className="text-2xl font-bold text-purple-400">
-                  +{selectedTask.bonusPoints} XP
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Requirements */}
           <div>
             <h4 className="font-semibold text-white mb-4 text-lg">Mission Requirements</h4>
             <div className="space-y-3">
-              {selectedTask.type === 'GPS' || selectedTask.type === 'GPS_LOCATION' ? (
+              {selectedTask.type === 'GPS' ? (
                 <div className="flex items-center gap-3 text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3 backdrop-blur-sm">
                   <span className="text-2xl">📍</span>
                   <span>Visit the location (within {selectedTask.radius || 50}m)</span>
@@ -137,46 +124,6 @@ export function TaskDetail() {
             </div>
           </div>
 
-          {/* Sponsor Info */}
-          {selectedTask.sponsorName && (
-            <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-yellow-950/20 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(234,179,8,0.2)_1px,transparent_1px)] bg-[length:10px_10px]" />
-              <div className="relative flex items-center gap-3">
-                <span className="text-3xl">⭐</span>
-                <div>
-                  <p className="font-semibold text-white text-sm uppercase tracking-wide">Sponsored by</p>
-                  <p className="text-yellow-400 font-bold text-lg">{selectedTask.sponsorName}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hints */}
-          {selectedTask.hints && selectedTask.hints.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-white mb-4 text-lg">Available Hints</h4>
-              <div className="space-y-3">
-                {selectedTask.hints.map((hint, index) => (
-                  <div
-                    key={hint.id}
-                    className="relative group cursor-pointer"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
-                    
-                    <div className="relative flex items-center justify-between rounded-xl border border-white/10 bg-gray-900/60 p-4 backdrop-blur-xl hover:border-yellow-500/50 transition-colors">
-                      <div>
-                        <p className="font-bold text-white">Hint #{index + 1}</p>
-                        <p className="text-sm text-yellow-400 font-mono">{hint.cost} XP Cost</p>
-                      </div>
-                      <button className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-lg transition-all shadow-[0_0_15px_-3px_rgba(234,179,8,0.6)]">
-                        Unlock
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-white/10">

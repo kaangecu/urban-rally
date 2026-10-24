@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Task } from '../../types/schema';
+import type { Task } from '../../../shared/schema';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { isCyberpunkTheme } from '../../utils/theme';
@@ -18,7 +18,7 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
 
   const getTypeIcon = (type: Task['type']) => {
     switch (type) {
-      case 'GPS_LOCATION':
+      case 'GPS':
         return '📍';
       case 'PHOTO':
         return '📸';
@@ -26,10 +26,6 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
         return '🎥';
       case 'QUIZ':
         return '❓';
-      case 'QR_CODE':
-        return '📱';
-      case 'SPONSORED':
-        return '⭐';
       default:
         return '✨';
     }
@@ -154,17 +150,6 @@ export function TaskCard({ task, isCompleted }: TaskCardProps) {
           {task.difficulty && (
             <span className={`px-2 py-1 text-xs font-semibold rounded ${getDifficultyColor(task.difficulty)}`}>
               {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
-            </span>
-          )}
-
-          {/* Sponsored Badge */}
-          {task.sponsorName && (
-            <span className={`px-2 py-1 text-xs font-semibold rounded ${
-              useCyberpunk
-                ? 'glass-frosted border border-yellow-500/50 text-yellow-300'
-                : 'bg-purple-100 text-purple-800'
-            }`}>
-              Sponsored
             </span>
           )}
         </div>

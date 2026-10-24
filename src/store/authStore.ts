@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Team, Tenant } from '../types/schema';
+import type { Team, Tenant } from '../../shared/schema';
 
 interface AuthState {
   // State

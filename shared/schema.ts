@@ -1,5 +1,5 @@
-// Core Type Definitions for Spree Break Quest
-// All Firestore entities follow strict multi-tenant patterns
+// Firestore types shared by the app, functions/ and the seed script.
+// The model is described in docs/specs/data-model.md.
 
 /**
  * Base interface for all multi-tenant entities
@@ -32,10 +32,7 @@ export interface Tenant extends MultiTenantEntity {
   
   // Status
   isActive: boolean;
-  
-  // Subscription (for SaaS billing)
-  subscriptionTier?: 'free' | 'basic' | 'premium';
-  subscriptionExpiresAt?: Date;
+
 }
 
 /**
@@ -100,12 +97,11 @@ export interface Team extends MultiTenantEntity {
   // Team Info
   teamName?: string; // Optional custom name
   teamDisplayName?: string; // Friendly team name for leaderboard
-  memberCount?: number;
+  memberCount: number; // Kept up to date by joinTeam
   
   // Game State
   score: number;
   completedTaskIds: string[]; // Task IDs they've completed
-  inventory: InventoryItem[]; // Purchased hints, power-ups
   
   // Location Tracking (optional, for live leaderboard)
   lastKnownPosition?: {
@@ -116,18 +112,6 @@ export interface Team extends MultiTenantEntity {
   
   // Status
   isActive: boolean;
-}
-
-/**
- * Inventory Item
- * Items purchased or earned by teams (hints, power-ups)
- */
-export interface InventoryItem {
-  itemId: string;
-  type: 'hint' | 'power-up' | 'unlock';
-  purchasedAt: Date;
-  used: boolean;
-  usedAt?: Date;
 }
 
 /**
@@ -147,7 +131,6 @@ export interface Task extends MultiTenantEntity {
   
   // Points
   points: number;
-  bonusPoints?: number; // Extra points for speed or quality
   
   // Location (for GPS tasks)
   coordinates?: {
@@ -167,23 +150,12 @@ export interface Task extends MultiTenantEntity {
   quizCorrectAnswer?: string | number; // The correct answer
   quizHint?: string; // Optional hint for the quiz
   
-  // Hints (purchasable)
-  hints?: TaskHint[];
-  
-  // Sponsorship
-  sponsorId?: string;
-  sponsorName?: string;
-  sponsorLogoUrl?: string;
-  requiresVideoAd?: boolean; // Must watch ad to unlock
-  videoAdUrl?: string;
-  
   // Timing
   unlockAt?: Date; // When task becomes available
   expiresAt?: Date; // When task is no longer available
   
   // Ordering
-  order?: number; // For sequential tasks
-  dependsOn?: string[]; // Task IDs that must be completed first
+  order?: number; // Display order
   
   // Status
   isActive: boolean;
@@ -192,26 +164,25 @@ export interface Task extends MultiTenantEntity {
 /**
  * Task Types
  */
-export type TaskType = 
-  | 'GPS'          // Find a location
-  | 'GPS_LOCATION' // Alias for GPS
-  | 'PHOTO'        // Take a photo at location
-  | 'VIDEO'        // Record a video
-  | 'QUIZ'         // Answer questions
-  | 'QR_CODE'      // Scan a QR code
-  | 'SPONSORED'    // Branded challenge
-  | 'CHECKPOINT'   // Must visit in order
-  | 'WILDCARD';    // Creative/custom
+export type TaskType =
+  | 'GPS'    // Find a location
+  | 'PHOTO'  // Take a photo at location
+  | 'VIDEO'  // Record a video
+  | 'QUIZ';  // Answer a question
 
 /**
- * Task Hint
- * Purchasable hints for difficult tasks
+ * Member
+ * One player on a team, stored at teams/{teamId}/members/{uid}.
+ * The id is the player's Firebase Auth uid.
  */
-export interface TaskHint {
+export interface Member extends MultiTenantEntity {
   id: string;
-  text: string;
-  cost: number; // In points or currency
-  revealedCount?: number; // How many teams revealed it
+  teamId: string;
+  displayName: string;
+  email?: string;
+  consentVersion: string; // Terms and privacy version accepted
+  consentAt: Date;
+  joinedAt: Date;
 }
 
 /**
@@ -223,6 +194,7 @@ export interface TaskSubmission extends MultiTenantEntity {
   eventId: string;
   taskId: string;
   teamId: string;
+  submittedBy?: string; // uid of the member who submitted
   
   // Submission Data
   photoUrls?: string[];
@@ -262,55 +234,10 @@ export interface LeaderboardEntry {
 }
 
 /**
- * Stripe Payment Session (for micro-transactions)
- * Used by Firebase Stripe Extension
- */
-export interface CheckoutSession {
-  price: string; // Stripe Price ID
-  success_url: string;
-  cancel_url: string;
-  mode: 'payment' | 'subscription';
-  metadata?: {
-    teamId: string;
-    itemId: string;
-    itemType: string;
-  };
-}
-
-/**
- * User Profile (Admin/Organizer)
- * For event creators and moderators
- */
-export interface UserProfile extends MultiTenantEntity {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  
-  // Permissions
-  role: 'admin' | 'organizer' | 'moderator';
-  managedTenantIds: string[]; // Tenants they can manage
-  
-  // Status
-  isActive: boolean;
-}
-
-/**
  * Geolocation
  * Standard location type
  */
 export interface GeoLocation {
   lat: number;
   lng: number;
-}
-
-/**
- * Theme Configuration
- * Dynamic CSS variables for tenant branding
- */
-export interface ThemeConfig {
-  primaryColor: string;
-  secondaryColor?: string;
-  accentColor?: string;
-  logoUrl?: string;
 }

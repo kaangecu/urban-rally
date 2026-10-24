@@ -6,7 +6,7 @@ import { useMapStore } from '../../store/mapStore';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { getCurrentLocation, watchLocation } from '../../utils/geo.utils';
-import type { Task } from '../../types/schema';
+import type { Task } from '../../../shared/schema';
 
 // Fix for default marker icons in React-Leaflet
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -131,7 +131,7 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
     
     // Use letter abbreviations instead of emojis
     let iconText = 'T';
-    if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
+    if (task.type === 'GPS') {
       iconText = 'G';
     } else if (task.type === 'PHOTO') {
       iconText = 'P';
@@ -139,8 +139,6 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
       iconText = 'V';
     } else if (task.type === 'QUIZ') {
       iconText = 'Q';
-    } else if (task.type === 'SPONSORED') {
-      iconText = 'S';
     }
 
     // Use URL encoding instead of btoa to avoid emoji issues
@@ -195,7 +193,7 @@ function TaskMarker({ task, isCompleted }: TaskMarkerProps) {
         </Popup>
       </Marker>
       {/* Show radius circle for GPS tasks */}
-      {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && task.radius && (
+      {(task.type === 'GPS') && task.radius && (
         <Circle
           center={[task.coordinates.lat, task.coordinates.lng]}
           radius={task.radius}

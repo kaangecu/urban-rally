@@ -7,7 +7,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
-import type { Task } from '../types/schema';
+import type { Task } from '../../shared/schema';
+import { taskConverter } from '../../shared/converters';
 
 /**
  * Get all tasks for a specific event
@@ -32,18 +33,7 @@ export async function getTasksByEvent(
     
     const snapshot = await getDocs(q);
     
-    const tasks: Task[] = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        // Convert Firestore Timestamps to Dates
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        unlockAt: data.unlockAt?.toDate(),
-        expiresAt: data.expiresAt?.toDate(),
-      } as Task;
-    });
+    const tasks: Task[] = snapshot.docs.map((doc) => taskConverter.fromFirestore(doc.id, doc.data()));
     
     // Sort by order field if it exists, otherwise by points
     tasks.sort((a, b) => {
@@ -73,17 +63,7 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
       return null;
     }
     
-    const data = taskDoc.data();
-    const task: Task = {
-      id: taskDoc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      unlockAt: data.unlockAt?.toDate(),
-      expiresAt: data.expiresAt?.toDate(),
-    } as Task;
-    
-    return task;
+    return taskConverter.fromFirestore(taskDoc.id, taskDoc.data());
   } catch (error) {
     console.error('Error fetching task by ID:', error);
     throw new Error('Failed to fetch task');

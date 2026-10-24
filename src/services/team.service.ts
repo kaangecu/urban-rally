@@ -10,7 +10,8 @@ import {
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { getFirebaseFirestore, getFirebaseAuth } from './firebase.service';
-import type { Team } from '../types/schema';
+import type { Team } from '../../shared/schema';
+import { teamConverter } from '../../shared/converters';
 
 /**
  * Find a team by their access code
@@ -33,10 +34,7 @@ export async function getTeamByAccessCode(accessCode: string): Promise<Team | nu
     }
     
     const teamDoc = snapshot.docs[0];
-    return {
-      id: teamDoc.id,
-      ...teamDoc.data(),
-    } as Team;
+    return teamConverter.fromFirestore(teamDoc.id, teamDoc.data());
   } catch (error) {
     console.error('Error fetching team:', error);
     throw new Error('Failed to fetch team');
@@ -83,10 +81,7 @@ export async function getTeamById(teamId: string): Promise<Team | null> {
       return null;
     }
     
-    return {
-      id: teamDoc.id,
-      ...teamDoc.data(),
-    } as Team;
+    return teamConverter.fromFirestore(teamDoc.id, teamDoc.data());
   } catch (error) {
     console.error('Error fetching team by ID:', error);
     throw new Error('Failed to fetch team');

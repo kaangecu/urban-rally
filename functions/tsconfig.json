@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    // CommonJS so the compiled shared/ files run in Node without import extensions
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "rootDir": "..",
+    "outDir": "lib",
+    "types": []
+  },
+  "include": ["src", "../shared"],
+  "exclude": ["../shared/**/*.test.ts"]
+}

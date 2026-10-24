@@ -92,6 +92,13 @@ export const joinTeam = onCall<unknown, Promise<JoinTeamResult>>(async (request)
     // Joining again is a no-op, so a retry after a lost response is safe
     if ((await tx.get(memberRef)).exists) return result;
 
+    // The claims check above can't see a join to another team that is still
+    // running, so the uid's team is also kept here, inside the transaction
+    const joinedTeamId = (await tx.get(attemptsRef)).get('teamId') as string | undefined;
+    if (joinedTeamId && joinedTeamId !== teamId) {
+      throw refuse('already-on-team', 'You are already on another team. Ask an organiser to move you.');
+    }
+
     const [event, tenant] = await Promise.all([
       tx.get(db.doc(`events/${team.eventId}`)).then((snap) => snap.data() as Omit<Event, 'id'> | undefined),
       tx.get(db.doc(`tenants/${team.tenantId}`)).then((snap) => snap.data() as Omit<Tenant, 'id'> | undefined),
@@ -117,6 +124,7 @@ export const joinTeam = onCall<unknown, Promise<JoinTeamResult>>(async (request)
     };
     tx.create(memberRef, memberConverter.toFirestore(member));
     tx.update(teamRef, { memberCount: FieldValue.increment(1), updatedAt: now });
+    tx.set(attemptsRef, { teamId }, { merge: true });
     return result;
   });
 

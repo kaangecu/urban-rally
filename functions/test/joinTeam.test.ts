@@ -163,4 +163,17 @@ describe('joinTeam', () => {
     expect(statuses.filter((status) => status === 'NOT_FOUND')).toHaveLength(5);
     expect(statuses.filter((status) => status === 'RESOURCE_EXHAUSTED')).toHaveLength(5);
   });
+
+  it('lets parallel joins to two teams add the player to only one', async () => {
+    await seedTeam('team-race-a', 'RACEAAAA');
+    await seedTeam('team-race-b', 'RACEBBBB');
+    const { idToken, uid } = await signInAnonymously();
+
+    await Promise.all([join('RACEAAAA', idToken), join('RACEBBBB', idToken)]);
+
+    const memberships = await Promise.all(
+      ['team-race-a', 'team-race-b'].map((id) => db.doc(`teams/${id}/members/${uid}`).get()),
+    );
+    expect(memberships.filter((snap) => snap.exists)).toHaveLength(1);
+  });
 });

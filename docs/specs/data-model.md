@@ -23,7 +23,7 @@ All documents carry `tenantId`, `createdAt` and `updatedAt`. "Server" means writ
 | `tasks/{taskId}` | `eventId`, `title`, `description`, `type`, `imageUrl?`, `difficulty?`, `points`, `coordinates?`, `radius?`, `requiresPhoto`, `requiresVideo`, `requiresText`, `quizType?`, `quizOptions?`, `quizHint?`, `unlockAt?`, `expiresAt?`, `order?`, `isActive` | staff (rules) | signed-in players of the tenant |
 | `tasks/{taskId}/private/answer` | `quizCorrectAnswer: string \| number`, `acceptedAnswers?: string[]` | staff | no client (C1) |
 | `teams/{teamId}` | `eventId`, `accessCode`, `teamName?`, `memberCount`, `score`, `completedTaskIds`, `isActive` | server (codes, score); staff (name, rules) | members, staff |
-| `teams/{teamId}/members/{uid}` | `displayName`, `email?`, `consentVersion`, `consentAt`, `joinedAt` | server on join; the member edits `displayName` and `email` | members of that team, staff |
+| `teams/{teamId}/members/{uid}` | `teamId`, `displayName`, `email?`, `consentVersion`, `consentAt`, `joinedAt` | server on join; the member edits `displayName` and `email` | members of that team, staff |
 | `submissions/{teamId}_{taskId}` | `eventId`, `taskId`, `teamId`, `submittedBy` (uid), `photoUrls?`, `videoUrl?`, `textResponse?`, `submittedLocation?` (`lat`, `lng`, `accuracy`), `status`, `pointsAwarded`, `reviewedBy?`, `reviewedAt?`, `reviewNotes?`, `submittedAt` | server (`submitTask`, review) | members, staff |
 | `leaderboard/{eventId}/entries/{teamId}` | `teamName`, `score`, `tasksCompleted`, `lastUpdated` | server | anyone |
 | `joinAttempts/{uid}` | `failures`, `windowStart` | server (`joinTeam` rate limit) | no client |

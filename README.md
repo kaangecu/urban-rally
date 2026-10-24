@@ -13,7 +13,7 @@ Work in progress. The Firestore and Storage security rules were locked down, so 
 You need Node 22 (see `.nvmrc`) and, for the emulators, Java 21.
 
 ```sh
-npm ci
+npm ci && npm ci --prefix functions
 cp .env.example .env   # fill in your Firebase web app config
 npm run dev
 ```
@@ -26,8 +26,8 @@ To play locally without a real project, set `VITE_USE_EMULATOR=true` in `.env`, 
 | --- | --- |
 | `npm run dev` | Start the dev server |
 | `npm run check` | Lint, type-check, tests and production build. CI runs the same command |
-| `npm run test:rules` | Firestore and Storage rules tests against the emulators |
-| `npm run emulators` | Start the Auth, Firestore and Storage emulators |
+| `npm run test:rules` | Rules and Cloud Functions tests against the emulators |
+| `npm run emulators` | Start the Auth, Functions, Firestore and Storage emulators |
 | `npm run seed:emulator` | Reset the emulators to one playable game and print the join links |
 
 ## Project layout

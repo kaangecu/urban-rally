@@ -13,7 +13,8 @@ import {
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
 import { calculateDistance } from '../utils/geo.utils';
-import type { TaskSubmission, GeoLocation } from '../types/schema';
+import type { TaskSubmission, GeoLocation } from '../../shared/schema';
+import { submissionConverter } from '../../shared/converters';
 
 /**
  * Verify if user is within GPS radius of task location
@@ -140,17 +141,7 @@ export async function getSubmissionsByTeam(
 
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        submittedAt: data.submittedAt?.toDate() || new Date(),
-        reviewedAt: data.reviewedAt?.toDate(),
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as TaskSubmission;
-    });
+    return snapshot.docs.map((doc) => submissionConverter.fromFirestore(doc.id, doc.data()));
   } catch (error) {
     console.error('Error fetching team submissions:', error);
     throw new Error('Failed to fetch submissions');
@@ -176,17 +167,7 @@ export async function getSubmissionsByTask(
 
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        submittedAt: data.submittedAt?.toDate() || new Date(),
-        reviewedAt: data.reviewedAt?.toDate(),
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-      } as TaskSubmission;
-    });
+    return snapshot.docs.map((doc) => submissionConverter.fromFirestore(doc.id, doc.data()));
   } catch (error) {
     console.error('Error fetching task submissions:', error);
     throw new Error('Failed to fetch submissions');
@@ -208,15 +189,7 @@ export async function getSubmissionById(
       return null;
     }
 
-    const data = submissionDoc.data();
-    return {
-      id: submissionDoc.id,
-      ...data,
-      submittedAt: data.submittedAt?.toDate() || new Date(),
-      reviewedAt: data.reviewedAt?.toDate(),
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-    } as TaskSubmission;
+    return submissionConverter.fromFirestore(submissionDoc.id, submissionDoc.data());
   } catch (error) {
     console.error('Error fetching submission:', error);
     throw new Error('Failed to fetch submission');

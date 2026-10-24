@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { getFirebaseFirestore } from '../services/firebase.service';
 import { useAuthStore } from '../store/authStore';
-import type { Team } from '../types/schema';
+import { teamConverter } from '../../shared/converters';
 
 /**
  * Real-time sync hook for team data
@@ -35,10 +35,7 @@ export function useTeamSync() {
           return;
         }
 
-        const updatedTeam = { 
-          ...snapshot.data(), 
-          id: snapshot.id 
-        } as Team;
+        const updatedTeam = teamConverter.fromFirestore(snapshot.id, snapshot.data());
 
         // Log changes for debugging
         const oldScore = team.score;

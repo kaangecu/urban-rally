@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Task } from '../../types/schema';
+import type { Task } from '../../../shared/schema';
 import { CameraCapture } from './CameraCapture';
 import { VideoCapture } from './VideoCapture';
 import { QuizInput } from './QuizInput';
@@ -334,7 +334,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
       );
     }
 
-    if (task.type === 'GPS' || task.type === 'GPS_LOCATION') {
+    if (task.type === 'GPS') {
       console.log('📍 Rendering CameraCapture for GPS');
       return <CameraCapture onCapture={handlePhotoCapture} onCancel={() => setState('idle')} />;
     }
@@ -452,7 +452,7 @@ export const TaskSubmission: React.FC<TaskSubmissionProps> = ({ task, onSuccess,
               {task.type === 'PHOTO' && '📸 Take Photo'}
               {task.type === 'VIDEO' && '🎥 Record Video'}
               {task.type === 'QUIZ' && '❓ Answer Quiz'}
-              {(task.type === 'GPS' || task.type === 'GPS_LOCATION') && '📍 Take Photo at Location'}
+              {(task.type === 'GPS') && '📍 Take Photo at Location'}
             </span>
           </button>
 

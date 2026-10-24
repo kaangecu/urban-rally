@@ -1,6 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase.service';
-import type { Tenant } from '../types/schema';
+import type { Tenant } from '../../shared/schema';
 
 /**
  * Get tenant by slug (e.g., 'esn-berlin')

@@ -44,6 +44,7 @@ export default defineConfig({
       '**/*.manual-test.ts',
       'src/__tests__/examples/**', // Exclude example/template tests
       'tests/rules/**', // Needs the emulator: npm run test:rules
+      'functions/**', // Same
     ],
     testTimeout: 10000,
     hookTimeout: 10000,

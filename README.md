@@ -18,7 +18,7 @@ cp .env.example .env   # fill in your Firebase web app config
 npm run dev
 ```
 
-To point the app's Firestore at the local emulator instead of a real project, set `VITE_USE_EMULATOR=true` in `.env` and run `npm run emulators` in a second terminal. Auth and Storage still use the project in `.env`.
+To play locally without a real project, set `VITE_USE_EMULATOR=true` in `.env`, run `npm run emulators` in a second terminal and `npm run seed:emulator` in a third. The app then uses the emulators as the `demo-urban-rally` project, and the seed script prints a join link per team.
 
 ## Commands
 
@@ -28,6 +28,7 @@ To point the app's Firestore at the local emulator instead of a real project, se
 | `npm run check` | Lint, type-check, tests and production build. CI runs the same command |
 | `npm run test:rules` | Firestore and Storage rules tests against the emulators |
 | `npm run emulators` | Start the Auth, Firestore and Storage emulators |
+| `npm run seed:emulator` | Reset the emulators to one playable game and print the join links |
 
 ## Project layout
 

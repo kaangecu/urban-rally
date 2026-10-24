@@ -35,8 +35,15 @@ let storage: FirebaseStorage;
  */
 export const initializeFirebase = async (): Promise<void> => {
   try {
-    // Initialize Firebase App
-    app = initializeApp(firebaseConfig);
+    const useEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true';
+
+    // The emulators run as a demo- project (npm run emulators), which can
+    // never reach a real Firebase service
+    app = initializeApp(
+      useEmulator
+        ? { ...firebaseConfig, projectId: 'demo-urban-rally', storageBucket: 'demo-urban-rally.appspot.com' }
+        : firebaseConfig
+    );
     
     // Initialize Auth with local persistence
     auth = getAuth(app);
@@ -48,7 +55,7 @@ export const initializeFirebase = async (): Promise<void> => {
     storage = getStorage(app);
 
     // Connect to the local emulators in development (npm run emulators)
-    if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+    if (useEmulator) {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
       connectFirestoreEmulator(db, 'localhost', 8080);
       connectStorageEmulator(storage, 'localhost', 9199);

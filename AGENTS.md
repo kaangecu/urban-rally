@@ -12,6 +12,7 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - `npm run check`: all of the above in one go. CI runs the same command
 - `npm run test:rules`: Firestore and Storage rules tests against the emulators (needs Java)
 - `npm run emulators`: local Auth, Firestore and Storage. Then `VITE_USE_EMULATOR=true npm run dev` points the app at them
+- `npm run seed:emulator`: reset the emulators to one playable game (refuses anything but the emulators)
 
 ## Layout
 

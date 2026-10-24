@@ -10,14 +10,15 @@ Mobile-first scavenger-hunt PWA for student organisations: teams join with an ac
 - `npm run test:run`: Vitest, single run
 - `npm run build`: type-check and production build
 - `npm run check`: all of the above in one go. CI runs the same command
-- `npm run test:rules`: Firestore and Storage rules tests against the emulators (needs Java)
-- `npm run emulators`: local Auth, Firestore and Storage. Then `VITE_USE_EMULATOR=true npm run dev` points the app at them
+- `npm run test:rules`: rules and Cloud Functions tests against the emulators (needs Java)
+- `npm run emulators`: local Auth, Functions, Firestore and Storage. Then `VITE_USE_EMULATOR=true npm run dev` points the app at them
 - `npm run seed:emulator`: reset the emulators to one playable game (refuses anything but the emulators)
 
 ## Layout
 
 - `src/features/`: one folder per feature (`auth`, `map`, `submissions`, `tasks`)
 - `src/services/`: Firebase reads and writes
+- `functions/`: Cloud Functions, its own package (`npm ci --prefix functions`)
 - `src/store/`: Zustand stores
 - `src/components/`, `src/hooks/`, `src/utils/`, `src/types/`: shared code
 - `firestore.rules`, `storage.rules`: security rules (human-reviewed only)

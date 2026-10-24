@@ -26,7 +26,7 @@ All documents carry `tenantId`, `createdAt` and `updatedAt`. "Server" means writ
 | `teams/{teamId}/members/{uid}` | `teamId`, `displayName`, `email?`, `consentVersion`, `consentAt`, `joinedAt` | server on join; the member edits `displayName` and `email` | members of that team, staff |
 | `submissions/{teamId}_{taskId}` | `eventId`, `taskId`, `teamId`, `submittedBy` (uid), `photoUrls?`, `videoUrl?`, `textResponse?`, `submittedLocation?` (`lat`, `lng`, `accuracy`), `status`, `pointsAwarded`, `reviewedBy?`, `reviewedAt?`, `reviewNotes?`, `submittedAt` | server (`submitTask`, review) | members, staff |
 | `leaderboard/{eventId}/entries/{teamId}` | `teamName`, `score`, `tasksCompleted`, `lastUpdated` | server | anyone |
-| `joinAttempts/{uid}` | `failures`, `windowStart` | server (`joinTeam` rate limit) | no client |
+| `joinAttempts/{uid}` | `failures`, `windowStart`, `teamId?` | server (`joinTeam` rate limit and one team per player) | no client |
 
 - `TaskType` is `'GPS' | 'PHOTO' | 'VIDEO' | 'QUIZ'`, one value per kind.
 - Submission `status` is `'approved' | 'rejected'`. Photo and video score at once and an organiser can reject later, which takes the points back (answer 3). A wrong quiz answer writes nothing.

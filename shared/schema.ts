@@ -51,6 +51,7 @@ export interface Event extends MultiTenantEntity {
   // Game Settings
   isActive: boolean;
   maxTeams?: number;
+  maxTeamSize?: number; // Players per team, default 6 (joinTeam)
   
   // Map Configuration
   mapCenter: {

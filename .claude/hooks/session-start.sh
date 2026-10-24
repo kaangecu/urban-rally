@@ -3,5 +3,5 @@
 # dependencies there so npm run check works. Does nothing on your laptop.
 [ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0
 cd "$CLAUDE_PROJECT_DIR" || exit 0
-[ -d node_modules ] && exit 0
-npm ci --no-audit --no-fund >&2
+[ -d node_modules ] || npm ci --no-audit --no-fund >&2
+[ -d functions/node_modules ] || npm ci --prefix functions --no-audit --no-fund >&2
